@@ -2802,6 +2802,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 	tnid.cbSize = sizeof(NOTIFYICONDATA);
 	tnid.hWnd = hwnd;
 	tnid.uID = 1;
+	tnid.uFlags = 0;
 
 	Shell_NotifyIcon(NIM_DELETE, &tnid);
 
