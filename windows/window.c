@@ -221,6 +221,8 @@ static void ExtTextOutW2 (HDC, int, int, UINT, const RECT *, WCHAR *, UINT, cons
 /* */
 
 static int ime_mode = 0;
+static wchar_t ime_w[1024];
+static char ime_m[512];
 
 /* > transparent background patch */
 void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
@@ -3611,6 +3613,51 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	if (process_clipdata((HGLOBAL)lParam, wParam))
 	    term_do_paste(term);
 	return 0;
+      case WM_IME_REQUEST:
+	switch (wParam) {
+	case IMR_DOCUMENTFEED:
+	  {
+	    RECONVERTSTRING *re = (RECONVERTSTRING *)lParam;
+	    int size = term->cols;
+	    if (size > 511) {
+	      size = 511;
+	     }
+	    if (re) {
+	      int i;
+	      unsigned long uc;
+	      int c = 0;
+	      char *str = (char *)re + sizeof(RECONVERTSTRING);
+
+	      for (i = 0; i < size; i++) {
+		uc = term->disptext[term->dispcursy]->chars[i].chr;
+		if ((uc == UCSWIDE) || DIRECT_CHAR(uc)) {
+		  continue;
+		}
+		if (DIRECT_FONT(uc)) {
+		  uc &= ~CSET_MASK;
+		}
+		ime_w[c++] = uc;
+	      }
+	      ime_w[c] = L'\0';
+	      size++;
+	      WideCharToMultiByte(CP_ACP, 0, ime_w, -1, ime_m, size, NULL, NULL);
+
+	      re->dwSize = sizeof(RECONVERTSTRING) + size;
+	      re->dwVersion = 0;
+	      re->dwStrLen = size;
+	      re->dwStrOffset = sizeof(RECONVERTSTRING);
+	      re->dwCompStrLen = 0;
+	      re->dwCompStrOffset = 0;
+	      re->dwTargetStrLen = 0;
+	      re->dwTargetStrOffset = term->dispcursx;
+	      memcpy((void *)str, (void *)ime_m, size);
+	    } else {
+	      size++;
+	    }
+	    return sizeof(RECONVERTSTRING) + size;
+	  }
+	}
+	break;
       default:
 	if (message == wm_mousewheel || message == WM_MOUSEWHEEL) {
 	    int shift_pressed=0, control_pressed=0;
