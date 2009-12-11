@@ -956,7 +956,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 	if (cfg.sunken_edge)
 	    exwinmode |= WS_EX_CLIENTEDGE;
 	hwnd = CreateWindowEx(exwinmode, appname, appname,
-			      winmode, CW_USEDEFAULT, CW_USEDEFAULT,
+			      winmode, cfg.x, cfg.y,
 			      guess_width, guess_height,
 			      NULL, NULL, inst, NULL);
     }
@@ -3238,6 +3238,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	fullscr_on_max = TRUE;
 	break;
       case WM_MOVE:
+	{
+	    RECT rc;
+	    GetWindowRect(hwnd, &rc);
+	    cfg.x = rc.left;
+	    cfg.y = rc.top;
+	}
 	/* > transparent background patch */
 	if (cfg.transparent_mode == 2 && (! cfg.stop_when_moving))
         InvalidateRect(hwnd, NULL, FALSE);

@@ -653,6 +653,7 @@ struct config_tag {
     int blinktext;
     int win_name_always;
     int width, height;
+    int x, y;
     FontSpec font;
     int font_quality;
     Filename logfilename;

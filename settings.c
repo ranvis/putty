@@ -479,6 +479,8 @@ void save_open_settings(void *sesskey, Config *cfg)
     write_setting_s(sesskey, "WinTitle", cfg->wintitle);
     write_setting_i(sesskey, "TermWidth", cfg->width);
     write_setting_i(sesskey, "TermHeight", cfg->height);
+    write_setting_i(sesskey, "TermX", cfg->x);
+    write_setting_i(sesskey, "TermY", cfg->y);
     write_setting_fontspec(sesskey, "Font", cfg->font);
     write_setting_i(sesskey, "FontQuality", cfg->font_quality);
     write_setting_i(sesskey, "FontVTMode", cfg->vtmode);
@@ -810,6 +812,8 @@ void load_open_settings(void *sesskey, Config *cfg)
     gpps(sesskey, "WinTitle", "", cfg->wintitle, sizeof(cfg->wintitle));
     gppi(sesskey, "TermWidth", 80, &cfg->width);
     gppi(sesskey, "TermHeight", 24, &cfg->height);
+    gppi(sesskey, "TermX", CW_USEDEFAULT, &cfg->x);
+    gppi(sesskey, "TermY", CW_USEDEFAULT, &cfg->y);
     gppfont(sesskey, "Font", &cfg->font);
     gppi(sesskey, "FontQuality", FQ_DEFAULT, &cfg->font_quality);
     gppi(sesskey, "FontVTMode", VT_UNICODE, (int *) &cfg->vtmode);
