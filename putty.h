@@ -675,7 +675,7 @@ struct config_tag {
     int system_colour;
     int try_palette;
     int bold_colour;
-    unsigned char colours[22][3];
+    unsigned char colours[24][3];
     /* Selection options */
     int mouse_is_xterm;
     int rect_select;

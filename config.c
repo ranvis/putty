@@ -649,7 +649,8 @@ static const char *const colours[] = {
     "ANSI Blue", "ANSI Blue Bold",
     "ANSI Magenta", "ANSI Magenta Bold",
     "ANSI Cyan", "ANSI Cyan Bold",
-    "ANSI White", "ANSI White Bold"
+    "ANSI White", "ANSI White Bold",
+    "Cursor Text(IME ON)", "Cursor Colour(IME ON)",
 };
 
 static void colour_handler(union control *ctrl, void *dlg,

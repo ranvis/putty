@@ -490,7 +490,7 @@ void save_open_settings(void *sesskey, Config *cfg)
     write_setting_i(sesskey, "Xterm256Colour", cfg->xterm_256_colour);
     write_setting_i(sesskey, "BoldAsColour", cfg->bold_colour);
 
-    for (i = 0; i < 22; i++) {
+    for (i = 0; i < 24; i++) {
 	char buf[20], buf2[30];
 	sprintf(buf, "Colour%d", i);
 	sprintf(buf2, "%d,%d,%d", cfg->colours[i][0],
@@ -823,13 +823,14 @@ void load_open_settings(void *sesskey, Config *cfg)
     gppi(sesskey, "Xterm256Colour", 1, &cfg->xterm_256_colour);
     gppi(sesskey, "BoldAsColour", 1, &cfg->bold_colour);
 
-    for (i = 0; i < 22; i++) {
+    for (i = 0; i < 24; i++) {
 	static const char *const defaults[] = {
 	    "187,187,187", "255,255,255", "0,0,0", "85,85,85", "0,0,0",
 	    "0,255,0", "0,0,0", "85,85,85", "187,0,0", "255,85,85",
 	    "0,187,0", "85,255,85", "187,187,0", "255,255,85", "0,0,187",
 	    "85,85,255", "187,0,187", "255,85,255", "0,187,187",
-	    "85,255,255", "187,187,187", "255,255,255"
+	    "85,255,255", "187,187,187", "255,255,255", 
+	    "0,0,0", "255,0,0"
 	};
 	char buf[20], buf2[30];
 	int c0, c1, c2;

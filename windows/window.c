@@ -191,7 +191,7 @@ static enum {
 } und_mode;
 static int descent;
 
-#define NCFGCOLOURS 22
+#define NCFGCOLOURS 24
 #define NEXTCOLOURS 240
 #define NALLCOLOURS (NCFGCOLOURS + NEXTCOLOURS)
 static COLORREF colours[NALLCOLOURS];
@@ -217,6 +217,10 @@ static int compose_state = 0;
 static UINT wm_mousewheel = WM_MOUSEWHEEL;
 
 static void ExtTextOutW2 (HDC, int, int, UINT, const RECT *, WCHAR *, UINT, const int *, int);
+
+/* */
+
+static int ime_mode = 0;
 
 /* > transparent background patch */
 void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
@@ -1435,10 +1439,11 @@ static void cfgtopalette(void)
     static const int ww[] = {
 	256, 257, 258, 259, 260, 261,
 	0, 8, 1, 9, 2, 10, 3, 11,
-	4, 12, 5, 13, 6, 14, 7, 15
+	4, 12, 5, 13, 6, 14, 7, 15,
+	262, 263
     };
 
-    for (i = 0; i < 22; i++) {
+    for (i = 0; i < 24; i++) {
 	int w = ww[i];
 	defpal[w].rgbtRed = cfg.colours[i][0];
 	defpal[w].rgbtGreen = cfg.colours[i][1];
@@ -1478,6 +1483,8 @@ static void systopalette(void)
 	{ COLOR_WINDOW,		258, 259 }, /* Default Background */
 	{ COLOR_HIGHLIGHTTEXT,	260, 260 }, /* Cursor Text */
 	{ COLOR_HIGHLIGHT,	261, 261 }, /* Cursor Colour */
+	{ COLOR_HIGHLIGHTTEXT,	262, 262 }, /* Cursor Text(IME ON) */
+	{ COLOR_HIGHLIGHT,	263, 263 }, /* Cursor Colour(IME ON) */
     };
 
     for (i = 0; i < (sizeof(or)/sizeof(or[0])); i++) {
@@ -3494,6 +3501,20 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	/* lParam == Locale */
 	set_input_locale((HKL)lParam);
 	sys_cursor_update();
+	{
+	    HIMC hImc = ImmGetContext(hwnd);
+	    ime_mode = ImmGetOpenStatus(hImc);
+	    ImmReleaseContext(hwnd, hImc);
+	    term_update(term);
+	}
+	return 1;
+      case WM_IME_NOTIFY:
+	if (wParam == IMN_SETOPENSTATUS) {
+	    HIMC hImc = ImmGetContext(hwnd);
+	    ime_mode = ImmGetOpenStatus(hImc);
+	    ImmReleaseContext(hwnd, hImc);
+	    term_update(term);
+        }
 	break;
       case WM_IME_STARTCOMPOSITION:
 	{
@@ -3757,7 +3778,10 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
 	    attr &= ~ATTR_BOLD;
 
 	/* cursor fg and bg */
-	attr |= (260 << ATTR_FGSHIFT) | (261 << ATTR_BGSHIFT);
+	if (ime_mode)
+	    attr |= (262 << ATTR_FGSHIFT) | (263 << ATTR_BGSHIFT);
+	else 
+	    attr |= (260 << ATTR_FGSHIFT) | (261 << ATTR_BGSHIFT);
     }
 
     nfont = 0;
@@ -4079,6 +4103,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
     int char_width;
     HDC hdc = ctx;
     int ctype = cfg.cursor_type;
+    COLORREF colour = ime_mode ? colours[263] : colours[261];
 
     lattr &= LATTR_MODE;
 
@@ -4106,7 +4131,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
 	pts[2].x = pts[3].x = x + char_width - 1;
 	pts[0].y = pts[3].y = pts[4].y = y;
 	pts[1].y = pts[2].y = y + font_height - 1;
-	oldpen = SelectObject(hdc, CreatePen(PS_SOLID, 0, colours[261]));
+	oldpen = SelectObject(hdc, CreatePen(PS_SOLID, 0, colour));
 	Polyline(hdc, pts, 5);
 	oldpen = SelectObject(hdc, oldpen);
 	DeleteObject(oldpen);
@@ -4131,7 +4156,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
 	if (attr & TATTR_ACTCURS) {
 	    HPEN oldpen;
 	    oldpen =
-		SelectObject(hdc, CreatePen(PS_SOLID, 0, colours[261]));
+		SelectObject(hdc, CreatePen(PS_SOLID, 0, colour));
 	    MoveToEx(hdc, startx, starty, NULL);
 	    LineTo(hdc, startx + dx * length, starty + dy * length);
 	    oldpen = SelectObject(hdc, oldpen);
@@ -4139,7 +4164,7 @@ void do_cursor(Context ctx, int x, int y, wchar_t *text, int len,
 	} else {
 	    for (i = 0; i < length; i++) {
 		if (i % 2 == 0) {
-		    SetPixel(hdc, startx, starty, colours[261]);
+		    SetPixel(hdc, startx, starty, colour);
 		}
 		startx += dx;
 		starty += dy;
