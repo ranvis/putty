@@ -495,6 +495,12 @@ enum {
     controlidstart = 100,
     IDC_QUIT,
     IDC_TITLE,
+    IDC_BOX_GENERATE,
+    IDC_TYPESTATIC, IDC_KEYSSH1, IDC_KEYSSH2RSA, IDC_KEYSSH2DSA,
+    IDC_BITSSTATIC, IDC_BITS,
+    IDC_GENSTATIC, IDC_GENERATE,
+    IDC_BOX_LOAD,
+    IDC_LOADSTATIC, IDC_LOAD,
     IDC_BOX_KEY,
     IDC_NOKEY,
     IDC_GENERATING,
@@ -504,13 +510,7 @@ enum {
     IDC_COMMENTSTATIC, IDC_COMMENTEDIT,
     IDC_PASSPHRASE1STATIC, IDC_PASSPHRASE1EDIT,
     IDC_PASSPHRASE2STATIC, IDC_PASSPHRASE2EDIT,
-    IDC_BOX_ACTIONS,
-    IDC_GENSTATIC, IDC_GENERATE,
-    IDC_LOADSTATIC, IDC_LOAD,
     IDC_SAVESTATIC, IDC_SAVE, IDC_SAVEPUB,
-    IDC_BOX_PARAMS,
-    IDC_TYPESTATIC, IDC_KEYSSH1, IDC_KEYSSH2RSA, IDC_KEYSSH2DSA,
-    IDC_BITSSTATIC, IDC_BITS,
     IDC_ABOUT,
     IDC_GIVEHELP,
     IDC_IMPORT, IDC_EXPORT_OPENSSH, IDC_EXPORT_SSHCOM
@@ -892,6 +892,19 @@ static int CALLBACK MainDlgProc(HWND mainwnd, UINT msg,
 	    /* Accelerators used: acglops1rbd */
 
 	    ctlposinit(&cp, hwnd, 4, 4, 4);
+	    beginbox(&cp, "Generate a public/private key pair", IDC_BOX_GENERATE);
+	    radioline(&cp, "Type of key to generate:", IDC_TYPESTATIC, 3,
+		      "SSH-&1 (RSA)", IDC_KEYSSH1,
+		      "SSH-2 &RSA", IDC_KEYSSH2RSA,
+		      "SSH-2 &DSA", IDC_KEYSSH2DSA, NULL);
+	    staticedit(&cp, "Number of &bits in a generated key:",
+		       IDC_BITSSTATIC, IDC_BITS, 20);
+	    staticbtn(&cp, "", IDC_GENSTATIC, "&Generate", IDC_GENERATE);
+	    endbox(&cp);
+	    beginbox(&cp, "Load an existing private key file", IDC_BOX_LOAD);
+	    staticbtn(&cp, "",
+		      IDC_LOADSTATIC, "&Load", IDC_LOAD);
+	    endbox(&cp);
 	    beginbox(&cp, "Key", IDC_BOX_KEY);
 	    cp2 = cp;
 	    statictext(&cp2, "No key.", 1, IDC_NOKEY);
@@ -912,23 +925,9 @@ static int CALLBACK MainDlgProc(HWND mainwnd, UINT msg,
 			   IDC_PASSPHRASE1EDIT, 75);
 	    staticpassedit(&cp, "C&onfirm passphrase:",
 			   IDC_PASSPHRASE2STATIC, IDC_PASSPHRASE2EDIT, 75);
-	    endbox(&cp);
-	    beginbox(&cp, "Actions", IDC_BOX_ACTIONS);
-	    staticbtn(&cp, "Generate a public/private key pair",
-		      IDC_GENSTATIC, "&Generate", IDC_GENERATE);
-	    staticbtn(&cp, "Load an existing private key file",
-		      IDC_LOADSTATIC, "&Load", IDC_LOAD);
 	    static2btn(&cp, "Save the generated key", IDC_SAVESTATIC,
 		       "Save p&ublic key", IDC_SAVEPUB,
 		       "&Save private key", IDC_SAVE);
-	    endbox(&cp);
-	    beginbox(&cp, "Parameters", IDC_BOX_PARAMS);
-	    radioline(&cp, "Type of key to generate:", IDC_TYPESTATIC, 3,
-		      "SSH-&1 (RSA)", IDC_KEYSSH1,
-		      "SSH-2 &RSA", IDC_KEYSSH2RSA,
-		      "SSH-2 &DSA", IDC_KEYSSH2DSA, NULL);
-	    staticedit(&cp, "Number of &bits in a generated key:",
-		       IDC_BITSSTATIC, IDC_BITS, 20);
 	    endbox(&cp);
 	}
 	CheckRadioButton(hwnd, IDC_KEYSSH1, IDC_KEYSSH2DSA, IDC_KEYSSH2RSA);

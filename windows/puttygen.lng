@@ -48,7 +48,6 @@ Generate a public/private key pair=公開/秘密鍵ペアの生成
 Load an existing private key file=既存の秘密鍵の読込
 &Load=読込(&L)
 Save the generated key=生成した鍵の保存
-Parameters=パラメータ
 Type of key to generate:=生成する鍵の種類:
 Number of &bits in a generated key:=生成する鍵のビット数(&B):
 Out of thread resources=スレッドリソースが不足しています。
