@@ -1235,6 +1235,10 @@ static int CALLBACK MainDlgProc(HWND mainwnd, UINT msg,
 		}
 	    }
 	    break;
+	  case IDC_KEYDISPLAY:
+	    if (HIWORD(wParam) == EN_SETFOCUS)
+		SendMessage(GetDlgItem(hwnd, IDC_KEYDISPLAY), EM_SETSEL, 0, -1);
+	    break;
 	  case IDC_LOAD:
 	  case IDC_IMPORT:
 	    if (HIWORD(wParam) != BN_CLICKED)
