@@ -19,7 +19,8 @@
 
 #define WM_DONEKEY (WM_APP + 1)
 
-#define DEFAULT_KEYSIZE 1024
+#define DEFAULT_KEYSIZE 2048
+#define DEFAULT_DSA_KEYSIZE 1024
 
 static char *cmdline_keyfile = NULL;
 
@@ -1008,6 +1009,8 @@ static int CALLBACK MainDlgProc(HWND mainwnd, UINT msg,
 				     LOWORD(wParam));
 		CheckMenuRadioItem(state->keymenu, IDC_KEYSSH1, IDC_KEYSSH2DSA,
 				   LOWORD(wParam), MF_BYCOMMAND);
+		if (LOWORD(wParam) == IDC_KEYSSH2DSA)
+		    SetDlgItemInt(hwnd, IDC_BITS, DEFAULT_DSA_KEYSIZE, FALSE);
 	    }
 	    break;
 	  case IDC_QUIT:
