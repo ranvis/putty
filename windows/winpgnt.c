@@ -58,7 +58,7 @@ static HWND aboutbox;
 static HMENU systray_menu, session_menu;
 static int already_running;
 
-static int confirm_any_request;
+static int confirm_any_request = 0;
 static char *putty_path;
 
 /* CWD for "add key" file requester. */
@@ -2681,6 +2681,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 	    if (advapi)
 		FreeLibrary(advapi);
 	    return 1;
+	} else if (!strcmp(argv[i], "-confirm")) {
+	    confirm_any_request = 1;
 	} else if (!strcmp(argv[i], "-c")) {
 	    /*
 	     * If we see `-c', then the rest of the
@@ -2769,8 +2771,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     l10nAppendMenu(systray_menu, MF_ENABLED, IDM_VIEWKEYS,
 	   "&View Keys");
     l10nAppendMenu(systray_menu, MF_ENABLED, IDM_ADDKEY, "Add &Key");
-    confirm_any_request = 0;
-    l10nAppendMenu(systray_menu, MF_UNCHECKED, IDM_CONFIRM_REQUEST, "&Confirm Any Request");
+    l10nAppendMenu(systray_menu, confirm_any_request ? MF_CHECKED : MF_UNCHECKED, IDM_CONFIRM_REQUEST, "&Confirm Any Request");
     AppendMenu(systray_menu, MF_SEPARATOR, 0, 0);
     if (has_help())
 	l10nAppendMenu(systray_menu, MF_ENABLED, IDM_HELP, "&Help");
