@@ -80,6 +80,7 @@
 #ifndef WHEEL_DELTA
 #define WHEEL_DELTA 120
 #endif
+#define WHEEL_DELTA_PER_LINE (WHEEL_DELTA / 6)
 
 static Mouse_Button translate_button(Mouse_Button button);
 static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -3526,21 +3527,21 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	    }
 
 	    /* process events when the threshold is reached */
-	    while (abs(wheel_accumulator) >= WHEEL_DELTA) {
-		int b;
+	    if (send_raw_mouse &&
+		!(cfg.mouse_override && shift_pressed)) {
+		while (abs(wheel_accumulator) >= WHEEL_DELTA) {
+		    int b;
 
-		/* reduce amount for next time */
-		if (wheel_accumulator > 0) {
-		    b = MBT_WHEEL_UP;
-		    wheel_accumulator -= WHEEL_DELTA;
-		} else if (wheel_accumulator < 0) {
-		    b = MBT_WHEEL_DOWN;
-		    wheel_accumulator += WHEEL_DELTA;
-		} else
-		    break;
+		    /* reduce amount for next time */
+		    if (wheel_accumulator > 0) {
+			b = MBT_WHEEL_UP;
+			wheel_accumulator -= WHEEL_DELTA;
+		    } else if (wheel_accumulator < 0) {
+			b = MBT_WHEEL_DOWN;
+			wheel_accumulator += WHEEL_DELTA;
+		    } else
+			break;
 
-		if (send_raw_mouse &&
-		    !(cfg.mouse_override && shift_pressed)) {
 		    /* send a mouse-down followed by a mouse up */
 		    term_mouse(term, b, translate_button(b),
 			       MA_CLICK,
@@ -3551,11 +3552,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 			       MA_RELEASE, TO_CHR_X(X_POS(lParam)),
 			       TO_CHR_Y(Y_POS(lParam)), shift_pressed,
 			       control_pressed, is_alt_pressed());
-		} else {
+		}
+	    } else {
+		int count = wheel_accumulator / WHEEL_DELTA_PER_LINE;
+		if (count != 0) {
+		    wheel_accumulator -= count * WHEEL_DELTA_PER_LINE;
 		    /* trigger a scroll */
-		    term_scroll(term, 0,
-				b == MBT_WHEEL_UP ?
-				-term->rows / 2 : term->rows / 2);
+		    term_scroll(term, 0, -count);
 		}
 	    }
 	    return 0;
