@@ -1034,8 +1034,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 	char *str;
 
 	popup_menus[SYSMENU].menu = GetSystemMenu(hwnd, FALSE);
+	AppendMenu(popup_menus[SYSMENU].menu, MF_SEPARATOR, 0, 0);
 	popup_menus[CTXMENU].menu = CreatePopupMenu();
-	AppendMenu(popup_menus[CTXMENU].menu, MF_ENABLED, IDM_PASTE, "&Paste");
 
 	savedsess_menu = CreateMenu();
 	get_sesslist(&sesslist, TRUE);
@@ -1044,6 +1044,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 	for (j = 0; j < lenof(popup_menus); j++) {
 	    m = popup_menus[j].menu;
 
+	    AppendMenu(m, MF_ENABLED, IDM_PASTE, "&Paste");
 	    AppendMenu(m, MF_SEPARATOR, 0, 0);
 	    AppendMenu(m, MF_ENABLED, IDM_SHOWLOG, "&Event Log");
 	    AppendMenu(m, MF_SEPARATOR, 0, 0);
