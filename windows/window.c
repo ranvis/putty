@@ -161,6 +161,8 @@ struct agent_callback {
 
 /* > transparent background patch */
 static HBITMAP background_bmp = NULL;
+static LONG width_background = 0, height_background = 0;
+
 static void xtrans_paint_bg(HDC, int, int, int, int);
 static void (*xtrans_paint_background)(HDC, int, int, int, int) = xtrans_paint_bg;
 /* < */
@@ -243,17 +245,32 @@ void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height)
 {
     HDC memhdc;
     HBITMAP defbmp;
-    POINT point;
+	int xIndex = x, yIndex = y;
+	int w = 0, h = 0;
 
-    point.x = x;
-    point.y = y;
-    ClientToScreen(hwnd, &point);
-
-    memhdc = CreateCompatibleDC(hdc);
+	memhdc = CreateCompatibleDC(hdc);
     defbmp = SelectObject(memhdc, background_bmp);
 
-    BitBlt(hdc, x, y, width, height, memhdc, point.x, point.y, SRCCOPY);
-
+	w = width;
+	for( xIndex = x; xIndex < x + width; )
+	{
+		int offsetX = xIndex % width_background;
+		h = height;
+		for( yIndex = y; yIndex < y + height; )
+		{
+			int offsetY = yIndex % height_background;
+			BitBlt( hdc, 
+				xIndex, yIndex, 
+				( w < width_background - offsetX ) ? w : width_background - offsetX,
+				( h < height_background - offsetY ) ? h : height_background - offsetY,
+				memhdc,
+				offsetX, offsetY, SRCCOPY );
+			yIndex += height_background - offsetY;
+			h -= height_background - offsetY;
+		}
+		xIndex += width_background - offsetX;
+		w -= width_background - offsetX;
+	}
     SelectObject(memhdc, defbmp);
     DeleteDC(memhdc);
 }
@@ -330,11 +347,15 @@ void xtrans_set_background()
 void xtrans_set_bitmap()
 {
     if (cfg.bgimg_file.path[0] != '\0') {
+		BITMAP bitmap;
         if (background_bmp)
             xtrans_free_background();
         background_bmp = LoadImage(0, cfg.bgimg_file.path,
                                    IMAGE_BITMAP, 0, 0,
                                    LR_LOADFROMFILE | LR_DEFAULTSIZE);
+		GetObject( background_bmp, sizeof(BITMAP), &bitmap );
+		width_background = bitmap.bmWidth;
+		height_background = bitmap.bmHeight;
     }
 
     if (background_bmp == NULL) {
@@ -346,23 +367,18 @@ void xtrans_set_bitmap()
         HDC hdc, memhdc, memhdc_mask;
         HBITMAP bmp_mask, defbmp_mask, defbmp;
         BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, 0 };
-        int width, height;
-
         bf.SourceConstantAlpha = (BYTE) cfg.shading;
-
         hdc = GetDC(hwnd);
         memhdc = CreateCompatibleDC(hdc);
         memhdc_mask = CreateCompatibleDC(hdc);
         defbmp = SelectObject(memhdc, background_bmp);
-        width = GetDeviceCaps(memhdc, HORZRES);
-        height = GetDeviceCaps(memhdc, VERTRES);
-        bmp_mask = CreateCompatibleBitmap(hdc, width, height);
+        bmp_mask = CreateCompatibleBitmap(hdc, width_background, height_background);
         ReleaseDC(hwnd, hdc);
         defbmp_mask = SelectObject(memhdc_mask, bmp_mask);
 
-        xtrans_daub_with_bgcolor(memhdc_mask, width, height);
-        AlphaBlend(memhdc_mask, 0, 0, width, height,
-                   memhdc, 0, 0, width, height, bf);
+        xtrans_daub_with_bgcolor(memhdc_mask, width_background, height_background);
+        AlphaBlend(memhdc_mask, 0, 0, width_background, height_background,
+                   memhdc, 0, 0, width_background, height_background, bf);
 
         SelectObject(memhdc_mask, defbmp_mask);
         DeleteDC(memhdc_mask);
@@ -4087,7 +4103,7 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
             general_textout2(hdc, x + xoffset,
                             y - font_height * (lattr==LATTR_BOT) + text_adjust,
                             &line_box, wbuf, len, lpDx,
-                            opaque && !(attr & TATTR_COMBINING),
+                            opaque && !(attr & TATTR_COMBINING) && !(cfg.transparent_mode && (nbg == 258)),
             !!(attr & ATTR_WIDE), in_utf (term) && term->ucsdata->iso2022);
 
             /* And the shadow bold hack. */
