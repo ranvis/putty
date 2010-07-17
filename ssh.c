@@ -499,9 +499,15 @@ const static struct ssh_compress ssh_comp_none = {
     ssh_comp_none_init, ssh_comp_none_cleanup, ssh_comp_none_block,
     ssh_comp_none_disable, NULL
 };
+const static struct ssh_compress ssh_comp_zlib_delayed = {
+    "zlib@openssh.com",
+    ssh_comp_none_init, ssh_comp_none_cleanup, ssh_comp_none_block,
+    ssh_comp_none_init, ssh_comp_none_cleanup, ssh_comp_none_block,
+    ssh_comp_none_disable, NULL
+};
 extern const struct ssh_compress ssh_zlib;
 const static struct ssh_compress *compressions[] = {
-    &ssh_zlib, &ssh_comp_none
+    &ssh_zlib, &ssh_comp_zlib_delayed, &ssh_comp_none
 };
 
 enum {				       /* channel types */
@@ -655,6 +661,7 @@ static void ssh_pkt_getstring(struct Packet *pkt, char **p, int *length);
 static void ssh2_timer(void *ctx, long now);
 static int do_ssh2_transport(Ssh ssh, void *vin, int inlen,
 			     struct Packet *pktin);
+static void ssh2_start_delayed_compression(Ssh ssh);
 
 struct rdpkt1_state_tag {
     long len, pad, biglen, to_read;
@@ -5820,6 +5827,9 @@ static int do_ssh2_transport(Ssh ssh, void *vin, int inlen,
     ssh->sccomp = s->sccomp_tobe;
     ssh->sc_comp_ctx = ssh->sccomp->decompress_init();
 
+    if (ssh->state == SSH_STATE_SESSION)
+	ssh2_start_delayed_compression(ssh);
+
     /*
      * Set IVs on server-to-client keys. Here we use the exchange
      * hash from the _first_ key exchange.
@@ -6978,6 +6988,7 @@ static void do_ssh2_authconn(Ssh ssh, unsigned char *in, int inlen,
 	    if (pktin->type == SSH2_MSG_USERAUTH_SUCCESS) {
 		logevent("Access granted");
 		s->we_are_in = TRUE;
+		ssh2_start_delayed_compression(ssh);
 		break;
 	    }
 
@@ -8191,6 +8202,23 @@ static void do_ssh2_authconn(Ssh ssh, unsigned char *in, int inlen,
     }
 
     crFinishV;
+}
+
+/*
+ * Start delayed compression if necessary.
+ */
+static void ssh2_start_delayed_compression(Ssh ssh)
+{
+    if (ssh->cscomp == &ssh_comp_zlib_delayed) {
+	ssh->cscomp->compress_cleanup(ssh->cs_comp_ctx);
+	ssh->cscomp = &ssh_zlib;
+	ssh->cs_comp_ctx = ssh->cscomp->compress_init();
+    }
+    if (ssh->sccomp == &ssh_comp_zlib_delayed) {
+	ssh->sccomp->decompress_cleanup(ssh->sc_comp_ctx);
+	ssh->sccomp = &ssh_zlib;
+	ssh->sc_comp_ctx = ssh->sccomp->decompress_init();
+    }
 }
 
 /*
