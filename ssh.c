@@ -503,7 +503,8 @@ const static struct ssh_compress ssh_comp_zlib_delayed = {
     "zlib@openssh.com",
     ssh_comp_none_init, ssh_comp_none_cleanup, ssh_comp_none_block,
     ssh_comp_none_init, ssh_comp_none_cleanup, ssh_comp_none_block,
-    ssh_comp_none_disable, NULL
+    ssh_comp_none_disable,
+    "delayed zlib"
 };
 extern const struct ssh_compress ssh_zlib;
 const static struct ssh_compress *compressions[] = {
