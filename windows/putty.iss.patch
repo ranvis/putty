@@ -1,17 +1,17 @@
---- putty.iss.orig	2009-03-06 12:07:13.157208649 +0900
-+++ putty.iss	2009-04-07 17:35:42.114604696 +0900
+--- putty.iss.orig
++++ putty.iss
 @@ -13,22 +13,36 @@
  ;    UninstallDisplayIcon, though.
  
  [Setup]
 -AppName=PuTTY
--AppVerName=PuTTY version 0.61
--VersionInfoTextVersion=Release 0.61
+-AppVerName=PuTTY version 0.62
+-VersionInfoTextVersion=Release 0.62
 +AppName={cm:MyAppName}
 +AppVerName={cm:MyAppVerName}
 +VersionInfoTextVersion={cm:MyVersionInfo}
- AppVersion=0.61
- VersionInfoVersion=0.61.0.0
+ AppVersion=0.62
+ VersionInfoVersion=0.62.0.0
 -AppPublisher=Simon Tatham
 -AppPublisherURL=http://www.chiark.greenend.org.uk/~sgtatham/putty/
 -AppReadmeFile={app}\README.txt
@@ -30,7 +30,7 @@
  AllowNoIcons=yes
 +AppId=PuTTY
 +PrivilegesRequired=none
-+OutputBaseFilename=putty-0.61-JP_Y-setup
++OutputBaseFilename=putty-0.62-JP_Y-setup
 +
 +[Languages]
 +Name: "eng"; MessagesFile: "compiler:Default.isl,Default.isl"
@@ -60,8 +60,8 @@
 +Source: "putty.lng"; DestDir: "{app}"; Components: jpnlng
 +Source: "puttygen.lng"; DestDir: "{app}"; Components: jpnlng
 +Source: "puttytel.lng"; DestDir: "{app}"; Components: jpnlng
-+Source: "..\..\putty-doc\readme-putty-0.61-JP_Y.html"; DestDir: "{app}"; Flags: isreadme
-+Source: "..\..\putty-doc\putty-0.61-JP_Y.patch"; DestDir: "{app}"; Components: source
++Source: "..\..\putty-doc\readme-putty-0.62-JP_Y.html"; DestDir: "{app}"; Flags: isreadme
++Source: "..\..\putty-doc\putty-0.62-JP_Y.patch"; DestDir: "{app}"; Components: source
 +Source: "puttyd.ico"; DestDir: "{app}"; Components: source
  
  [Icons]

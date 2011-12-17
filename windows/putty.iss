@@ -16,8 +16,8 @@
 AppName={cm:MyAppName}
 AppVerName={cm:MyAppVerName}
 VersionInfoTextVersion={cm:MyVersionInfo}
-AppVersion=0.61
-VersionInfoVersion=0.61.0.0
+AppVersion=0.62
+VersionInfoVersion=0.62.0.0
 AppPublisher=Yebisuya Hompo
 AppPublisherURL=http://yebisuya.dip.jp/Software/PuTTY/
 AppReadmeFile={app}\readme-putty-0.59-JP_Y.html
@@ -31,7 +31,7 @@ Compression=zip/9
 AllowNoIcons=yes
 AppId=PuTTY
 PrivilegesRequired=none
-OutputBaseFilename=putty-0.61-JP_Y-setup
+OutputBaseFilename=putty-0.62-JP_Y-setup
 
 [Languages]
 Name: "eng"; MessagesFile: "compiler:Default.isl,Default.isl"
@@ -78,8 +78,8 @@ Source: "plinkw.lng"; DestDir: "{app}"; Components: jpnlng and plinkw
 Source: "putty.lng"; DestDir: "{app}"; Components: jpnlng
 Source: "puttygen.lng"; DestDir: "{app}"; Components: jpnlng
 Source: "puttytel.lng"; DestDir: "{app}"; Components: jpnlng
-Source: "..\..\putty-doc\readme-putty-0.61-JP_Y.html"; DestDir: "{app}"; Flags: isreadme
-Source: "..\..\putty-doc\putty-0.61-JP_Y.patch"; DestDir: "{app}"; Components: source
+Source: "..\..\putty-doc\readme-putty-0.62-JP_Y.html"; DestDir: "{app}"; Flags: isreadme
+Source: "..\..\putty-doc\putty-0.62-JP_Y.patch"; DestDir: "{app}"; Components: source
 Source: "puttyd.ico"; DestDir: "{app}"; Components: source
 
 [Icons]
