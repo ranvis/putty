@@ -344,18 +344,17 @@ void xtrans_set_background()
     ReleaseDC(hwnd, hdc);
 }
 
+static void xtrans_bitmap_changed(void);
+
 void xtrans_set_bitmap()
 {
     if (cfg.bgimg_file.path[0] != '\0') {
-		BITMAP bitmap;
         if (background_bmp)
             xtrans_free_background();
         background_bmp = LoadImage(0, cfg.bgimg_file.path,
                                    IMAGE_BITMAP, 0, 0,
                                    LR_LOADFROMFILE | LR_DEFAULTSIZE);
-		GetObject( background_bmp, sizeof(BITMAP), &bitmap );
-		width_background = bitmap.bmWidth;
-		height_background = bitmap.bmHeight;
+        xtrans_bitmap_changed();
     }
 
     if (background_bmp == NULL) {
@@ -390,6 +389,14 @@ void xtrans_set_bitmap()
     }
 }
 
+void xtrans_bitmap_changed(void)
+{
+    BITMAP bitmap;
+
+    GetObject( background_bmp, sizeof(BITMAP), &bitmap );
+    width_background = bitmap.bmWidth;
+    height_background = bitmap.bmHeight;
+}
 
 void xtrans_load_bitmap()
 {
@@ -400,6 +407,7 @@ void xtrans_load_bitmap()
     char *cp;
     int i;
 
+    xtrans_free_background();
     if (cfg.transparent_mode == 2 && cfg.bgimg_file.path[0] != '\0')
         return;
 
@@ -423,6 +431,7 @@ void xtrans_load_bitmap()
         xtrans_free_background();
     background_bmp = LoadImage(0, pass, IMAGE_BITMAP, 0, 0,
                                LR_LOADFROMFILE | LR_DEFAULTSIZE);
+    xtrans_bitmap_changed();
     cfg.transparent_mode = 2;
 
     cp += 5;
