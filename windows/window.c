@@ -4104,7 +4104,7 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
                             y - font_height * (lattr==LATTR_BOT) + text_adjust,
                             &line_box, wbuf, len, lpDx,
                             opaque && !(attr & TATTR_COMBINING) && !(cfg.transparent_mode && (nbg == 258)),
-            !!(attr & ATTR_WIDE), in_utf (term) && term->ucsdata->iso2022);
+                            !!(attr & ATTR_WIDE), in_utf (term) && term->ucsdata->iso2022);
 
             /* And the shadow bold hack. */
             if (bold_mode == BOLD_SHADOW && (attr & ATTR_BOLD)) {
