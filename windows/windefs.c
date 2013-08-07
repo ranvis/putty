@@ -6,13 +6,14 @@
 
 #include <commctrl.h>
 
-FontSpec platform_default_fontspec(const char *name)
+FontSpec *platform_default_fontspec(const char *name)
 {
-    FontSpec ret;
     if (!strcmp(name, "Font")) {
-	if (!get_l10n_setting("_DEFAULTFONTNAME_", ret.name, sizeof (ret.name)))
-            strcpy(ret.name, "Courier New");
-	ret.isbold = 0;
+	char fontname[128];
+	FontSpec *ret;
+	if (!get_l10n_setting("_DEFAULTFONTNAME_", fontname, sizeof fontname))
+            strcpy(fontname, "Courier New");
+	ret = fontspec_new(fontname, 0, 0, 0);
 #ifdef ANSI_CHARSET
         {
             int charset;
@@ -99,26 +100,24 @@ FontSpec platform_default_fontspec(const char *name)
 #endif // BALTIC_CHARSET
             else
                 charset = ANSI_CHARSET;
-	    ret.charset = charset;
+	    ret->charset = charset;
         }
 #else // ANSI_CHARSET
-	ret.charset = 0;
+	ret->charset = 0;
 #endif// ANSI_CHARSET
-	ret.height = 10;
+	ret->height = 10;
+	return ret;
     } else {
-	ret.name[0] = '\0';
+        return fontspec_new("", 0, 0, 0);
     }
-    return ret;
 }
 
-Filename platform_default_filename(const char *name)
+Filename *platform_default_filename(const char *name)
 {
-    Filename ret;
     if (!strcmp(name, "LogFileName"))
-	strcpy(ret.path, "putty.log");
+	return filename_from_str("putty.log");
     else
-	*ret.path = '\0';
-    return ret;
+	return filename_from_str("");
 }
 
 char *platform_default_s(const char *name)

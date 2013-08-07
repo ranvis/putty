@@ -1403,7 +1403,7 @@ init (struct iso2022struct *q)
 */
 
 int
-iso2022_init (struct iso2022_data *this, char *p, int mode)
+iso2022_init (struct iso2022_data *this, const char *p, int mode)
 {
   int i, f, j, k;
   int tmp_lockgr, tmp_mskanji, tmp_big5, tmp_win95flag, tmp_ssgr, tmp_utf8cjk;
@@ -1786,7 +1786,7 @@ iso2022_init (struct iso2022_data *this, char *p, int mode)
 }
 
 int
-iso2022_init_test (char *p)
+iso2022_init_test (const char *p)
 {
   return iso2022_init (NULL, p, 2);
 }
