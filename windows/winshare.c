@@ -229,6 +229,17 @@ int platform_ssh_share(const char *pi_name, Conf *conf,
     return SHARE_NONE;
 }
 
+int platform_ssh_share_ask(const char *name)
+{
+    /* blocking UI */
+    char *text = dupprintf("Permit sharing an existing SSH connection %s?", name);
+    int id = MessageBox(GetForegroundWindow(), text,
+	"SSH connection sharing",
+	MB_YESNO | MB_DEFBUTTON2 | MB_SETFOREGROUND | MB_TOPMOST | MB_SYSTEMMODAL);
+    free(text);
+    return id == IDYES;
+}
+
 void platform_ssh_share_cleanup(const char *name)
 {
 }

@@ -2178,6 +2178,10 @@ void setup_config_box(struct controlbox *b, int midsession,
 			  HELPCTX(ssh_share),
 			  conf_checkbox_handler,
 			  I(CONF_ssh_connection_sharing));
+	    ctrl_checkbox(s, "Ask on sharing", 'a',
+			  HELPCTX(ssh_share),
+			  conf_checkbox_handler,
+			  I(CONF_ssh_connection_sharing_ask));
 
             ctrl_text(s, "Permitted roles in a shared connection:",
                       HELPCTX(ssh_share));

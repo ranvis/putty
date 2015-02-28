@@ -382,6 +382,11 @@ int platform_ssh_share(const char *pi_name, Conf *conf,
     return SHARE_NONE;
 }
 
+int platform_ssh_share_ask(const char *name)
+{
+    return 1; /* unimplemented */
+}
+
 void platform_ssh_share_cleanup(const char *name)
 {
     char *dirname, *filename, *logtext;

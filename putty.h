@@ -939,6 +939,7 @@ void cleanup_exit(int);
     X(FILENAME, NONE, bgimg_file) \
 	/* < */ \
     X(FILENAME, NONE, iconfile) \
+    X(INT, NONE, ssh_connection_sharing_ask) \
 
 /* Now define the actual enum of option keywords using that macro. */
 #define CONF_ENUM_DEF(valtype, keytype, keyword) CONF_ ## keyword,

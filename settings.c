@@ -662,6 +662,7 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_filename( sesskey, "BackgroundImageFile", conf_get_filename(conf, CONF_bgimg_file));
     /* < */
     write_setting_i(sesskey, "ConnectionSharing", conf_get_int(conf, CONF_ssh_connection_sharing));
+    write_setting_i(sesskey, "ConnectionSharingAsk", conf_get_int(conf, CONF_ssh_connection_sharing_ask));
     write_setting_i(sesskey, "ConnectionSharingUpstream", conf_get_int(conf, CONF_ssh_connection_sharing_upstream));
     write_setting_i(sesskey, "ConnectionSharingDownstream", conf_get_int(conf, CONF_ssh_connection_sharing_downstream));
     wmap(sesskey, "SSHManualHostKeys", conf, CONF_ssh_manual_hostkeys, FALSE);
@@ -1028,6 +1029,7 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppfile(sesskey, "BackgroundImageFile", conf, CONF_bgimg_file);
     /* < */
     gppi(sesskey, "ConnectionSharing", 0, conf, CONF_ssh_connection_sharing);
+    gppi(sesskey, "ConnectionSharingAsk", 0, conf, CONF_ssh_connection_sharing_ask);
     gppi(sesskey, "ConnectionSharingUpstream", 1, conf, CONF_ssh_connection_sharing_upstream);
     gppi(sesskey, "ConnectionSharingDownstream", 1, conf, CONF_ssh_connection_sharing_downstream);
     gppmap(sesskey, "SSHManualHostKeys", conf, CONF_ssh_manual_hostkeys);
