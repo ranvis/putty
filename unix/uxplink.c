@@ -74,10 +74,6 @@ void nonfatal(char *p, ...)
     va_end(ap);
     fputc('\n', stderr);
     postmsg(&cf);
-    if (logctx) {
-        log_free(logctx);
-        logctx = NULL;
-    }
 }
 void connection_fatal(void *frontend, char *p, ...)
 {
@@ -208,7 +204,7 @@ static char *get_ttychar(struct termios *t, int index)
     cc_t c = t->c_cc[index];
 #if defined(_POSIX_VDISABLE)
     if (c == _POSIX_VDISABLE)
-	return dupprintf("");
+	return dupstr("");
 #endif
     return dupprintf("^<%d>", c);
 }
@@ -560,6 +556,8 @@ static void usage(void)
     printf("  -P port   connect to specified port\n");
     printf("  -l user   connect with specified username\n");
     printf("  -batch    disable all interactive prompts\n");
+    printf("  -sercfg configuration-string (e.g. 19200,8,n,1,X)\n");
+    printf("            Specify the serial configuration (serial only)\n");
     printf("The following options only apply to SSH connections:\n");
     printf("  -pw passw login with specified password\n");
     printf("  -D [listen-IP:]listen-port\n");
@@ -574,16 +572,16 @@ static void usage(void)
     printf("  -1 -2     force use of particular protocol version\n");
     printf("  -4 -6     force use of IPv4 or IPv6\n");
     printf("  -C        enable compression\n");
-    printf("  -i key    private key file for authentication\n");
+    printf("  -i key    private key file for user authentication\n");
     printf("  -noagent  disable use of Pageant\n");
     printf("  -agent    enable use of Pageant\n");
+    printf("  -hostkey aa:bb:cc:...\n");
+    printf("            manually specify a host key (may be repeated)\n");
     printf("  -m file   read remote command(s) from file\n");
     printf("  -s        remote command is an SSH subsystem (SSH-2 only)\n");
     printf("  -N        don't start a shell/command (SSH-2 only)\n");
     printf("  -nc host:port\n");
     printf("            open tunnel in place of session (SSH-2 only)\n");
-    printf("  -sercfg configuration-string (e.g. 19200,8,n,1,X)\n");
-    printf("            Specify the serial configuration (serial only)\n");
     exit(1);
 }
 
@@ -594,6 +592,9 @@ static void version(void)
 }
 
 void frontend_net_error_pending(void) {}
+
+const int share_can_be_downstream = TRUE;
+const int share_can_be_upstream = TRUE;
 
 int main(int argc, char **argv)
 {
@@ -706,8 +707,7 @@ int main(int argc, char **argv)
 			q += 2;
 		    conf_set_int(conf, CONF_protocol, PROT_TELNET);
 		    p = q;
-		    while (*p && *p != ':' && *p != '/')
-			p++;
+                    p += host_strcspn(p, ":/");
 		    c = *p;
 		    if (*p)
 			*p++ = '\0';
@@ -845,10 +845,21 @@ int main(int argc, char **argv)
 	    }
 	}
 
-	/*
-	 * Trim off a colon suffix if it's there.
-	 */
-	host[strcspn(host, ":")] = '\0';
+        /*
+         * Trim a colon suffix off the hostname if it's there. In
+         * order to protect unbracketed IPv6 address literals
+         * against this treatment, we do not do this if there's
+         * _more_ than one colon.
+         */
+        {
+            char *c = host_strchr(host, ':');
+ 
+            if (c) {
+                char *d = host_strchr(c+1, ':');
+                if (!d)
+                    *c = '\0';
+            }
+        }
 
 	/*
 	 * Remove any remaining whitespace.
@@ -979,6 +990,7 @@ int main(int argc, char **argv)
 	int maxfd;
 	int rwx;
 	int ret;
+        unsigned long next;
 
 	FD_ZERO(&rset);
 	FD_ZERO(&wset);
@@ -1032,12 +1044,17 @@ int main(int argc, char **argv)
 		FD_SET_MAX(fd, maxfd, xset);
 	}
 
-	do {
-	    unsigned long next, then;
-	    long ticks;
-	    struct timeval tv, *ptv;
+        if (toplevel_callback_pending()) {
+            struct timeval tv;
+            tv.tv_sec = 0;
+            tv.tv_usec = 0;
+            ret = select(maxfd, &rset, &wset, &xset, &tv);
+        } else if (run_timers(now, &next)) {
+            do {
+                unsigned long then;
+                long ticks;
+                struct timeval tv;
 
-	    if (run_timers(now, &next)) {
 		then = now;
 		now = GETTICKCOUNT();
 		if (now - then > next - then)
@@ -1046,16 +1063,15 @@ int main(int argc, char **argv)
 		    ticks = next - now;
 		tv.tv_sec = ticks / 1000;
 		tv.tv_usec = ticks % 1000 * 1000;
-		ptv = &tv;
-	    } else {
-		ptv = NULL;
-	    }
-	    ret = select(maxfd, &rset, &wset, &xset, ptv);
-	    if (ret == 0)
-		now = next;
-	    else
-		now = GETTICKCOUNT();
-	} while (ret < 0 && errno == EINTR);
+                ret = select(maxfd, &rset, &wset, &xset, &tv);
+                if (ret == 0)
+                    now = next;
+                else
+                    now = GETTICKCOUNT();
+            } while (ret < 0 && errno == EINTR);
+        } else {
+            ret = select(maxfd, &rset, &wset, &xset, NULL);
+        }
 
 	if (ret < 0) {
 	    perror("select");
@@ -1116,7 +1132,7 @@ int main(int argc, char **argv)
 	    back->unthrottle(backhandle, try_output(TRUE));
 	}
 
-        net_pending_errors();
+        run_toplevel_callbacks();
 
 	if ((!connopen || !back->connected(backhandle)) &&
 	    bufchain_size(&stdout_data) == 0 &&

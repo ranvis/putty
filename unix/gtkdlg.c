@@ -2276,15 +2276,22 @@ GtkWidget *layout_ctrls(struct dlgparam *dp, struct Shortcuts *scs,
 		    cols = cols ? cols : 1;
 		    for (i = 0; i < cols; i++) {
 			GtkTreeViewColumn *column;
+                        GtkCellRenderer *cellrend;
 			/*
 			 * It appears that GTK 2 doesn't leave us any
 			 * particularly sensible way to honour the
 			 * "percentages" specification in the ctrl
 			 * structure.
 			 */
+                        cellrend = gtk_cell_renderer_text_new();
+                        if (!ctrl->listbox.hscroll) {
+                            gtk_object_set(GTK_OBJECT(cellrend),
+                                           "ellipsize", PANGO_ELLIPSIZE_END,
+                                           "ellipsize-set", TRUE,
+                                           NULL);
+                        }
 			column = gtk_tree_view_column_new_with_attributes
-			    ("heading", gtk_cell_renderer_text_new(),
-			     "text", i+1, (char *)NULL);
+			    ("heading", cellrend, "text", i+1, (char *)NULL);
 			gtk_tree_view_column_set_sizing
 			    (column, GTK_TREE_VIEW_COLUMN_GROW_ONLY);
 			gtk_tree_view_append_column(GTK_TREE_VIEW(w), column);
@@ -3415,7 +3422,7 @@ void nonfatal(char *p, ...)
     va_start(ap, p);
     msg = dupvprintf(p, ap);
     va_end(ap);
-    fatal_message_box(NULL, msg);
+    nonfatal_message_box(NULL, msg);
     sfree(msg);
 }
 
@@ -3432,7 +3439,7 @@ static void licence_clicked(GtkButton *button, gpointer data)
     char *title;
 
     char *licence =
-	"Copyright 1997-2013 Simon Tatham.\n\n"
+	"Copyright 1997-2014 Simon Tatham.\n\n"
 
 	"Portions copyright Robert de Bath, Joris van Rantwijk, Delian "
 	"Delchev, Andreas Schultz, Jeroen Massar, Wez Furlong, Nicolas "
@@ -3513,7 +3520,7 @@ void about_box(void *window)
 		       w, FALSE, FALSE, 5);
     gtk_widget_show(w);
 
-    w = gtk_label_new("Copyright 1997-2013 Simon Tatham. All rights reserved");
+    w = gtk_label_new("Copyright 1997-2014 Simon Tatham. All rights reserved");
     gtk_box_pack_start(GTK_BOX(GTK_DIALOG(aboutbox)->vbox),
 		       w, FALSE, FALSE, 5);
     gtk_widget_show(w);
