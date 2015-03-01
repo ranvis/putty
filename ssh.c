@@ -2960,11 +2960,13 @@ static int do_ssh_init(Ssh ssh, unsigned char c)
     s->proto2 = ssh_versioncmp(s->version, "1.99") >= 0;
 
     if (conf_get_int(ssh->conf, CONF_sshprot) == 0 && !s->proto1) {
-	bombout(("SSH protocol version 1 required by user but not provided by server"));
+	bombout(("SSH protocol version 1 required by configuration but "
+		 "not provided by server"));
 	crStop(0);
     }
     if (conf_get_int(ssh->conf, CONF_sshprot) == 3 && !s->proto2) {
-	bombout(("SSH protocol version 2 required by user but not provided by server"));
+	bombout(("SSH protocol version 2 required by configuration but "
+		 "not provided by server"));
 	crStop(0);
     }
 
@@ -3283,6 +3285,14 @@ static int ssh_do_close(Ssh ssh, int notify_exit)
 	}
 	freetree234(ssh->portfwds);
 	ssh->portfwds = NULL;
+    }
+
+    /*
+     * Also stop attempting to connection-share.
+     */
+    if (ssh->connshare) {
+        sharestate_free(ssh->connshare);
+        ssh->connshare = NULL;
     }
 
     return ret;
@@ -3857,6 +3867,7 @@ static int do_ssh1_login(Ssh ssh, unsigned char *in, int inlen,
         s->dlgret = verify_ssh_manual_host_key(ssh, fingerprint, NULL, NULL);
         if (s->dlgret == 0) {          /* did not match */
             bombout(("Host key did not appear in manually configured list"));
+            sfree(keystr);
             crStop(0);
         } else if (s->dlgret < 0) { /* none configured; use standard handling */
             ssh_set_frozen(ssh, 1);
@@ -3883,6 +3894,8 @@ static int do_ssh1_login(Ssh ssh, unsigned char *in, int inlen,
                                NULL, 0, TRUE);
                 crStop(0);
             }
+        } else {
+            sfree(keystr);
         }
     }
 
@@ -6632,6 +6645,13 @@ static void do_ssh2_transport(Ssh ssh, void *vin, int inlen,
         }
         ssh_pkt_getstring(pktin, &s->sigdata, &s->siglen);
 
+        {
+            const char *err = dh_validate_f(ssh->kex_ctx, s->f);
+            if (err) {
+                bombout(("key exchange reply failed validation: %s", err));
+                crStopV;
+            }
+        }
         s->K = dh_find_K(ssh->kex_ctx, s->f);
 
         /* We assume everything from now on will be quick, and it might
@@ -10585,6 +10605,8 @@ static const char *ssh_init(void *frontend_handle, void **backend_handle,
     ssh->sent_console_eof = FALSE;
     ssh->got_pty = FALSE;
     ssh->bare_connection = FALSE;
+    ssh->X11_fwd_enabled = FALSE;
+    ssh->connshare = NULL;
     ssh->attempting_connshare = FALSE;
 
     *backend_handle = ssh;
@@ -11239,13 +11261,19 @@ static int ssh_return_exitcode(void *handle)
 }
 
 /*
- * cfg_info for SSH is the currently running version of the
- * protocol. (1 for 1; 2 for 2; 0 for not-decided-yet.)
+ * cfg_info for SSH is the protocol running in this session.
+ * (1 or 2 for the full SSH-1 or SSH-2 protocol; -1 for the bare
+ * SSH-2 connection protocol, i.e. a downstream; 0 for not-decided-yet.)
  */
 static int ssh_cfg_info(void *handle)
 {
     Ssh ssh = (Ssh) handle;
-    return ssh->version;
+    if (ssh->version == 0)
+	return 0; /* don't know yet */
+    else if (ssh->bare_connection)
+	return -1;
+    else
+	return ssh->version;
 }
 
 /*

@@ -858,6 +858,7 @@ static void share_try_cleanup(struct ssh_sharing_connstate *cs)
                                             SSH2_MSG_GLOBAL_REQUEST,
                                             packet, pos, "cleanup after"
                                             " downstream went away");
+            sfree(packet);
 
             share_remove_forwarding(cs, fwd);
             i--;    /* don't accidentally skip one as a result */
@@ -1595,6 +1596,9 @@ static void share_got_pkt_from_downstream(struct ssh_sharing_connstate *cs,
                 !ssh_agent_forwarding_permitted(cs->parent->ssh)) {
                 unsigned server_id = GET_32BIT(pkt);
                 unsigned char recipient_id[4];
+
+                sfree(request_name);
+
                 chan = share_find_channel_by_server(cs, server_id);
                 if (chan) {
                     PUT_32BIT(recipient_id, chan->downstream_id);
@@ -1626,6 +1630,8 @@ static void share_got_pkt_from_downstream(struct ssh_sharing_connstate *cs,
                 int auth_proto, protolen, datalen;
                 int pos;
 
+                sfree(request_name);
+
                 chan = share_find_channel_by_server(cs, server_id);
                 if (!chan) {
                     char *buf = dupprintf("X11 forwarding request for "
@@ -1647,16 +1653,19 @@ static void share_got_pkt_from_downstream(struct ssh_sharing_connstate *cs,
                 want_reply = pkt[15] != 0;
                 single_connection = pkt[16] != 0;
                 auth_proto_str = getstring(pkt+17, pktlen-17);
+                auth_proto = x11_identify_auth_proto(auth_proto_str);
+                sfree(auth_proto_str);
                 pos = 17 + getstring_size(pkt+17, pktlen-17);
                 auth_data = getstring(pkt+pos, pktlen-pos);
                 pos += getstring_size(pkt+pos, pktlen-pos);
+
                 if (pktlen < pos+4) {
                     err = dupprintf("Truncated CHANNEL_REQUEST(\"x11\") packet");
+                    sfree(auth_data);
                     goto confused;
                 }
                 screen = GET_32BIT(pkt+pos);
 
-                auth_proto = x11_identify_auth_proto(auth_proto_str);
                 if (auth_proto < 0) {
                     /* Reject due to not understanding downstream's
                      * requested authorisation method. */
@@ -1664,11 +1673,14 @@ static void share_got_pkt_from_downstream(struct ssh_sharing_connstate *cs,
                     PUT_32BIT(recipient_id, chan->downstream_id);
                     send_packet_to_downstream(cs, SSH2_MSG_CHANNEL_FAILURE,
                                               recipient_id, 4, NULL);
+                    sfree(auth_data);
+                    break;
                 }
 
                 chan->x11_auth_proto = auth_proto;
                 chan->x11_auth_data = x11_dehexify(auth_data,
                                                    &chan->x11_auth_datalen);
+                sfree(auth_data);
                 chan->x11_auth_upstream =
                     ssh_sharing_add_x11_display(cs->parent->ssh, auth_proto,
                                                 cs, chan);
@@ -1701,6 +1713,8 @@ static void share_got_pkt_from_downstream(struct ssh_sharing_connstate *cs,
 
                 break;
             }
+
+            sfree(request_name);
         }
 
         ssh_send_packet_from_downstream(cs->parent->ssh, cs->id,
@@ -2106,7 +2120,7 @@ Socket ssh_connection_sharing_init(const char *host, int port,
         sharestate->connections = newtree234(share_connstate_cmp);
         sharestate->ssh = ssh;
         sharestate->server_verstring = NULL;
-        sharestate->sockname = dupstr(sockname);
+        sharestate->sockname = sockname;
         sharestate->nextid = 1;
         return NULL;
     }

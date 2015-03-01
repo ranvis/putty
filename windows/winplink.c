@@ -172,7 +172,7 @@ void agent_schedule_callback(void (*callback)(void *, void *, int),
  */
 static void usage(void)
 {
-    printf("PuTTY Link: command-line connection utility\n");
+    printf("Plink: command-line connection utility\n");
     printf("%s\n", ver);
     printf("Usage: plink [options] [user@]host [command]\n");
     printf("       (\"host\" can also be a PuTTY saved session name)\n");
@@ -679,6 +679,7 @@ int main(int argc, char **argv)
 
         if (toplevel_callback_pending()) {
             ticks = 0;
+            next = now;
         } else if (run_timers(now, &next)) {
 	    then = now;
 	    now = GETTICKCOUNT();
@@ -688,6 +689,8 @@ int main(int argc, char **argv)
 		ticks = next - now;
 	} else {
 	    ticks = INFINITE;
+            /* no need to initialise next here because we can never
+             * get WAIT_TIMEOUT */
 	}
 
 	handles = handle_get_events(&nhandles);

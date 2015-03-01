@@ -15,11 +15,11 @@
 AppName={cm:MyAppName}
 AppVerName={cm:MyAppVerName}
 VersionInfoTextVersion={cm:MyVersionInfo}
-AppVersion=0.63
-VersionInfoVersion=0.63.0.0
-AppPublisher=Yebisuya Hompo
-AppPublisherURL=http://yebisuya.dip.jp/Software/PuTTY/
-AppReadmeFile={app}\readme-putty-0.59-JP_Y.html
+AppVersion=0.64
+VersionInfoVersion=0.64.0.0
+AppPublisher=Simon Tatham
+AppPublisherURL=http://www.chiark.greenend.org.uk/~sgtatham/putty/
+AppReadmeFile={app}\README.txt
 DefaultDirName={code:DefaultBaseDir}\PuTTY
 DefaultGroupName={cm:MyAppName}
 SetupIconFile=puttyins.ico
