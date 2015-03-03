@@ -238,7 +238,7 @@ int platform_ssh_share_ask(const char *name)
     int id = MessageBox(GetForegroundWindow(), text,
 	"SSH connection sharing",
 	MB_YESNO | MB_DEFBUTTON2 | MB_SETFOREGROUND | MB_TOPMOST | MB_SYSTEMMODAL);
-    free(text);
+    sfree(text);
     return id == IDYES;
 }
 
