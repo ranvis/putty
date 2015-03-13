@@ -1,10 +1,154 @@
-#include <winsock2.h>
-#include <windows.h>
 #include <string.h>
 #include "putty.h"
 #include "iso2022.h"
 
+#define strlenu(s) strlen ((char *)s)
+
 int iso2022_win95flag;
+
+#ifdef _WINDOWS
+#define UCS2CHAR WCHAR
+
+static int
+get_win95flag (void)
+{
+  OSVERSIONINFO ovi;
+
+  ovi.dwOSVersionInfoSize = sizeof ovi;
+  GetVersionEx (&ovi);
+  return ovi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS;
+}
+
+static int
+wchar_to_utf8 (UCS2CHAR *src, unsigned char *dest, int destlen, BOOL *err)
+{
+  return WideCharToMultiByte (CP_UTF8, 0, src, -1, (char *)dest, destlen, 0,
+			      err);
+}
+
+static int
+wchar_to_cp932 (UCS2CHAR *src, unsigned char *dest, int destlen, BOOL *err)
+{
+  return WideCharToMultiByte (932, 0, src, -1, (char *)dest, destlen, 0, err);
+}
+
+static int
+wchar_to_cp950 (UCS2CHAR *src, unsigned char *dest, int destlen, BOOL *err)
+{
+  return WideCharToMultiByte (950, 0, src, -1, (char *)dest, destlen, 0, err);
+}
+
+static void
+utf8_to_wchar (unsigned char *src, UCS2CHAR *dest, int destlen)
+{
+  MultiByteToWideChar (CP_UTF8, 0, (char *)src, -1, dest, destlen);
+}
+
+static void
+cp932_to_wchar (unsigned char *src, UCS2CHAR *dest, int destlen)
+{
+  MultiByteToWideChar (932, 0, (char *)src, -1, dest, destlen);
+}
+
+static void
+cp950_to_wchar (unsigned char *src, UCS2CHAR *dest, int destlen)
+{
+  MultiByteToWideChar (950, 0, (char *)src, -1, dest, destlen);
+}
+#else
+#include <iconv.h>
+#include <stdlib.h>
+#define BOOL int
+#define UCS2CHAR uint16_t
+
+static int
+get_win95flag (void)
+{
+  return 0;
+}
+
+static int
+call_iconv (const char *fromcode, char *src, size_t srclen,
+	    const char *tocode, char *dest, int destlen, int to_w, BOOL *err)
+{
+  iconv_t cd;
+  size_t outbytesleft;
+
+  outbytesleft = destlen - 1;
+  if (to_w)
+    outbytesleft--;
+  cd = iconv_open (tocode, fromcode);
+  if (cd == (iconv_t)-1)
+    {
+      char msg[100];
+
+      snprintf (msg, 100, "iconv_open (\"%s\", \"%s\")", tocode, fromcode);
+      perror (msg);
+      exit (1);
+    }
+  if (err)
+    *err = 0;
+  if (iconv (cd, &src, &srclen, &dest, &outbytesleft) == -1 && err)
+    *err = 1;
+  iconv_close (cd);
+  *dest++ = 0;
+  if (to_w)
+    *dest++ = 0;
+  return destlen - outbytesleft;
+}
+
+static int
+wchar_to_utf8 (UCS2CHAR *src, unsigned char *dest, int destlen, BOOL *err)
+{
+  size_t srclen;
+
+  for (srclen = 0; src[srclen] != 0; srclen++);
+  return call_iconv ("UCS-2LE", (char *)src, srclen * 2,
+		     "UTF-8", (char *)dest, destlen, 0, err);
+}
+
+static int
+wchar_to_cp932 (UCS2CHAR *src, unsigned char *dest, int destlen, BOOL *err)
+{
+  size_t srclen;
+
+  for (srclen = 0; src[srclen] != 0; srclen++);
+  return call_iconv ("UCS-2LE", (char *)src, srclen * 2,
+		     "MS_KANJI", (char *)dest, destlen, 0, err);
+}
+
+static int
+wchar_to_cp950 (UCS2CHAR *src, unsigned char *dest, int destlen, BOOL *err)
+{
+  size_t srclen;
+
+  for (srclen = 0; src[srclen] != 0; srclen++);
+  return call_iconv ("UCS-2LE", (char *)src, srclen * 2,
+		     "CP950", (char *)dest, destlen, 0, err);
+}
+
+static void
+utf8_to_wchar (unsigned char *src, UCS2CHAR *dest, int destlen)
+{
+  call_iconv ("UTF-8", (char *)src, strlen ((char *)src),
+	      "UCS-2LE", (char *)dest, destlen * 2, 1, NULL);
+}
+
+static void
+cp932_to_wchar (unsigned char *src, UCS2CHAR *dest, int destlen)
+{
+  /* "MS_KANJI" is better than "CP932" for avoiding mojibake. */
+  call_iconv ("MS_KANJI", (char *)src, strlen ((char *)src),
+	      "UCS-2LE", (char *)dest, destlen * 2, 1, NULL);
+}
+
+static void
+cp950_to_wchar (unsigned char *src, UCS2CHAR *dest, int destlen)
+{
+  call_iconv ("CP950", (char *)src, strlen ((char *)src),
+	      "UCS-2LE", (char *)dest, destlen * 2, 1, NULL);
+}
+#endif
 
 static int
 buflen (struct iso2022struct *p)
@@ -63,11 +207,29 @@ iso2022_tgetbuf (struct iso2022_data *this)
 int
 iso2022_width (struct iso2022_data *this, wchar_t c)
 {
+  int width;
+
+  width = iso2022_width_sub (this, c);
+  switch (width)
+    {
+    case -1:
+      return mk_wcwidth_cjk (c);
+    case -2:
+      return mk_wcwidth (c);
+    default:
+      return width;
+    }
+}
+
+int
+iso2022_width_sub (struct iso2022_data *this, wchar_t c)
+{
   if (this->rcv.width == 0)
     {
-      if (this->rcv.gr->type == UTF8CJK) return mk_wcwidth_cjk (c);
-      /* else if (this->rcv.gr->type == UTF8CJKL) return this->rcv.width == 1 ? mk_wcwidth_cjk (c) : mk_wcwidth (c); */
-      else if (this->rcv.gr->type == UTF8NONCJK) return mk_wcwidth (c);
+      if (this->rcv.gr->type == UTF8CJK)
+	return -1;
+      else if (this->rcv.gr->type == UTF8NONCJK)
+	return -2;
       return 1;			/* This shouldn't happen */
     }
   else
@@ -206,8 +368,7 @@ setg_94_1 (struct iso2022struct *q, struct g *p)
 static void
 translate (struct iso2022struct *q, struct g *p)
 {
-  WCHAR buf2[100];
-  int i;
+  UCS2CHAR buf2[100];
 
   q->buflen = 0;
   q->width = p->len;
@@ -216,8 +377,7 @@ translate (struct iso2022struct *q, struct g *p)
     case US_ASCII:
       buf2[0] = q->buf[0] & 0x7f;
       buf2[1] = 0;
-      q->buflen = WideCharToMultiByte
-	(CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0);
+      q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL);
       if (q->buflen)
 	q->buflen--;
       break;
@@ -226,8 +386,7 @@ translate (struct iso2022struct *q, struct g *p)
       buf2[1] = 0;
       if (buf2[0] == 0x5c) buf2[0] = 0xa5;
       if (buf2[0] == 0x7e) buf2[0] = 0x203e;
-      q->buflen =
-	WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0);
+      q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL);
       if (q->buflen)
 	q->buflen--;
       break;
@@ -235,13 +394,12 @@ translate (struct iso2022struct *q, struct g *p)
       buf2[0] = q->buf[0] & 0x7f;
       buf2[0] += 0xff40;
       buf2[1] = 0;
-      q->buflen =
-	WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0);
+      q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL);
       if (q->buflen)
 	q->buflen--;
       break;
 #define A(a) q->buf[0] &= 0x7f; buf2[0] = q->buf[0] >= 0x20 ? a[q->buf[0] - 0x20] : 0; buf2[1] = 0; \
-q->buflen = WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0); \
+q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL); \
 if (q->buflen) q->buflen--;
     case ISO8859_1: A(iso_8859_1); break;
     case ISO8859_2: A(iso_8859_2); break;
@@ -274,21 +432,22 @@ if (q->buflen) q->buflen--;
       q->buf[0] &= 0x7f; buf2[0] = q->buf[0] >= 0x20 ? q->buf[0] : 0;
       if (q->buf[0] >= 0x60 && q->buf[0] <= 0x7f)
         buf2[0] = unitab_xterm_std[q->buf[0] - 0x60];
-      q->buflen = WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0);
+      q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL);
       if (q->buflen) q->buflen--;
       break;
 #undef A
 #define A(a) q->buf[0] &= 0x7f;q->buf[1] &= 0x7f;q->buflen = 0; \
 if (q->buf[0] >= 0x21 && q->buf[0] <= 0x7e && q->buf[1] >= 0x21 && q->buf[1] <= 0x7e) \
 {buf2[0] = a[q->buf[0] - 0x21][q->buf[1] - 0x21];buf2[1] = 0; \
-q->buflen = WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0); \
+q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL); \
 if (q->buflen)q->buflen--;}
+/* This is a workaround for wave dash problem */
 #define B(a) if((q->buf[0]&0x7f)>=0x30){A(a);}else{ \
 q->buf[0]&=0x7f;q->buf[1]&=0x7f;q->buf[2]=q->buf[0]-0x21; \
 q->buf[3]=q->buf[1]-0x21+((q->buf[2]%2)?94:0)+64; \
 q->buf[0]=q->buf[2]/2+129;q->buf[1]=q->buf[3]+((q->buf[3]>=0x7f)?1:0); \
-q->buf[2]=0;MultiByteToWideChar(932,0,q->buf,-1,buf2,100); \
-q->buflen = WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0); \
+q->buf[2]=0; cp932_to_wchar (q->buf, buf2, 100); \
+q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL); \
 if (q->buflen)q->buflen--;}
     case JISC6226_1978: B(jisc6226_1978); break;
     case JISX0208_1983: B(jisx0208_1983); break;
@@ -311,16 +470,14 @@ if (q->buflen)q->buflen--;}
     case MS_KANJI:
       q->width = (q->buf[0] >= 160 && q->buf[0] < 224) ? 1 : 2;
       q->buf[q->width] = 0;
-      MultiByteToWideChar (932, 0, q->buf, -1, buf2, 100);
-      q->buflen =
-	WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0);
+      cp932_to_wchar (q->buf, buf2, 100);
+      q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL);
       break;
     case BIG5:
       q->width = 2;
       q->buf[q->width] = 0;
-      MultiByteToWideChar (950, 0, q->buf, -1, buf2, 100);
-      q->buflen =
-	WideCharToMultiByte (CP_UTF8, 0, buf2, -1, q->buf, 100, 0, 0);
+      cp950_to_wchar (q->buf, buf2, 100);
+      q->buflen = wchar_to_utf8 (buf2, q->buf, 100, NULL);
       break;
     case UTF8CJK:
     case UTF8NONCJK:
@@ -330,25 +487,10 @@ if (q->buflen)q->buflen--;}
     }
   if (!q->buflen)
     {
-      int j;
-
-      for (i = j = 0; i < p->len && i < 2; i++)
-	{
-#if 0
-	  buf2[0] = 0xd900 | 'a'; /* UCSERR */
-	  q->buf[j + 3] = 0;
-	  q->buf[j + 2] = 0x80 | (buf2[0] & 0x3f), buf2[0] >>= 6;
-	  q->buf[j + 1] = 0x80 | (buf2[0] & 0x3f), buf2[0] >>= 6;
-	  q->buf[j + 0] = 0xe0 | (buf2[0] & 0xf);
-	  j += 4;
-#else
-	  q->buf[j] = '?';
-	  j++;
-#endif
-	}
-      q->buf[j] = 0;
-      q->buflen = j;
-      q->width = 1;
+      q->buf[0] = '?';
+      q->buf[1] = 0;
+      q->buflen = 1;
+      q->width = p->len;
     }
   q->bufoff = 0;
   if (q->ssl)
@@ -356,7 +498,7 @@ if (q->buflen)q->buflen--;}
 }
 
 static int
-try0 (struct g *p, WCHAR buf2, unsigned char *buf)
+try0 (struct g *p, UCS2CHAR buf2, unsigned char *buf)
 {
   int i, j;
 
@@ -409,8 +551,8 @@ buf[0]=i+32;buf[1]=0;return 1;
 #undef A
 #define A(a) for(j=94,i=0;i<94&&j==94;i++)for(j=0;j<94;j++)if(a[i][j]==buf2)break; \
 if(j!=94){buf[0]=i+0x20;buf[1]=j+0x21;buf[2]=0;return 1;}
-#define B {WCHAR a[]={buf2,0};BOOL b; \
- WideCharToMultiByte(932,0,a,-1,buf,5,0,&b); \
+#define B {UCS2CHAR a[]={buf2,0};BOOL b; \
+ wchar_to_cp932 (a, buf, 5, &b); \
  if (buf[0]<129||buf[0]>=0xf0||(buf[0]>=160&&buf[0]<224))return 0; \
  if(!b){if(buf[0]>=224)buf[0]-=224-160;buf[0]-=129;if(buf[1]>=0x7f)buf[1]--; \
  buf[1]-=64;buf[0]=buf[0]*2+(buf[1]>=94);if(buf[1]>=94)buf[1]-=94;buf[2]=0; \
@@ -434,20 +576,20 @@ if(j!=94){buf[0]=i+0x20;buf[1]=j+0x21;buf[2]=0;return 1;}
     case KSC5601_1987: A(ksc5601_1987); break;
     case MS_KANJI:
       {
-	WCHAR a[] = { buf2, 0 };
+	UCS2CHAR a[] = { buf2, 0 };
 	BOOL b;
 
-	WideCharToMultiByte (932, 0, a, -1, buf, 5, 0, &b);
+	wchar_to_cp932 (a, buf, 5, &b);
 	if (!b)
 	  return 1;
       }
       break;
     case BIG5:
       {
-	WCHAR a[] = { buf2, 0 };
+	UCS2CHAR a[] = { buf2, 0 };
 	BOOL b;
 
-	WideCharToMultiByte (950, 0, a, -1, buf, 5, 0, &b);
+	wchar_to_cp950 (a, buf, 5, &b);
 	if (!b)
 	  return 1;
       }
@@ -710,21 +852,17 @@ put (struct iso2022struct *q, unsigned char c)
       q->esc = 1;
       goto pass;
     pass:			/* pass through the buffer */
-      /* if (q->gr->type == UTF8CJKL && q->width == 2 && q->buf[0] == 0x0a)
-	q->width = 1; */
       q->buf[q->buflen = q->bufoff] = 0;
       q->bufoff = 0;
       break;
     cont:		       /* parse after the next byte arrived */
       break;
     clear:			/* clear the buffer */
-      /* if (q->gr->type == UTF8CJKL)
-	q->width = 2; */
       q->bufoff = 0;
       break;
     err:			/* broken input */
-      q->ins = "??";
-      q->insw = "\1\1";
+      q->ins = (unsigned char *)"??";
+      q->insw = (unsigned char *)"\1\1";
       q->inslen = (err_width > 2) ? 2 : err_width;
       if (q->bufoff >= 2)
 	{
@@ -745,7 +883,7 @@ put (struct iso2022struct *q, unsigned char c)
 }
 
 static int
-try1 (struct iso2022struct *q, WCHAR buf2, unsigned char *p,
+try1 (struct iso2022struct *q, UCS2CHAR buf2, unsigned char *p,
       unsigned char *designate, unsigned char *invoke,
       unsigned char *beforec0, int bits)
 {
@@ -766,7 +904,7 @@ try1 (struct iso2022struct *q, WCHAR buf2, unsigned char *p,
 }
 
 static int
-try2 (struct iso2022struct *q, WCHAR buf2, unsigned char *p,
+try2 (struct iso2022struct *q, UCS2CHAR buf2, unsigned char *p,
       unsigned char *designate, unsigned char *invoke,
       unsigned char *beforec0, int bits)
 {
@@ -800,7 +938,7 @@ try2 (struct iso2022struct *q, WCHAR buf2, unsigned char *p,
 }
 
 static int
-try3 (struct iso2022struct *q, WCHAR buf2, unsigned char *p,
+try3 (struct iso2022struct *q, UCS2CHAR buf2, unsigned char *p,
       unsigned char *designate, unsigned char *invoke,
       unsigned char *beforec0, int bits)
 {
@@ -834,7 +972,7 @@ try3 (struct iso2022struct *q, WCHAR buf2, unsigned char *p,
 }
 
 static int
-try4 (struct iso2022struct *q, WCHAR buf2, unsigned char *p,
+try4 (struct iso2022struct *q, UCS2CHAR buf2, unsigned char *p,
       unsigned char *designate, unsigned char *invoke,
       unsigned char *beforec0, int bits)
 {
@@ -877,30 +1015,30 @@ transmit (struct iso2022_data *this, struct iso2022struct *q, unsigned char c)
       (q->bufoff == 5 && (q->buf[0] & 0xfc) == 0xf8) ||
       (q->bufoff == 6 && (q->buf[0] & 0xfe) == 0xfc))
     {
-      WCHAR buf2[100];
+      UCS2CHAR buf2[100];
       unsigned char *p1, *p2, *p3, *p4, buf3[100];
       int bits;
 
       p1 = this->initstring;
-      p1 += strlen (p1) + 1;
-      p1 += strlen (p1) + 1;
+      p1 += strlenu (p1) + 1;
+      p1 += strlenu (p1) + 1;
       p2 = p1;
-      while (strlen (p2))
-	p2 += strlen (p2) + 1;
+      while (strlenu (p2))
+	p2 += strlenu (p2) + 1;
       p2++;
       p3 = p2;
-      while (strlen (p3))
-	p3 += strlen (p3) + 1;
+      while (strlenu (p3))
+	p3 += strlenu (p3) + 1;
       p3++;
       p4 = p3;
-      while (strlen (p4))
-	p4 += strlen (p4) + 1;
+      while (strlenu (p4))
+	p4 += strlenu (p4) + 1;
       p4++;
       bits = *p4;
       if (q->buf[0] >= 0x20 && q->buf[0] != 0x7f)
 	{
 	  q->buf[q->bufoff] = 0;
-	  MultiByteToWideChar (CP_UTF8, 0, q->buf, -1, buf2, 100);
+	  utf8_to_wchar (q->buf, buf2, 100);
 	  for (;;)
 	    {
 	      if (!try1 (q, buf2[0], buf3, p1, p2, p3, bits))
@@ -918,8 +1056,8 @@ transmit (struct iso2022_data *this, struct iso2022struct *q, unsigned char c)
 		      }
 	      break;
 	    }
-	  strcpy (q->buf, buf3);
-	  q->buflen = strlen (q->buf);
+	  strcpy ((char *)q->buf, (char *)buf3);
+	  q->buflen = strlenu (q->buf);
 	  q->bufoff = 0;
 	}
       else
@@ -949,7 +1087,7 @@ transmit (struct iso2022_data *this, struct iso2022struct *q, unsigned char c)
 	    }
 	  *pp++ = c;
 	  *pp = 0;
-	  q->buflen = strlen (q->buf);
+	  q->buflen = strlenu (q->buf);
 	  q->bufoff = 0;
 	  if (!c)
 	    q->buflen++;
@@ -971,15 +1109,15 @@ transmit2 (struct iso2022_data *this, struct iso2022struct *q, unsigned char c)
       unsigned char *p1, *p2, *p3;
 
       p1 = this->initstring;
-      p1 += strlen (p1) + 1;
-      p1 += strlen (p1) + 1;
+      p1 += strlenu (p1) + 1;
+      p1 += strlenu (p1) + 1;
       p2 = p1;
-      while (strlen (p2))
-	p2 += strlen (p2) + 1;
+      while (strlenu (p2))
+	p2 += strlenu (p2) + 1;
       p2++;
       p3 = p2;
-      while (strlen (p3))
-	p3 += strlen (p3) + 1;
+      while (strlenu (p3))
+	p3 += strlenu (p3) + 1;
       p3++;
         {
 	  struct iso2022struct saveq;
@@ -1006,7 +1144,7 @@ transmit2 (struct iso2022_data *this, struct iso2022struct *q, unsigned char c)
 	    }
 	  *pp++ = c;
 	  *pp = 0;
-	  q->buflen = strlen (q->buf);
+	  q->buflen = strlenu (q->buf);
 	  q->bufoff = 0;
 	  if (!c)
 	    q->buflen++;
@@ -1405,48 +1543,45 @@ init (struct iso2022struct *q)
 int
 iso2022_init (struct iso2022_data *this, const char *p, int mode)
 {
-  int i, f, j, k;
+  int i, f, j, k = 0;
   int tmp_lockgr, tmp_mskanji, tmp_big5, tmp_win95flag, tmp_ssgr, tmp_utf8cjk;
   int tmp_utf8noncjk, tmp_autojp_eucjp, tmp_autojp_mskanji, tmp_autojp_utf8;
   unsigned char *init_string = this->initstring;
 
-  if (!lstrcmpi (p, "euc-jp"))
+  if (!stricmp (p, "euc-jp"))
     p = "iso2022 lockgr euc-jp";
-  else if (!lstrcmpi (p, "iso-2022-jp"))
+  else if (!stricmp (p, "iso-2022-jp"))
     p = "iso2022 "
       "1b28420f00 1b28420f00 1b2842001b2442001b2428440000 00 1b28420000 07";
-  else if (!lstrcmpi (p, "MS_Kanji") || !lstrcmpi (p, "Shift_JIS"))
+  else if (!stricmp (p, "MS_Kanji") || !stricmp (p, "Shift_JIS"))
     p = "iso2022 lockgr MS_Kanji";
-  else if (!lstrcmpi (p, "big5"))
+  else if (!stricmp (p, "big5"))
     p = "iso2022 lockgr big5";
-  else if (!lstrcmpi (p, "euc-kr"))
+  else if (!stricmp (p, "euc-kr"))
     p = "iso2022 lockgr euc-kr";
-  else if (!lstrcmpi (p, "euc-cn"))
+  else if (!stricmp (p, "euc-cn"))
     p = "iso2022 lockgr euc-cn";
-  else if (!lstrcmpi (p, "euc-tw"))
+  else if (!stricmp (p, "euc-tw"))
     p = "iso2022 lockgr euc-tw";
-  else if (!lstrcmpi (p, "utf-8 (cjk)"))
+  else if (!stricmp (p, "utf-8 (cjk)"))
     p = "iso2022 lockgr utf-8-cjk";
-  else if (!lstrcmpi (p, "utf-8 (non-cjk)"))
+  else if (!stricmp (p, "utf-8 (non-cjk)"))
     p = "iso2022 lockgr utf-8-noncjk";
-  else if (!lstrcmpi (p, "euc-jp/auto-detect japanese"))
+  else if (!stricmp (p, "euc-jp/auto-detect japanese"))
     p = "iso2022 autojp-eucjp autojp-mskanji autojp-utf8 lockgr euc-jp";
-  else if (!lstrcmpi (p, "MS_Kanji/auto-detect japanese"))
+  else if (!stricmp (p, "MS_Kanji/auto-detect japanese"))
     p = "iso2022 autojp-eucjp autojp-mskanji autojp-utf8 lockgr MS_Kanji";
-  else if (!lstrcmpi (p, "Shift_JIS/auto-detect japanese"))
+  else if (!stricmp (p, "Shift_JIS/auto-detect japanese"))
     p = "iso2022 autojp-eucjp autojp-mskanji autojp-utf8 lockgr MS_Kanji";
-  else if (!lstrcmpi (p, "utf-8/auto-detect japanese"))
+  else if (!stricmp (p, "utf-8/auto-detect japanese"))
     p = "iso2022 autojp-eucjp autojp-mskanji autojp-utf8 lockgr utf-8-cjk";
   if (strnicmp (p, "iso2022 ", 8))
     return -1;
   p += 8;
   {
     unsigned char initstring[512];
-    OSVERSIONINFO ovi;
 
-    ovi.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-    GetVersionEx (&ovi);
-    tmp_win95flag = (ovi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS);
+    tmp_win95flag = get_win95flag ();
     tmp_lockgr = tmp_mskanji = tmp_big5 = tmp_ssgr = tmp_utf8cjk = tmp_utf8noncjk = 0;
     tmp_autojp_eucjp = tmp_autojp_mskanji = tmp_autojp_utf8 = 0;
     for (;;)
@@ -1521,7 +1656,7 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
 	    p += 11;
 	    continue;
 	  }
-	if (!lstrcmpi (p, "euc-jp"))
+	if (!stricmp (p, "euc-jp"))
 	  {
 	    p =
 	      /* receiving */
@@ -1555,7 +1690,7 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
 	    tmp_ssgr = 1;
 	    break;
 	  }
-	if (!lstrcmpi (p, "euc-kr"))
+	if (!stricmp (p, "euc-kr"))
 	  {
 	    p =
 	      /* receiving */
@@ -1582,7 +1717,7 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
 	      "08";
 	    break;
 	  }
-	if (!lstrcmpi (p, "euc-cn"))
+	if (!stricmp (p, "euc-cn"))
 	  {
 	    p =
 	      /* receiving */
@@ -1609,7 +1744,7 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
 	      "08";
 	    break;
 	  }
-	if (!lstrcmpi (p, "euc-tw"))
+	if (!stricmp (p, "euc-tw"))
 	  {
 	    p =
 	      /* receiving */
@@ -1791,6 +1926,7 @@ iso2022_init_test (const char *p)
   return iso2022_init (NULL, p, 2);
 }
 
+#ifdef _WINDOWS
 int
 xMultiByteToWideChar (UINT a1, DWORD a2, LPCSTR a3, int a4, LPWSTR a5, int a6)
 {
@@ -1892,3 +2028,4 @@ xWideCharToMultiByte (UINT a1, DWORD a2, LPCWSTR a3, int a4, LPSTR a5, int a6,
     a5[k] = '\0';
   return k + 1;
 }
+#endif

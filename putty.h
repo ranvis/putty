@@ -1518,18 +1518,13 @@ void request_callback_notifications(toplevel_callback_notify_fn_t notify,
 /*
  * Exports from iso2022.c
  */
-int xMultiByteToWideChar(UINT, DWORD, LPCSTR, int, LPWSTR, int);
-int xWideCharToMultiByte(UINT, DWORD, LPCWSTR, int, LPSTR, int,
-                         LPCSTR, LPBOOL);
-#define MultiByteToWideChar xMultiByteToWideChar
-#define WideCharToMultiByte xWideCharToMultiByte
-
 int iso2022_init (struct iso2022_data *this, const char *p, int mode);
 int iso2022_init_test (const char *p);
 void iso2022_transmit (struct iso2022_data *this, unsigned char c);
 void iso2022_put (struct iso2022_data *this, unsigned char c);
 void iso2022_clearesc (struct iso2022_data *this);
-int iso2022_width (struct iso2022_data *this, wchar_t);
+int iso2022_width (struct iso2022_data *this, wchar_t c);
+int iso2022_width_sub (struct iso2022_data *this, wchar_t);
 unsigned char iso2022_tgetbuf (struct iso2022_data *this);
 unsigned char iso2022_getbuf (struct iso2022_data *this);
 void iso2022_settranschar (struct iso2022_data *this, int value);
@@ -1540,7 +1535,7 @@ void iso2022_autodetect_put (struct iso2022_data *this, unsigned char *buf,
 			     int nchars);
 
 /*
- * Exports from l10n.c
+ * Exports from winl10n.c/uxl10n.c
  */
 char *l10n_dupstr (char *);
 int get_l10n_setting(const char* keyname, char* buf, int size);

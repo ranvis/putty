@@ -1218,7 +1218,9 @@ static void term_schedule_vbell(Terminal *term, int already_started,
  */
 static void power_on(Terminal *term, int clear)
 {
-    if (in_utf (term)) term->ucsdata->iso2022 = !iso2022_init (&term->ucsdata->iso2022_data, conf_get_str(term->conf, CONF_line_codepage), 0);
+    if (in_utf (term))
+	term->ucsdata->iso2022 = !iso2022_init (&term->ucsdata->iso2022_data,
+						conf_get_str(term->conf, CONF_line_codepage), 0);
     term->alt_x = term->alt_y = 0;
     term->savecurs.x = term->savecurs.y = 0;
     term->alt_savecurs.x = term->alt_savecurs.y = 0;
@@ -2736,27 +2738,27 @@ static void term_out(Terminal *term)
     int unget;
     unsigned char localbuf[256], *chars;
     int nchars = 0;
-    int iso2022;
-    struct iso2022_data *iso2022_data_p;
+    struct iso2022_data *iso2022 = NULL;
 
     unget = -1;
 
-    iso2022 = in_utf (term) && term->ucsdata->iso2022;
-    if (iso2022) iso2022_data_p = &term->ucsdata->iso2022_data;
+    if (in_utf (term) && term->ucsdata->iso2022)
+	iso2022 = &term->ucsdata->iso2022_data;
     chars = NULL;		       /* placate compiler warnings */
-    while (nchars > 0 || unget != -1 || bufchain_size(&term->inbuf) > 0 || (iso2022 && iso2022_buflen (iso2022_data_p) > 0)) {
+    while (nchars > 0 || unget != -1 || bufchain_size(&term->inbuf) > 0 ||
+	   (iso2022 && iso2022_buflen (iso2022) > 0)) {
 	if (unget == -1) {
-	    if (iso2022 && term->termstate == TOPLEVEL) iso2022_clearesc (iso2022_data_p);
-	    if (!iso2022 || !iso2022_buflen (iso2022_data_p)) {
+	    if (iso2022 && term->termstate == TOPLEVEL)
+		iso2022_clearesc (iso2022);
+	    if (!iso2022 || !iso2022_buflen (iso2022)) {
 	    if (nchars == 0) {
 		void *ret;
 		bufchain_prefix(&term->inbuf, &ret, &nchars);
 		if (nchars > sizeof(localbuf))
 		    nchars = sizeof(localbuf);
 		memcpy(localbuf, ret, nchars);
-		if (iso2022) {
-		     iso2022_autodetect_put (iso2022_data_p, localbuf, nchars);
-		}
+		if (iso2022)
+		    iso2022_autodetect_put (iso2022, localbuf, nchars);
 		bufchain_consume(&term->inbuf, nchars);
 		chars = localbuf;
 		assert(chars != NULL);
@@ -2770,11 +2772,13 @@ static void term_out(Terminal *term)
 	     */
 	    if (term->logtype == LGTYP_DEBUG && term->logctx)
 		logtraffic(term->logctx, (unsigned char) c, LGTYP_DEBUG);
-	    if (iso2022) iso2022_put (iso2022_data_p, c);
+	    if (iso2022) iso2022_put (iso2022, c);
 	    }
 	    if (iso2022) {
-		if (iso2022_buflen (iso2022_data_p) > 0) c = iso2022_getbuf (iso2022_data_p);
-		else continue;
+		if (iso2022_buflen (iso2022) > 0)
+		    c = iso2022_getbuf (iso2022);
+		else
+		    continue;
 	    }
 	} else {
 	    c = unget;
@@ -3154,14 +3158,14 @@ static void term_out(Terminal *term)
 		{
 		    termline *cline = scrlineptr(term->curs.y);
 		    int width = 0;
-		    if (!iso2022) {
 		    if (DIRECT_CHAR(c))
 			width = 1;
+		    if (iso2022)
+			width = iso2022_width (iso2022, (wchar_t)c);
 		    if (!width)
 			width = (term->cjk_ambig_wide ?
 				 mk_wcwidth_cjk((unsigned int) c) :
 				 mk_wcwidth((unsigned int) c));
-		    } else width = iso2022_width (iso2022_data_p, (wchar_t) c);
 
 		    if (term->wrapnext && term->wrap && width > 0) {
 			cline->lattr |= LATTR_WRAPPED;

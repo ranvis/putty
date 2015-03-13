@@ -424,7 +424,7 @@ aftercreate (HWND r)
   if (type == TYPE_MAIN)
     do
       {
-	qq = (struct prop *)LocalAlloc (0, sizeof (*qq));
+	qq = (struct prop *)LocalAlloc (0, sizeof *qq);
 	if (!qq)
 	  break;
 	if (!SetProp (r, propstr, (HANDLE)qq))
@@ -432,7 +432,7 @@ aftercreate (HWND r)
 	    LocalFree ((HANDLE)qq);
 	    break;
 	  }
-	memset(qq, 0, sizeof (*qq));
+	*qq = defaultprop;
 	qq->oldproc = (WNDPROC)SetWindowLong (r, GWL_WNDPROC,
 					      (LONG)wndproc);
       }

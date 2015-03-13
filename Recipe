@@ -204,9 +204,11 @@ TERMINAL = terminal wcwidth ldiscucs logging tree234 minibidi
 # GUI front end and terminal emulator (putty, puttytel).
 GUITERM  = TERMINAL window windlg winctrls sizetip winucs winprint
          + winutils wincfg sercfg winhelp winjump
+         + winl10n
 
 # Same thing on Unix.
 UXTERM   = TERMINAL uxcfg sercfg uxucs uxprint timing callback
+         + uxl10n
 GTKTERM  = UXTERM gtkwin gtkcfg gtkdlg gtkfont gtkcols xkeysym
 OSXTERM  = UXTERM osxwin osxdlg osxctrls
 
@@ -262,15 +264,13 @@ U_BE_NOSSH = be_nos_s uxser nocproxy
 # X/GTK Unix app, [U] for command-line Unix app.
 
 putty    : [G] GUITERM NONSSH WINSSH W_BE_ALL WINMISC winx11 putty.res LIBS
-         + l10n
 puttytel : [G] GUITERM NONSSH W_BE_NOSSH WINMISC puttytel.res nogss LIBS
-         + l10n
 plink    : [C] winplink wincons NONSSH WINSSH W_BE_ALL logging WINMISC
          + winx11 plink.res winnojmp noterm LIBS
          + l10ndummy
 #plinkw   : [G] winplinkw winconsw NONSSH WINSSH W_BE_ALL logging WINMISC
 #         + winx11 plinkw.res winnojmp noterm LIBS
-#         + l10n
+#         + winl10n
 pscp     : [C] pscp winsftp wincons WINSSH BE_SSH SFTP wildcard WINMISC
          + pscp.res winnojmp LIBS
          + l10ndummy
@@ -281,16 +281,16 @@ psftp    : [C] psftp winsftp wincons WINSSH BE_SSH SFTP wildcard WINMISC
 pageant  : [G] winpgnt sshrsa sshpubk sshdes sshbn sshmd5 version tree234
          + misc sshaes sshsha winsecur winpgntc sshdss sshsh256 sshsh512
          + winutils winmisc winhelp conf pageant.res LIBS
-         + l10n
+         + winl10n
 
 puttygen : [G] winpgen sshrsag sshdssg sshprime sshdes sshbn sshmd5 version
          + sshrand winnoise sshsha winstore misc winctrls sshrsa sshdss winmisc
          + sshpubk sshaes sshsh256 sshsh512 import winutils puttygen.res
-	 + tree234 notiming winhelp winnojmp conf LIBS wintime
-	 + l10n
+         + tree234 notiming winhelp winnojmp conf LIBS wintime
+         + winl10n
 
 #pfwd     : [G] pfwd wincons2 NONSSH WINSSH cproxy logging WINMISC
-#         + pfwd.res winnojmp noterm LIBS l10n
+#         + pfwd.res winnojmp noterm LIBS winl10n
 
 pterm    : [X] GTKTERM uxmisc misc ldisc settings uxpty uxsel BE_NONE uxstore
          + uxsignal CHARSET cmdline uxpterm version time xpmpterm xpmptcfg

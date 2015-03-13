@@ -558,6 +558,15 @@ int remove_from_jumplist_registry(const char *item);
 char *get_jumplist_registry_entries(void);
 
 /*
+ * Exports from iso2022.c
+ */
+int xMultiByteToWideChar(UINT, DWORD, LPCSTR, int, LPWSTR, int);
+int xWideCharToMultiByte(UINT, DWORD, LPCWSTR, int, LPSTR, int,
+                         LPCSTR, LPBOOL);
+#define MultiByteToWideChar xMultiByteToWideChar
+#define WideCharToMultiByte xWideCharToMultiByte
+
+/*
  * Exports from l10n.c
  */
 int xMessageBoxA(HWND, LPCSTR, LPCSTR, UINT);

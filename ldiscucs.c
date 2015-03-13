@@ -92,10 +92,10 @@ void luni_send(void *handle, wchar_t * widebuf, int len, int interactive)
 	else
 	    p = linebuffer;
     }
-    if (in_utf (term) && term->ucsdata->iso2022) iso2022_settranschar (&term->ucsdata->iso2022_data, 1);
+    if (in_utf (ldisc->term) && ldisc->term->ucsdata->iso2022) iso2022_settranschar (&ldisc->term->ucsdata->iso2022_data, 1);
     if (p > linebuffer)
 	ldisc_send(ldisc, linebuffer, p - linebuffer, interactive);
-    if (in_utf (term) && term->ucsdata->iso2022) iso2022_settranschar (&term->ucsdata->iso2022_data, 0);
+    if (in_utf (ldisc->term) && ldisc->term->ucsdata->iso2022) iso2022_settranschar (&ldisc->term->ucsdata->iso2022_data, 0);
 
     sfree(linebuffer);
 }
