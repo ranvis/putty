@@ -1023,7 +1023,7 @@ int check_compose(int first, int second)
 
 int decode_codepage(const char *cp_name)
 {
-    char *s, *d;
+    const char *s, *d;
     const struct cp_list_item *cpi;
     int codepage = -1;
     CPINFO cpinfo;

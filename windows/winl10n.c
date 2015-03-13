@@ -350,6 +350,7 @@ static int getEnabled ()
       if (GetPrivateProfileString ("Default", "Language", "", lang, 32,
 				   lngfile))
 	{
+	  HINSTANCE hinst = GetModuleHandle(NULL);
 	  enabled = 1;
 	  GetPrivateProfileString (lang, "_FONTNAME_", "System", fontname, 128,
 				   lngfile);
@@ -361,7 +362,6 @@ static int getEnabled ()
 	  for (i = 0; b[i].classname != NULL; i++)
 	    {
 	      WNDCLASS wndclass;
-	      HINSTANCE hinst = GetModuleHandle(NULL);
 
 	      GetClassInfo (hinst, b[i].classname, &wndclass);
 	      wndclass.hInstance = hinst;

@@ -371,7 +371,6 @@ void xtrans_set_bitmap()
         HDC hdc, memhdc, memhdc_mask;
         HBITMAP bmp_mask, defbmp_mask, defbmp;
         BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, 0 };
-        int width, height;
 
         bf.SourceConstantAlpha = (BYTE) conf_get_int(conf, CONF_shading);
         hdc = GetDC(hwnd);
