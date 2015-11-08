@@ -27,6 +27,7 @@ static char propstr[] = "l10n";
 static DLGPROC lastolddlgproc;
 
 #define HOOK_TREEVIEW "xSysTreeView32"
+#define HOOK_TREEVIEW_W L"xSysTreeView32"
 
 static char *
 aa (char *p)
@@ -526,6 +527,26 @@ xCreateWindowExA (DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a6,
   if (!getEnabled())
     return r;
   return aftercreate (r);
+}
+
+#undef CreateWindowExW
+HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    HWND window;
+
+    if (getEnabled() && IsBadStringPtrW(lpClassName, 100) == FALSE) {
+	if (_wcsicmp(lpClassName, WC_TREEVIEWW) == 0) lpClassName = HOOK_TREEVIEW_W;
+        else if (_wcsicmp(lpClassName, L"Button") == 0) lpClassName = L"xButton";
+        else if (_wcsicmp(lpClassName, L"Static") == 0) lpClassName = L"xStatic";
+        else if (_wcsicmp(lpClassName, L"Edit") == 0) lpClassName = L"xEdit";
+        else if (_wcsicmp(lpClassName, L"ListBox") == 0) lpClassName = L"xListBox";
+        else if (_wcsicmp(lpClassName, L"ComboBox") == 0) lpClassName = L"xComboBox";
+    }
+    window = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    if (!getEnabled()) {
+        return window;
+    }
+    return aftercreate(window);
 }
 
 #undef DialogBoxParamA

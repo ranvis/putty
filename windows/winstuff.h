@@ -572,10 +572,12 @@ int xWideCharToMultiByte(UINT, DWORD, LPCWSTR, int, LPSTR, int,
 int xMessageBoxA(HWND, LPCSTR, LPCSTR, UINT);
 HWND xCreateWindowExA(DWORD, LPCSTR, LPCSTR, DWORD, int, int,
                       int, int, HWND, HMENU, HINSTANCE, LPVOID);
+HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
 int xDialogBoxParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
 HWND xCreateDialogParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
 #define MessageBoxA xMessageBoxA
 #define CreateWindowExA xCreateWindowExA
+#define CreateWindowExW xCreateWindowExW
 #define DialogBoxParamA xDialogBoxParamA
 #define CreateDialogParamA xCreateDialogParamA
 int xsprintf(char*,const char*, ...);
