@@ -5344,12 +5344,10 @@ static int TranslateKey(UINT message, WPARAM wParam, LPARAM lParam,
 			term_seen_key_event(term);
 			if (ldisc)
 			    luni_send(ldisc, cbuf+!left_alt, 1+!!left_alt, 1);
-		    } else if (conf_get_int(conf, CONF_alt_metabit)) {
-			if (left_alt) {
+		    } else if (left_alt && conf_get_int(conf, CONF_alt_metabit) && wch < 0x80) {
+			if (ldisc) {
 			    char cbuf = (char) ((wch & 0x7f) | (1 << 7));
 			    ldisc_send(ldisc, &cbuf, 1, 1);
-			} else {
-			    luni_send(ldisc, &wch, 1, 1);
 			}
 		    } else {
 			WCHAR cbuf[2];
