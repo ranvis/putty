@@ -650,6 +650,7 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_s(sesskey, "WindowClass", conf_get_str(conf, CONF_winclass));
     write_setting_i(sesskey, "AltMetaBit", conf_get_int(conf, CONF_alt_metabit));
     write_setting_i(sesskey, "CtrlTabSwitch", conf_get_int(conf, CONF_ctrl_tab_switch));
+    write_setting_i(sesskey, "SwitchSkipMin", conf_get_int(conf, CONF_switch_skip_min));
     write_setting_i(sesskey, "RightAltKey", conf_get_int(conf, CONF_rightaltkey));
     write_setting_filename(sesskey, "IconFile", conf_get_filename(conf, CONF_iconfile));
     write_setting_i(sesskey, "Use5Casis", conf_get_int(conf, CONF_use_5casis));
@@ -1019,6 +1020,7 @@ void load_open_settings(void *sesskey, Conf *conf)
     gpps(sesskey, "WindowClass", "", conf, CONF_winclass);
     gppi(sesskey, "AltMetaBit", 0, conf, CONF_alt_metabit);
     gppi(sesskey, "CtrlTabSwitch", 0, conf, CONF_ctrl_tab_switch);
+    gppi(sesskey, "SwitchSkipMin", 0, conf, CONF_switch_skip_min);
     gppi(sesskey, "RightAltKey", 0, conf, CONF_rightaltkey);
     gppfile(sesskey, "IconFile", conf, CONF_iconfile);
     gppi(sesskey, "Use5Casis", 0, conf, CONF_use_5casis);

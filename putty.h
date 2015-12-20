@@ -930,6 +930,7 @@ void cleanup_exit(int);
     X(STR, NONE, winclass) \
     X(INT, NONE, alt_metabit)		       /* set meta instead of escape */ \
     X(INT, NONE, ctrl_tab_switch)	       /* switch PuTTY windows with Ctrl+Tab */ \
+    X(INT, NONE, switch_skip_min) \
     X(INT, NONE, rightaltkey) \
     X(INT, NONE, use_5casis) \
     X(INT, NONE, x) \

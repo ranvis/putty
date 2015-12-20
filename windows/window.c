@@ -2458,6 +2458,7 @@ static int is_shift_pressed(void)
 struct ctrl_tab_info {
     int direction;
     HWND  self;
+    Conf  *conf;
     DWORD self_hi_date_time;
     DWORD self_lo_date_time;
     HWND  next;
@@ -2470,7 +2471,7 @@ static BOOL CALLBACK CtrlTabWindowProc(HWND hwnd, LPARAM lParam) {
     struct ctrl_tab_info* info = (struct ctrl_tab_info*) lParam;
     char class_name[16];
     int wndExtra;
-    if (info->self != hwnd && (wndExtra = GetClassLong(hwnd, GCL_CBWNDEXTRA)) >= 8 && GetClassName(hwnd, class_name, sizeof class_name) >= 5 && memcmp(class_name, "PuTTY", 5) == 0) {
+    if (info->self != hwnd && (wndExtra = GetClassLong(hwnd, GCL_CBWNDEXTRA)) >= 8 && GetClassName(hwnd, class_name, sizeof class_name) >= 5 && strncmp(class_name, appname, sizeof class_name) == 0) {
         DWORD hwnd_hi_date_time = GetWindowLong(hwnd, wndExtra - 8);
         DWORD hwnd_lo_date_time = GetWindowLong(hwnd, wndExtra - 4);
         int hwnd_self, hwnd_next;
@@ -2482,7 +2483,8 @@ static BOOL CALLBACK CtrlTabWindowProc(HWND hwnd, LPARAM lParam) {
 	if (hwnd_next == 0) 
 	    hwnd_next = hwnd_lo_date_time - info->next_lo_date_time;
 	hwnd_next *= info->direction;
-        if (hwnd_self > 0 && hwnd_next < 0 || (hwnd_self > 0 || hwnd_next < 0) && info->next_self <= 0) {
+	if ((hwnd_self > 0 && hwnd_next < 0 || (hwnd_self > 0 || hwnd_next < 0) && info->next_self <= 0)
+		&& (!conf_get_int(info->conf, CONF_switch_skip_min) || !IsIconic(hwnd))) {
             info->next              = hwnd;
             info->next_hi_date_time = hwnd_hi_date_time;
             info->next_lo_date_time = hwnd_lo_date_time;
@@ -3590,18 +3592,21 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	return FALSE;
       case WM_KEYDOWN:
       case WM_SYSKEYDOWN:
-         if (conf_get_int(conf, CONF_ctrl_tab_switch) && wParam == VK_TAB && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0) {
-             struct ctrl_tab_info info = {
-                  GetKeyState(VK_SHIFT) < 0 ? 1 : -1,
-                  hwnd,
-             };
-             info.next_hi_date_time = info.self_hi_date_time = GetWindowLong(hwnd, 0);
-             info.next_lo_date_time = info.self_lo_date_time = GetWindowLong(hwnd, 4);
-             EnumWindows(CtrlTabWindowProc, (LPARAM) &info);
-             if (info.next != NULL)
-                 SetForegroundWindow(info.next);
-             return 0;
-         }
+        if (wParam == VK_TAB && conf_get_int(conf, CONF_ctrl_tab_switch) && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0) {
+	    struct ctrl_tab_info info = {
+		GetKeyState(VK_SHIFT) < 0 ? 1 : -1,
+		hwnd,
+		conf,
+	    };
+	    info.next_hi_date_time = info.self_hi_date_time = GetWindowLong(hwnd, 0);
+	    info.next_lo_date_time = info.self_lo_date_time = GetWindowLong(hwnd, 4);
+	    EnumWindows(CtrlTabWindowProc, (LPARAM) &info);
+	    if (info.next != NULL) {
+		SetForegroundWindow(info.next);
+		ShowWindowAsync(info.next, SW_RESTORE);
+	    }
+	    return 0;
+	}
       case WM_KEYUP:
       case WM_SYSKEYUP:
 	if (lParam & 0x80000000) break;

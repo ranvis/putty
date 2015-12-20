@@ -356,10 +356,15 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		  HELPCTX(behaviour_altenter),
 		  conf_checkbox_handler,
 		  I(CONF_fullscreenonaltenter));
-    if (!midsession)
+    if (!midsession) {
 	ctrl_checkbox(s, "Switch PuTTY windows with Ctrl-Tab", 's',
 		  HELPCTX(no_help),
 		  conf_checkbox_handler, I(CONF_ctrl_tab_switch));
+	ctrl_checkbox(s, "Skip minimized windows", 'm',
+		  HELPCTX(no_help),
+		  conf_checkbox_handler, I(CONF_switch_skip_min));
+	
+    }
 
 	/* > transparent background patch */
     /*

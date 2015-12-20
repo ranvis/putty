@@ -201,6 +201,7 @@ System menu appears on ALT alone=単独の Alt でシステムメニューを表示する
 Ensure window is always on top=ウィンドウを常に手前に表示する
 Full screen on Alt-Enter=Alt-Enter でフルスクリーンにする
 Switch PuTTY windows with Ctrl-Tab=Ctrl-Tab で PuTTY のウィンドウを切り替える
+Skip minimized windows=最小化したウインドウを除く
 
 Translation=変換
 Character set translation=文字セット変換
