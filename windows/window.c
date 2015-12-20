@@ -363,7 +363,7 @@ void xtrans_set_bitmap()
             xtrans_free_background();
         background_bmp = LoadImage(0, conf_get_filename(conf, CONF_bgimg_file)->path,
                                    IMAGE_BITMAP, 0, 0,
-                                   LR_LOADFROMFILE | LR_DEFAULTSIZE);
+                                   LR_LOADFROMFILE | LR_SHARED);
         xtrans_bitmap_changed();
     }
 
@@ -441,7 +441,7 @@ void xtrans_load_bitmap()
     if (background_bmp)
         xtrans_free_background();
     background_bmp = LoadImage(0, pass, IMAGE_BITMAP, 0, 0,
-                               LR_LOADFROMFILE | LR_DEFAULTSIZE);
+                               LR_LOADFROMFILE | LR_SHARED);
     xtrans_bitmap_changed();
     conf_set_int(conf, CONF_transparent_mode, 2);
 
