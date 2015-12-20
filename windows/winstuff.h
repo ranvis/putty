@@ -237,7 +237,7 @@ GLOBAL void *logctx;
 			      "All Files (*.*)\0*\0\0\0")
 #define FILTER_WAVE_FILES ("Wave Files (*.wav)\0*.WAV\0" \
 			       "All Files (*.*)\0*\0\0\0")
-#define FILTER_IMAGE_FILES ("Bmp Files (*.bmp)\0*.bmp\0" \
+#define FILTER_IMAGE_FILES ("Bitmap Files (*.bmp)\0*.bmp\0" \
 			       "All Files (*.*)\0*\0\0\0")
 #define FILTER_ICON_FILES ("Icon Files (*.ico)\0*.ico\0" \
 			       "Module Files (*.exe;*.dll)\0*.exe;*.dll\0" \

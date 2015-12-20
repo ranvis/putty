@@ -357,7 +357,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		  conf_checkbox_handler,
 		  I(CONF_fullscreenonaltenter));
     if (!midsession)
-	ctrl_checkbox(s, "Switch PuTTY windows with Ctrl + TAB", 's',
+	ctrl_checkbox(s, "Switch PuTTY windows with Ctrl-Tab", 's',
 		  HELPCTX(no_help),
 		  conf_checkbox_handler, I(CONF_ctrl_tab_switch));
 
@@ -373,26 +373,26 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 					   HELPCTX(no_help),
 					   conf_radiobutton_handler,
 					   I(CONF_transparent_mode),
-					   "Disable", 'd', I(0),
-					   "Like transparent xterms", 'x', I(1),
+					   "Disabled", 'd', I(0),
+					   "xterm-like transparency", 'x', I(1),
 					   "Use bitmap file", 'b', I(2),
 					   NULL );
 
 	s = ctrl_getset( b, "Window/Wallpaper", "shading",
 					 "Adjust transparency" );
-	ctrl_editbox( s, "Alpha value of bg image (0 - 255) :", 'l', 20,
+	ctrl_editbox( s, "Alpha value of bg image (0-255):", 'l', 20,
 				  HELPCTX(no_help),
 				  conf_editbox_handler, I(CONF_shading), I(-1) );
 
 	s = ctrl_getset( b, "Window/Wallpaper", "imgfile",
-					 "Use bitmap file mode settings" );
-	ctrl_checkbox( s, "Use AlphaBlending", 'u',
+					 "Settings for bitmap file" );
+	ctrl_checkbox( s, "Use alpha-blending", 'u',
 				   HELPCTX(no_help),
 				   conf_checkbox_handler, I(CONF_use_alphablend) );
-	ctrl_checkbox( s, "Stopped to draw when moving", 's',
+	ctrl_checkbox( s, "Suspend updating when moving window", 's',
 				   HELPCTX(no_help),
 				   conf_checkbox_handler, I(CONF_stop_when_moving) );
-	ctrl_filesel( s, "Bitmap file used for background :", NO_SHORTCUT,
+	ctrl_filesel( s, "Bitmap file to use for background:", NO_SHORTCUT,
 				  FILTER_IMAGE_FILES,
 				  FALSE, "Select bitmap file for background",
 				  HELPCTX(no_help),
