@@ -3602,8 +3602,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	    info.next_lo_date_time = info.self_lo_date_time = GetWindowLong(hwnd, 4);
 	    EnumWindows(CtrlTabWindowProc, (LPARAM) &info);
 	    if (info.next != NULL) {
-		SetForegroundWindow(info.next);
-		ShowWindowAsync(info.next, SW_RESTORE);
+		HWND next_win = info.next;
+		SetForegroundWindow(next_win);
+		if (IsIconic(next_win)) {
+		    ShowWindowAsync(next_win, IsZoomed(next_win) ? SW_SHOWMAXIMIZED : SW_RESTORE);
+		}
 	    }
 	    return 0;
 	}
