@@ -173,7 +173,19 @@ struct agent_callback {
 static HBITMAP background_bmp = NULL;
 static LONG width_background = 0, height_background = 0;
 
-static void xtrans_paint_bg(HDC, int, int, int, int);
+static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height);
+static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height);
+static void xtrans_free_background();
+static void xtrans_daub_with_bgcolor(HDC hdc, int width, int height);
+static void xtrans_set_background();
+static void xtrans_set_bitmap();
+static void xtrans_bitmap_changed(void);
+static void xtrans_load_bitmap();
+static void xtrans_init(int reinit);
+static void xtrans_refresh();
+static void xtrans_move();
+static void xtrans_size();
+
 static void (*xtrans_paint_background)(HDC, int, int, int, int) = xtrans_paint_bg;
 /* < */
 
@@ -236,7 +248,7 @@ static int ime_mode = 0;
 LRESULT wndproc_document_feed(RECONVERTSTRING *rs);
 
 /* > transparent background patch */
-void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
+static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
 {
     HDC memhdc;
     HBITMAP defbmp;
@@ -250,7 +262,7 @@ void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
     DeleteDC(memhdc);
 }
 
-void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height)
+static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height)
 {
     HDC memhdc;
     HBITMAP defbmp;
@@ -284,7 +296,7 @@ void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height)
     DeleteDC(memhdc);
 }
 
-void xtrans_free_background()
+static void xtrans_free_background()
 {
     if (background_bmp) {
         DeleteObject(background_bmp);
@@ -292,7 +304,7 @@ void xtrans_free_background()
     }
 }
 
-void xtrans_daub_with_bgcolor(HDC hdc, int width, int height)
+static void xtrans_daub_with_bgcolor(HDC hdc, int width, int height)
 {
     HPEN pen, defpen;
     HBRUSH brush, defbrush;
@@ -310,7 +322,7 @@ void xtrans_daub_with_bgcolor(HDC hdc, int width, int height)
     DeleteObject(brush);
 }
 
-void xtrans_set_background()
+static void xtrans_set_background()
 {
     HDC hdc, memhdc;
     HBITMAP defbmp;
@@ -322,8 +334,7 @@ void xtrans_set_background()
 
     if (conf_get_int(conf, CONF_transparent_mode) == -1) {
         conf_set_int(conf, CONF_transparent_mode, 1);
-        if (background_bmp)
-            xtrans_free_background();
+	xtrans_free_background();
     }
 
     bf.SourceConstantAlpha = (BYTE) conf_get_int(conf, CONF_shading);
@@ -353,13 +364,10 @@ void xtrans_set_background()
     ReleaseDC(hwnd, hdc);
 }
 
-static void xtrans_bitmap_changed(void);
-
-void xtrans_set_bitmap()
+static void xtrans_set_bitmap()
 {
     if (conf_get_filename(conf, CONF_bgimg_file)->path[0] != '\0') {
-        if (background_bmp)
-            xtrans_free_background();
+	xtrans_free_background();
         background_bmp = LoadImage(0, conf_get_filename(conf, CONF_bgimg_file)->path,
                                    IMAGE_BITMAP, 0, 0,
                                    LR_LOADFROMFILE | LR_SHARED);
@@ -399,7 +407,7 @@ void xtrans_set_bitmap()
     }
 }
 
-void xtrans_bitmap_changed(void)
+static void xtrans_bitmap_changed(void)
 {
     BITMAP bitmap;
 
@@ -408,7 +416,7 @@ void xtrans_bitmap_changed(void)
     height_background = bitmap.bmHeight;
 }
 
-void xtrans_load_bitmap()
+static void xtrans_load_bitmap()
 {
     HANDLE find_handle;
     WIN32_FIND_DATA find_data;
@@ -437,8 +445,7 @@ void xtrans_load_bitmap()
      * putty76.bmp
      *      ^^ shading value (0 - 255)
      */
-    if (background_bmp)
-        xtrans_free_background();
+    xtrans_free_background();
     background_bmp = LoadImage(0, pass, IMAGE_BITMAP, 0, 0,
                                LR_LOADFROMFILE | LR_SHARED);
     xtrans_bitmap_changed();
@@ -456,7 +463,7 @@ void xtrans_load_bitmap()
 }
 
 
-void xtrans_init(int reinit)
+static void xtrans_init(int reinit)
 {
     if (reinit)
         xtrans_load_bitmap();
@@ -467,7 +474,7 @@ void xtrans_init(int reinit)
         conf_set_int(conf, CONF_shading, 0);
     }
 
-    if (conf_get_int(conf, CONF_transparent_mode) == 0 && background_bmp)
+    if (conf_get_int(conf, CONF_transparent_mode) == 0)
         xtrans_free_background();
 
     if (conf_get_int(conf, CONF_transparent_mode) == 1) {
@@ -479,7 +486,33 @@ void xtrans_init(int reinit)
         xtrans_paint_background = xtrans_paint_bg_fwp;
     }
 }
+
+static void xtrans_refresh()
+{
+    if (conf_get_int(conf, CONF_transparent_mode) == 2) {
+	if (conf_get_int(conf, CONF_stop_when_moving))
+	    InvalidateRect(hwnd, NULL, FALSE);
+    }
+    else if (conf_get_int(conf, CONF_transparent_mode))
+	xtrans_set_background();
+}
+
+static void xtrans_move()
+{
+    if (conf_get_int(conf, CONF_transparent_mode) == 2 && (! conf_get_int(conf, CONF_stop_when_moving)))
+	InvalidateRect(hwnd, NULL, FALSE);
+}
+
+static void xtrans_size()
+{
+    if(conf_get_int(conf, CONF_transparent_mode) == 1)
+	conf_set_int(conf, CONF_transparent_mode, -1);
+    else if (conf_get_int(conf, CONF_transparent_mode) == 2)
+	InvalidateRect(hwnd, NULL, FALSE);
+}
+
 /* < */
+
 #define IS_HIGH_VARSEL(wch1, wch2) \
     ((wch1) == 0xDB40 && ((wch2) >= 0xDD00 && (wch2) <= 0xDDEF))
 #define IS_LOW_VARSEL(wch) \
@@ -2164,12 +2197,7 @@ static void reset_window(int reinit) {
     win_height = cr.bottom - cr.top;
 
 	/* > transparent background patch */
-    if (conf_get_int(conf, CONF_transparent_mode) == 2) {
-        if (conf_get_int(conf, CONF_stop_when_moving))
-            InvalidateRect(hwnd, NULL, FALSE);
-    }
-    else if (conf_get_int(conf, CONF_transparent_mode))
-        xtrans_set_background();
+    xtrans_refresh();
 	/* < */
 
     resize_action = conf_get_int(conf, CONF_resize_action);
@@ -3268,12 +3296,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	debug((27, "WM_EXITSIZEMOVE"));
 #endif
 	/* > transparent background patch */
-	if (conf_get_int(conf, CONF_transparent_mode) == 2) {
-        if (conf_get_int(conf, CONF_stop_when_moving))
-            InvalidateRect(hwnd, NULL, FALSE);
-    }
-    else if (conf_get_int(conf, CONF_transparent_mode))
-        xtrans_set_background();
+	xtrans_refresh();
 	/* < */
 	if (need_backend_resize) {
 	    term_size(term, conf_get_int(conf, CONF_height),
@@ -3386,8 +3409,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	    conf_set_int(conf, CONF_y, rc.top);
 	}
 	/* > transparent background patch */
-	if (conf_get_int(conf, CONF_transparent_mode) == 2 && (! conf_get_int(conf, CONF_stop_when_moving)))
-        InvalidateRect(hwnd, NULL, FALSE);
+	xtrans_move();
 	/* < */
 	sys_cursor_update();
 	break;
@@ -3403,10 +3425,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	    LOWORD(lParam), HIWORD(lParam)));
 #endif
 	/* > transparent background patch */
-	if(conf_get_int(conf, CONF_transparent_mode) == 1)
-        conf_set_int(conf, CONF_transparent_mode, -1);
-	else if (conf_get_int(conf, CONF_transparent_mode) == 2)
-        InvalidateRect(hwnd, NULL, FALSE);
+	xtrans_size();
 	/* < */
 	if (wParam == SIZE_MINIMIZED)
 	    SetWindowText(hwnd,
@@ -4387,7 +4406,7 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
             general_textout2(hdc, x + xoffset,
                             y - font_height * (lattr==LATTR_BOT) + text_adjust,
                             &line_box, wbuf, len, lpDx,
-                            opaque && !(attr & TATTR_COMBINING) && !(conf_get_int(conf, CONF_transparent_mode) && (nbg == 258)),
+                            opaque && !(attr & TATTR_COMBINING) && !(nbg == 258 && conf_get_int(conf, CONF_transparent_mode)),
                             !!(attr & ATTR_WIDE), in_utf (term) && term->ucsdata->iso2022);
 
             /* And the shadow bold hack. */
