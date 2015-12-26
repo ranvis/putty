@@ -80,12 +80,14 @@ static int use_inifile;
 static char inifile[2 * MAX_PATH + 10] = {'\0'};
 static const char HEADER[] = "Session:";
 
+#define LOCAL_SCOPE
+
 static int get_use_inifile(void)
 {
     if (inifile[0] == '\0') {
     	char buf[10];
 	char *p;
-	GetModuleFileName(NULL, inifile, sizeof(inifile));
+	GetModuleFileName(NULL, inifile, sizeof inifile - 10);
 	if((p = strrchr(inifile, '\\'))){
 	    *p = '\0';
 	}
@@ -94,15 +96,15 @@ static int get_use_inifile(void)
 	use_inifile = buf[0] == '1';
 	if (!use_inifile) {
 	    HMODULE module;
-	    HRESULT (WINAPI* SHGetFolderPath)(HWND, int, HANDLE, DWORD, LPSTR);
-	    module = LoadLibrary("shell32.dll");
-	    SHGetFolderPath = (HRESULT (WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)) GetProcAddress(module, "SHGetFolderPathA");
-	    if (SHGetFolderPath == NULL) {
+	    DECL_WINDOWS_FUNCTION(LOCAL_SCOPE, HRESULT, SHGetFolderPathA, (HWND, int, HANDLE, DWORD, LPSTR));
+	    module = load_system32_dll("shell32.dll");
+	    GET_WINDOWS_FUNCTION(module, SHGetFolderPathA);
+	    if (!p_SHGetFolderPathA) {
 		FreeLibrary(module);
-		module = LoadLibrary("SHFolder.dll");
-		SHGetFolderPath = (HRESULT (WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)) GetProcAddress(module, "SHGetFolderPathA");
+		module = load_system32_dll("shfolder.dll");
+		GET_WINDOWS_FUNCTION(module, SHGetFolderPathA);
 	    }
-	    if (SHGetFolderPath != NULL && SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, inifile))) {
+	    if (p_SHGetFolderPathA && SUCCEEDED(p_SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, inifile))) {
 		strcat(inifile, "\\PuTTY\\putty.ini");
 		GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
 		use_inifile = buf[0] == '1';
