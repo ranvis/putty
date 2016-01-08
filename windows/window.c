@@ -19,6 +19,7 @@
 #include "terminal.h"
 #include "storage.h"
 #include "win_res.h"
+#include "winwallp.h"
 
 #ifndef NO_MULTIMON
 #include <multimon.h>
@@ -170,13 +171,9 @@ struct agent_callback {
 };
 
 /* > transparent background patch */
-static HBITMAP background_bmp = NULL;
-static LONG width_background = 0, height_background = 0;
-
 static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height);
 static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height);
 static void xtrans_free_background();
-static void xtrans_daub_with_bgcolor(HDC hdc, int width, int height);
 static void xtrans_set_background();
 static void xtrans_set_bitmap();
 static void xtrans_bitmap_changed(void);
@@ -264,36 +261,16 @@ static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
 
 static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height)
 {
-    HDC memhdc;
+    HDC bg_hdc;
     HBITMAP defbmp;
-	int xIndex = x, yIndex = y;
-	int w = 0, h = 0;
-
-	memhdc = CreateCompatibleDC(hdc);
-    defbmp = SelectObject(memhdc, background_bmp);
-
-	w = width;
-	for( xIndex = x; xIndex < x + width; )
-	{
-		int offsetX = xIndex % width_background;
-		h = height;
-		for( yIndex = y; yIndex < y + height; )
-		{
-			int offsetY = yIndex % height_background;
-			BitBlt( hdc, 
-				xIndex, yIndex, 
-				( w < width_background - offsetX ) ? w : width_background - offsetX,
-				( h < height_background - offsetY ) ? h : height_background - offsetY,
-				memhdc,
-				offsetX, offsetY, SRCCOPY );
-			yIndex += height_background - offsetY;
-			h -= height_background - offsetY;
-		}
-		xIndex += width_background - offsetX;
-		w -= width_background - offsetX;
-	}
-    SelectObject(memhdc, defbmp);
-    DeleteDC(memhdc);
+    bg_hdc = CreateCompatibleDC(hdc);
+    defbmp = SelectObject(bg_hdc, background_bmp);
+    if (conf_get_int(conf, CONF_wallpaper_place) & WALLPAPER_PLACE_SHRINK)
+	wallpaper_paint_zoom(hdc, x, y, width, height, bg_hdc);
+    else
+	wallpaper_paint_tile(hdc, x, y, width, height, bg_hdc);
+    SelectObject(bg_hdc, defbmp);
+    DeleteDC(bg_hdc);
 }
 
 static void xtrans_free_background()
@@ -304,17 +281,22 @@ static void xtrans_free_background()
     }
 }
 
-static void xtrans_daub_with_bgcolor(HDC hdc, int width, int height)
+COLORREF wallpaper_get_bg_color(void)
+{
+    return colours[258];
+}
+
+void wallpaper_fill_bgcolor(HDC hdc, int x, int y, int width, int height)
 {
     HPEN pen, defpen;
     HBRUSH brush, defbrush;
 
-    pen = CreatePen(PS_SOLID, 0, colours[258]);
+    pen = CreatePen(PS_SOLID, 0, wallpaper_get_bg_color());
     defpen = SelectObject(hdc, pen);
-    brush = CreateSolidBrush(colours[258]);
+    brush = CreateSolidBrush(wallpaper_get_bg_color());
     defbrush = SelectObject(hdc, brush);
 
-    Rectangle(hdc, 0, 0, width, height);
+    Rectangle(hdc, x, y, width + x, height + y);
 
     SelectObject(hdc, defpen);
     DeleteObject(pen);
@@ -354,7 +336,7 @@ static void xtrans_set_background()
 
     defbmp = SelectObject(memhdc, background_bmp);
 
-    xtrans_daub_with_bgcolor(memhdc, rect.right, rect.bottom);
+    wallpaper_fill_bgcolor(memhdc, 0, 0, rect.right, rect.bottom);
     PaintDesktop(hdc);
     AlphaBlend(memhdc, up_rect.left, up_rect.top, width, height,
                hdc, up_rect.left, up_rect.top, width, height, bf);
@@ -389,20 +371,20 @@ static void xtrans_set_bitmap()
         memhdc = CreateCompatibleDC(hdc);
         memhdc_mask = CreateCompatibleDC(hdc);
         defbmp = SelectObject(memhdc, background_bmp);
-        bmp_mask = CreateCompatibleBitmap(hdc, width_background, height_background);
+        bmp_mask = CreateCompatibleBitmap(hdc, bg_width, bg_height);
         ReleaseDC(hwnd, hdc);
         defbmp_mask = SelectObject(memhdc_mask, bmp_mask);
 
-        xtrans_daub_with_bgcolor(memhdc_mask, width_background, height_background);
-        AlphaBlend(memhdc_mask, 0, 0, width_background, height_background,
-                   memhdc, 0, 0, width_background, height_background, bf);
+	wallpaper_fill_bgcolor(memhdc_mask, 0, 0, bg_width, bg_height);
+	AlphaBlend(memhdc_mask, 0, 0, bg_width, bg_height,
+		   memhdc, 0, 0, bg_width, bg_height, bf);
 
         SelectObject(memhdc_mask, defbmp_mask);
         DeleteDC(memhdc_mask);
         SelectObject(memhdc, defbmp);
         DeleteDC(memhdc);
 
-        DeleteObject(background_bmp);
+        xtrans_free_background();
         background_bmp = bmp_mask;
     }
 }
@@ -412,8 +394,8 @@ static void xtrans_bitmap_changed(void)
     BITMAP bitmap;
 
     GetObject( background_bmp, sizeof(BITMAP), &bitmap );
-    width_background = bitmap.bmWidth;
-    height_background = bitmap.bmHeight;
+    bg_width = bitmap.bmWidth;
+    bg_height = bitmap.bmHeight;
 }
 
 static void xtrans_load_bitmap()

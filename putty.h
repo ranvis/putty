@@ -939,6 +939,8 @@ void cleanup_exit(int);
 	X(INT, NONE, transparent_mode) \
 	X(INT, NONE, shading) \
 	X(INT, NONE, use_alphablend) \
+    X(INT, NONE, wallpaper_place) \
+    X(INT, NONE, wallpaper_align) \
     X(INT, NONE, stop_when_moving) \
     X(FILENAME, NONE, bgimg_file) \
 	/* < */ \

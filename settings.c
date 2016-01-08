@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "putty.h"
 #include "storage.h"
+#include "winwallp.h"
 
 /* The cipher order given here is the default order. */
 static const struct keyvalwhere ciphernames[] = {
@@ -660,6 +661,8 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_i( sesskey, "TransparentMode", conf_get_int(conf, CONF_transparent_mode));
     write_setting_i( sesskey, "Shading", conf_get_int(conf, CONF_shading));
     write_setting_i( sesskey, "UseAlphaBlend", conf_get_int(conf, CONF_use_alphablend));
+    write_setting_i(sesskey, "WallpaperPlacement", conf_get_int(conf, CONF_wallpaper_place));
+    write_setting_i(sesskey, "WallpaperAlignment", conf_get_int(conf, CONF_wallpaper_align));
     write_setting_i( sesskey, "StoppedToDraw", conf_get_int(conf, CONF_stop_when_moving));
     write_setting_filename( sesskey, "BackgroundImageFile", conf_get_filename(conf, CONF_bgimg_file));
     /* < */
@@ -1030,6 +1033,8 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppi(sesskey, "TransparentMode", 0, conf, CONF_transparent_mode);
     gppi(sesskey, "Shading", 0, conf, CONF_shading);
     gppi(sesskey, "UseAlphaBlend", 0, conf, CONF_use_alphablend);
+    gppi(sesskey, "WallpaperPlacement", WALLPAPER_PLACE_DEFAULT, conf, CONF_wallpaper_place);
+    gppi(sesskey, "WallpaperAlignment", WALLPAPER_ALIGN_DEFAULT, conf, CONF_wallpaper_align);
     gppi(sesskey, "StoppedToDraw", 0, conf, CONF_stop_when_moving);
     gppfile(sesskey, "BackgroundImageFile", conf, CONF_bgimg_file);
     /* < */

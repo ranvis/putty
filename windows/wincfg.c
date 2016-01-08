@@ -9,6 +9,9 @@
 #include "putty.h"
 #include "dialog.h"
 #include "storage.h"
+#include "winwallp.h"
+
+static void wallpaper_dropdown_handler(union control *ctrl, void *dlg, void *data, int event);
 
 static void about_handler(union control *ctrl, void *dlg,
 			  void *data, int event)
@@ -390,6 +393,10 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 
 	s = ctrl_getset( b, "Window/Wallpaper", "imgfile",
 					 "Settings for bitmap file" );
+	ctrl_droplist(s, "Placement:", 'p', 40, HELPCTX(no_help),
+		      wallpaper_dropdown_handler, I(CONF_wallpaper_place));
+	ctrl_droplist(s, "Alignment:", 'n', 40, HELPCTX(no_help),
+		      wallpaper_dropdown_handler, I(CONF_wallpaper_align));
 	ctrl_checkbox( s, "Use alpha-blending", 'u',
 				   HELPCTX(no_help),
 				   conf_checkbox_handler, I(CONF_use_alphablend) );
@@ -468,5 +475,68 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		     NULL, FALSE, "Select X authority file",
 		     HELPCTX(ssh_tunnels_xauthority),
 		     conf_filesel_handler, I(CONF_xauthfile));
+    }
+}
+
+typedef struct {
+    const char *name;
+    int val;
+} DropdownItem;
+
+static void wallpaper_dropdown_handler(union control *ctrl, void *dlg, void *data, int event)
+{
+    static const DropdownItem align_items[] = {
+	{"Center", WALLPAPER_ALIGN_CENTER | WALLPAPER_ALIGN_MIDDLE},
+	{"Top left", 0},
+	{"Top", WALLPAPER_ALIGN_CENTER},
+	{"Top right", WALLPAPER_ALIGN_RIGHT},
+	{"Left", WALLPAPER_ALIGN_MIDDLE},
+	{"Right", WALLPAPER_ALIGN_RIGHT | WALLPAPER_ALIGN_MIDDLE},
+	{"Bottom left", WALLPAPER_ALIGN_BOTTOM},
+	{"Bottom", WALLPAPER_ALIGN_CENTER | WALLPAPER_ALIGN_BOTTOM},
+	{"Bottom right", WALLPAPER_ALIGN_RIGHT | WALLPAPER_ALIGN_BOTTOM},
+	{NULL, 0},
+    }, place_items[] = {
+	{"Original size", WALLPAPER_PLACE_ORIGINAL},
+	{"Tile", WALLPAPER_PLACE_TILE_X | WALLPAPER_PLACE_TILE_Y},
+	{"Tile horizontally", WALLPAPER_PLACE_TILE_X},
+	{"Tile vertically", WALLPAPER_PLACE_TILE_Y},
+	{"Zoom", WALLPAPER_PLACE_SHRINK | WALLPAPER_PLACE_EXPAND},
+	{"Shrink only", WALLPAPER_PLACE_SHRINK},
+	{"Fit", WALLPAPER_PLACE_SHRINK | WALLPAPER_PLACE_EXPAND | WALLPAPER_PLACE_FIT},
+	{NULL, 0},
+    };
+    const DropdownItem *items;
+    int conf_item = ctrl->listbox.context.i;
+    Conf *conf = (Conf *)data;
+    items = (conf_item == CONF_wallpaper_align) ? align_items : place_items;
+    if (event == EVENT_REFRESH) {
+	int i, count;
+	int old_val = conf_get_int(conf, conf_item);
+        /* ref says the following updates cause retriggering EVENT_REFRESH */
+	dlg_update_start(ctrl, dlg);
+	dlg_listbox_clear(ctrl, dlg);
+	for (i = 0; items[i].name; i++)
+	    dlg_listbox_addwithid(ctrl, dlg, items[i].name, items[i].val);
+	count = i;
+	for (i = 0; i < count; i++) {
+	    if (old_val == items[i].val) {
+		dlg_listbox_select(ctrl, dlg, i);
+		break;
+	    }
+	}
+	if (i == count) { /* an unsupported setting was chosen */
+	    dlg_listbox_select(ctrl, dlg, 0);
+	    old_val = items[0].val;
+	}
+	dlg_update_done(ctrl, dlg);
+	conf_set_int(conf, conf_item, old_val); /* restore */
+    } else if (event == EVENT_SELCHANGE) {
+	int id, index = dlg_listbox_index(ctrl, dlg);
+	if (index < 0)
+	    id = items[0].val;
+	else
+	    id = dlg_listbox_getid(ctrl, dlg, index);
+	conf_set_int(conf, conf_item, id);
     }
 }
