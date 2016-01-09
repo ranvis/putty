@@ -5,6 +5,7 @@ extern Conf *conf;
 
 HBITMAP background_bmp = NULL;
 int bg_width = 0, bg_height = 0;
+BOOL bg_has_alpha;
 
 static void paint_bg_remaining(HDC hdc, int x, int y, int width, int height, const RECT *excl_rect);
 static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, int *x, int *y);
@@ -130,4 +131,82 @@ static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, 
 	*y = rect->bottom - wp_height;
     else
 	*y = 0;
+}
+
+
+/* gdiplus */
+
+#define GDIP_STATUS_OK 0
+
+typedef int GpStatus;
+typedef DWORD ARGB;
+typedef struct GpBitmap_tag GpBitmap, GpImage;
+
+typedef struct GdiplusStartupInput_tag {
+    UINT32 GdiplusVersion;
+    void *DebugEventCallback;
+    BOOL SuppressBackgroundThread;
+    BOOL SuppressExternalCodecs;
+} GdiplusStartupInput;
+
+typedef struct GdiplusStartupOutput_tag {
+    void *NotificationHook;
+    void *NotificationUnhook;
+} GdiplusStartupOutput;
+
+DECL_WINDOWS_FUNCTION(static, GpStatus, GdiplusStartup, (OUT ULONG_PTR *token, const GdiplusStartupInput *input, OUT GdiplusStartupOutput *output));
+DECL_WINDOWS_FUNCTION(static, VOID, GdiplusShutdown, (ULONG_PTR token));
+DECL_WINDOWS_FUNCTION(static, GpStatus, GdipCreateBitmapFromFile, (const WCHAR* filename, GpBitmap **bitmap));
+DECL_WINDOWS_FUNCTION(static, GpStatus, GdipCreateHBITMAPFromBitmap, (GpBitmap* bitmap, HBITMAP* hbmReturn, ARGB background));
+DECL_WINDOWS_FUNCTION(static, GpStatus, GdipDisposeImage, (GpImage *image));
+
+static ULONG_PTR gdip_token;
+
+int gdip_init(void)
+{
+    HMODULE module;
+    GdiplusStartupInput input = {1, NULL, FALSE, FALSE};
+    if (gdip_token)
+	return 1;
+    module = load_system32_dll("gdiplus.dll");
+    if (!module)
+	return 0;
+    if (!GET_WINDOWS_FUNCTION(module, GdiplusStartup)
+	|| !GET_WINDOWS_FUNCTION(module, GdiplusShutdown)
+	|| !GET_WINDOWS_FUNCTION(module, GdipCreateBitmapFromFile)
+	|| !GET_WINDOWS_FUNCTION(module, GdipCreateHBITMAPFromBitmap)
+	|| !GET_WINDOWS_FUNCTION(module, GdipDisposeImage)) {
+	FreeLibrary(module);
+	return 0;
+    }
+    if (p_GdiplusStartup(&gdip_token, &input, 0) != GDIP_STATUS_OK) {
+	gdip_token = 0;
+	return 0;
+    }
+    return 1;
+}
+
+void gdip_terminate(void)
+{
+    if (gdip_token) {
+	p_GdiplusShutdown(gdip_token);
+	gdip_token = 0;
+    }
+}
+
+HBITMAP gdip_load_image(const char *path)
+{
+    WCHAR u_path[MAX_PATH];
+    GpBitmap *image;
+    HBITMAP bitmap;
+    if (!gdip_init())
+	return NULL;
+    if (!MultiByteToWideChar(CP_ACP, 0, path, -1, u_path, lenof(u_path)))
+	return NULL;
+    if (p_GdipCreateBitmapFromFile(u_path, &image) != GDIP_STATUS_OK)
+	return NULL;
+    if (p_GdipCreateHBITMAPFromBitmap(image, &bitmap, 0) != GDIP_STATUS_OK)
+	bitmap = NULL;
+    p_GdipDisposeImage(image);
+    return bitmap;
 }

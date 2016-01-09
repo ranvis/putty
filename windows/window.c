@@ -349,10 +349,17 @@ static void xtrans_set_background()
 static void xtrans_set_bitmap()
 {
     if (conf_get_filename(conf, CONF_bgimg_file)->path[0] != '\0') {
+        const char *path = conf_get_filename(conf, CONF_bgimg_file)->path;
+        const char *ext = strrchr(path, '.');
 	xtrans_free_background();
-        background_bmp = LoadImage(0, conf_get_filename(conf, CONF_bgimg_file)->path,
-                                   IMAGE_BITMAP, 0, 0,
-                                   LR_LOADFROMFILE | LR_SHARED);
+	if (!ext || !stricmp(ext, ".bmp")) {
+	    background_bmp = LoadImage(0, path, IMAGE_BITMAP, 0, 0,
+				       LR_LOADFROMFILE | LR_SHARED);
+            bg_has_alpha = FALSE;
+        } else {
+            background_bmp = gdip_load_image(path);
+            bg_has_alpha = TRUE;
+        }
         xtrans_bitmap_changed();
     }
 
@@ -364,7 +371,7 @@ static void xtrans_set_bitmap()
     if (conf_get_int(conf, CONF_use_alphablend)) {
         HDC hdc, memhdc, memhdc_mask;
         HBITMAP bmp_mask, defbmp_mask, defbmp;
-        BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, 0 };
+        BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, bg_has_alpha ? AC_SRC_ALPHA : 0 };
 
         bf.SourceConstantAlpha = (BYTE) conf_get_int(conf, CONF_shading);
         hdc = GetDC(hwnd);
@@ -430,6 +437,7 @@ static void xtrans_load_bitmap()
     xtrans_free_background();
     background_bmp = LoadImage(0, pass, IMAGE_BITMAP, 0, 0,
                                LR_LOADFROMFILE | LR_SHARED);
+    bg_has_alpha = FALSE;
     xtrans_bitmap_changed();
     conf_set_int(conf, CONF_transparent_mode, 2);
 
@@ -438,7 +446,7 @@ static void xtrans_load_bitmap()
         shading[i] = *cp;
     shading[i+1] = '\0';
 
-    if (i > 0) {
+    if (i > 0 && i < 255) {
         conf_set_int(conf, CONF_use_alphablend, 1);
         conf_set_int(conf, CONF_shading, atoi(shading));
     }
@@ -1299,6 +1307,7 @@ void cleanup_exit(int code)
 
 	/* > transparent background patch */
     xtrans_free_background();
+    gdip_terminate();
 	/* < */
 
     /* Clean up COM. */
@@ -4239,7 +4248,7 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
         maxlen = len;
     }
 
-    opaque = conf_get_int(conf, CONF_transparent_mode) ? FALSE : TRUE; /* start by erasing the rectangle */
+    opaque = !conf_get_int(conf, CONF_transparent_mode); /* start by erasing the rectangle if no wallpaper */
     for (remaining = len; remaining > 0;
          text += len, remaining -= len, x += char_width * len2) {
         len = (maxlen < remaining ? maxlen : remaining);

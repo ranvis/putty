@@ -21,10 +21,20 @@ enum {
 
 extern HBITMAP background_bmp;
 extern int bg_width, bg_height;
+extern BOOL bg_has_alpha;
 
 extern void wallpaper_paint_zoom(HDC hdc, int x, int y, int width, int height, HDC bg_hdc);
 extern void wallpaper_paint_tile(HDC hdc, int x, int y, int width, int height, HDC bg_hdc);
 extern void wallpaper_fill_bgcolor(HDC hdc, int x, int y, int width, int height);
 extern COLORREF wallpaper_get_bg_color(void);
+
+/* gdiplus */
+
+int gdip_init(void);
+void gdip_terminate(void);
+HBITMAP gdip_load_image(const char *path);
+
+#define FILTER_IMAGE_FILES_GDIP ("Image Files\0*.bmp;*.jpg;*.jpeg;*.png;*.tiff;*.wmf;*.gif\0" \
+				 "All Files (*.*)\0*\0")
 
 #endif

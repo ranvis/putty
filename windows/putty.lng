@@ -311,7 +311,9 @@ Bottom right=右下
 Suspend updating when moving window=ウインドウの移動時には描画しない
 Bitmap file to use for background:=背景に使用するビットマップファイル
 Select bitmap file for background=背景用ビットマップファイルの選択
+Select image file for background=背景用画像ファイルの選択
 Bitmap Files (*.bmp)=ビットマップファイル (*.bmp)%00*.BMP%00全てのファイル (*.*)%00*%00
+Image Files=画像ファイル%00*.bmp;*.jpg;*.jpeg;*.png;*.tiff;*.wmf;*.gif%00全てのファイル (*.*)%00*%00
 
 Icon=アイコン
 The icon on title bar=タイトルバーのアイコン

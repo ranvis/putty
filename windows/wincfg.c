@@ -403,12 +403,15 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 	ctrl_checkbox( s, "Suspend updating when moving window", 's',
 				   HELPCTX(no_help),
 				   conf_checkbox_handler, I(CONF_stop_when_moving) );
+    {
+	/* GDI+ is available by default on Windows XP+ */
+	int has_gdip = (osVersion.dwMajorVersion > 5 || (osVersion.dwMajorVersion == 5 && osVersion.dwMinorVersion >= 1));
 	ctrl_filesel( s, "Bitmap file to use for background:", NO_SHORTCUT,
-				  FILTER_IMAGE_FILES,
-				  FALSE, "Select bitmap file for background",
+				  has_gdip ? FILTER_IMAGE_FILES_GDIP : FILTER_IMAGE_FILES,
+				  FALSE, has_gdip ? "Select image file for background" : "Select bitmap file for background",
 				  HELPCTX(no_help),
 				  conf_filesel_handler, I(CONF_bgimg_file) );
-
+    }
 	/* < */
 
     /*
