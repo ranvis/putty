@@ -174,8 +174,11 @@ struct agent_callback {
 static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height);
 static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height);
 static void xtrans_free_background();
-static void xtrans_set_background();
-static void xtrans_set_bitmap();
+extern void wallpaper_cleanup(void);
+static int is_path_bmp(const char *path);
+static void wallpaper_prepare_desktop();
+static void wallpaper_prepare_dtimg();
+static void wallpaper_prepare_image();
 static void xtrans_bitmap_changed(void);
 static void xtrans_load_bitmap();
 static void xtrans_init(int reinit);
@@ -261,16 +264,13 @@ static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
 
 static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height)
 {
-    HDC bg_hdc;
-    HBITMAP defbmp;
-    bg_hdc = CreateCompatibleDC(hdc);
-    defbmp = SelectObject(bg_hdc, background_bmp);
-    if (conf_get_int(conf, CONF_wallpaper_place) & WALLPAPER_PLACE_SHRINK)
-	wallpaper_paint_zoom(hdc, x, y, width, height, bg_hdc);
-    else
-	wallpaper_paint_tile(hdc, x, y, width, height, bg_hdc);
-    SelectObject(bg_hdc, defbmp);
-    DeleteDC(bg_hdc);
+    RECT rect;
+    wallpaper_paint_mode mode;
+    SetRect(&rect, x, y, x + width, y + height);
+    mode.place = conf_get_int(conf, CONF_wallpaper_place);
+    mode.align = conf_get_int(conf, CONF_wallpaper_align);
+    mode.opaque = TRUE;
+    wallpaper_paint(hdc, &rect, background_bmp, &mode);
 }
 
 static void xtrans_free_background()
@@ -281,12 +281,22 @@ static void xtrans_free_background()
     }
 }
 
+void wallpaper_cleanup(void)
+{
+    xtrans_free_background();
+    if (img_bmp) {
+	DeleteObject(img_bmp);
+	img_bmp = NULL;
+    }
+    gdip_terminate();
+}
+
 COLORREF wallpaper_get_bg_color(void)
 {
     return colours[258];
 }
 
-void wallpaper_fill_bgcolor(HDC hdc, int x, int y, int width, int height)
+void wallpaper_fill_bgcolor(HDC hdc, const RECT *rect)
 {
     HPEN pen, defpen;
     HBRUSH brush, defbrush;
@@ -296,7 +306,7 @@ void wallpaper_fill_bgcolor(HDC hdc, int x, int y, int width, int height)
     brush = CreateSolidBrush(wallpaper_get_bg_color());
     defbrush = SelectObject(hdc, brush);
 
-    Rectangle(hdc, x, y, width + x, height + y);
+    Rectangle(hdc, rect->left, rect->top, rect->right, rect->bottom);
 
     SelectObject(hdc, defpen);
     DeleteObject(pen);
@@ -304,55 +314,100 @@ void wallpaper_fill_bgcolor(HDC hdc, int x, int y, int width, int height)
     DeleteObject(brush);
 }
 
-static void xtrans_set_background()
+static void wallpaper_prepare_desktop()
 {
-    HDC hdc, memhdc;
-    HBITMAP defbmp;
-
-    BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, 0 };
-
-    RECT rect, up_rect;
-    int width, height;
-
-    if (conf_get_int(conf, CONF_transparent_mode) == -1) {
-        conf_set_int(conf, CONF_transparent_mode, 1);
-	xtrans_free_background();
-    }
-
-    bf.SourceConstantAlpha = (BYTE) conf_get_int(conf, CONF_shading);
-
-    GetClientRect(hwnd, &rect);
-
+    HDC hdc, bg_dc;
+    HBITMAP prev_bmp;
+    BLENDFUNCTION bf = {AC_SRC_OVER, 0, 0, 0};
+    RECT rect;
+    int shading = conf_get_int(conf, CONF_shading);
     InvalidateRect(hwnd, NULL, FALSE);
-    GetUpdateRect(hwnd, &up_rect, FALSE);
-    width = up_rect.right - up_rect.left;
-    height = up_rect.bottom - up_rect.top;
-
+    GetClientRect(hwnd, &rect);
     hdc = GetDC(hwnd);
-    memhdc = CreateCompatibleDC(hdc);
-
     if (background_bmp == NULL)
-        background_bmp = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-
-    defbmp = SelectObject(memhdc, background_bmp);
-
-    wallpaper_fill_bgcolor(memhdc, 0, 0, rect.right, rect.bottom);
-    PaintDesktop(hdc);
-    AlphaBlend(memhdc, up_rect.left, up_rect.top, width, height,
-               hdc, up_rect.left, up_rect.top, width, height, bf);
-
-    SelectObject(memhdc, defbmp);
-    DeleteDC(memhdc);
+	background_bmp = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+    bg_dc = CreateCompatibleDC(hdc);
+    prev_bmp = SelectObject(bg_dc, background_bmp);
+    if (shading != 255)
+	wallpaper_fill_bgcolor(bg_dc, &rect);
+    if (shading != 0)
+	PaintDesktop(hdc);
+    bf.SourceConstantAlpha = (BYTE)shading;
+    AlphaBlend(bg_dc, 0, 0, rect.right, rect.bottom,
+	       hdc, 0, 0, rect.right, rect.bottom, bf);
+    SelectObject(bg_dc, prev_bmp);
+    DeleteDC(bg_dc);
     ReleaseDC(hwnd, hdc);
 }
 
-static void xtrans_set_bitmap()
+static int is_path_bmp(const char *path)
 {
-    if (conf_get_filename(conf, CONF_bgimg_file)->path[0] != '\0') {
-        const char *path = conf_get_filename(conf, CONF_bgimg_file)->path;
-        const char *ext = strrchr(path, '.');
+    const char *ext = strrchr(path, '.');
+    return !ext || !stricmp(ext, ".bmp");
+}
+
+static void wallpaper_prepare_dtimg()
+{
+    HDC hdc, bg_dc, img_dc;
+    HBITMAP prev_bmp, prev_img_bmp, px_bmp;
+    wallpaper_paint_mode mode;
+    BLENDFUNCTION bf = {AC_SRC_OVER, 0, 0, 0};
+    RECT rect, px_rect;
+    int shading = conf_get_int(conf, CONF_shading);
+    const char *path = conf_get_filename(conf, CONF_bgimg_file)->path;
+    if (img_bmp == NULL && path[0] != '\0') {
+	if (is_path_bmp(path)) {
+	    img_bmp = LoadImage(0, path, IMAGE_BITMAP, 0, 0,
+				LR_LOADFROMFILE | LR_SHARED);
+	    img_has_alpha = FALSE;
+	} else {
+	    img_bmp = gdip_load_image(path);
+	    img_has_alpha = TRUE;
+	}
+    }
+    if (!img_bmp) {
+	conf_set_int(conf, CONF_transparent_mode, 0);
+	return;
+    }
+    InvalidateRect(hwnd, NULL, FALSE);
+    GetClientRect(hwnd, &rect);
+    hdc = GetDC(hwnd);
+    if (background_bmp == NULL)
+	background_bmp = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+    bg_dc = CreateCompatibleDC(hdc);
+    prev_bmp = SelectObject(bg_dc, background_bmp);
+    PaintDesktop(hdc);
+    BitBlt(bg_dc, 0, 0, rect.right, rect.bottom, hdc, 0, 0, SRCCOPY);
+    mode.place = conf_get_int(conf, CONF_wallpaper_place);
+    mode.align = conf_get_int(conf, CONF_wallpaper_align);
+    mode.opaque = FALSE;
+    mode.bf = bf;
+    mode.bf.SourceConstantAlpha = 255;
+    mode.bf.AlphaFormat = (img_has_alpha && conf_get_int(conf, CONF_use_alphablend)) ? AC_SRC_ALPHA : 0;
+    wallpaper_paint(bg_dc, &rect, img_bmp, &mode);
+    if (shading != 0) {
+	bf.SourceConstantAlpha = 255 - (BYTE)shading;
+	px_bmp = CreateCompatibleBitmap(hdc, 1, 1);
+	img_dc = CreateCompatibleDC(hdc);
+	prev_img_bmp = SelectObject(img_dc, px_bmp);
+	SetRect(&px_rect, 0, 0, 1, 1);
+	wallpaper_fill_bgcolor(img_dc, &px_rect);
+	AlphaBlend(bg_dc, 0, 0, rect.right, rect.bottom,
+		   img_dc, 0, 0, 1, 1, bf);
+	SelectObject(img_dc, prev_img_bmp);
+	DeleteDC(img_dc);
+    }
+    SelectObject(bg_dc, prev_bmp);
+    DeleteDC(bg_dc);
+    ReleaseDC(hwnd, hdc);
+}
+
+static void wallpaper_prepare_image()
+{
+    const char *path = conf_get_filename(conf, CONF_bgimg_file)->path;
+    if (path[0] != '\0') {
 	xtrans_free_background();
-	if (!ext || !stricmp(ext, ".bmp")) {
+	if (is_path_bmp(path)) {
 	    background_bmp = LoadImage(0, path, IMAGE_BITMAP, 0, 0,
 				       LR_LOADFROMFILE | LR_SHARED);
             bg_has_alpha = FALSE;
@@ -363,7 +418,7 @@ static void xtrans_set_bitmap()
         xtrans_bitmap_changed();
     }
 
-    if (background_bmp == NULL) {
+    if (!background_bmp) {
         conf_set_int(conf, CONF_transparent_mode, 0);
         return;
     }
@@ -372,7 +427,9 @@ static void xtrans_set_bitmap()
         HDC hdc, memhdc, memhdc_mask;
         HBITMAP bmp_mask, defbmp_mask, defbmp;
         BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, bg_has_alpha ? AC_SRC_ALPHA : 0 };
-
+	RECT rect;
+	int bg_width, bg_height;
+	get_bitmap_size(background_bmp, &bg_width, &bg_height);
         bf.SourceConstantAlpha = (BYTE) conf_get_int(conf, CONF_shading);
         hdc = GetDC(hwnd);
         memhdc = CreateCompatibleDC(hdc);
@@ -382,7 +439,8 @@ static void xtrans_set_bitmap()
         ReleaseDC(hwnd, hdc);
         defbmp_mask = SelectObject(memhdc_mask, bmp_mask);
 
-	wallpaper_fill_bgcolor(memhdc_mask, 0, 0, bg_width, bg_height);
+	SetRect(&rect, 0, 0, bg_width, bg_height);
+	wallpaper_fill_bgcolor(memhdc_mask, &rect);
 	AlphaBlend(memhdc_mask, 0, 0, bg_width, bg_height,
 		   memhdc, 0, 0, bg_width, bg_height, bf);
 
@@ -398,11 +456,6 @@ static void xtrans_set_bitmap()
 
 static void xtrans_bitmap_changed(void)
 {
-    BITMAP bitmap;
-
-    GetObject( background_bmp, sizeof(BITMAP), &bitmap );
-    bg_width = bitmap.bmWidth;
-    bg_height = bitmap.bmHeight;
 }
 
 static void xtrans_load_bitmap()
@@ -414,8 +467,12 @@ static void xtrans_load_bitmap()
     char *cp;
     int i;
 
+    if (img_bmp) {
+        DeleteObject(img_bmp);
+        img_bmp = NULL;
+    }
     xtrans_free_background();
-    if (conf_get_int(conf, CONF_transparent_mode) == 2 && conf_get_filename(conf, CONF_bgimg_file)->path[0] != '\0')
+    if (conf_get_int(conf, CONF_transparent_mode) == WALLPAPER_MODE_IMAGE && conf_get_filename(conf, CONF_bgimg_file)->path[0] != '\0')
         return;
 
     GetModuleFileName(NULL, pass, MAX_PATH);
@@ -439,7 +496,7 @@ static void xtrans_load_bitmap()
                                LR_LOADFROMFILE | LR_SHARED);
     bg_has_alpha = FALSE;
     xtrans_bitmap_changed();
-    conf_set_int(conf, CONF_transparent_mode, 2);
+    conf_set_int(conf, CONF_transparent_mode, WALLPAPER_MODE_IMAGE);
 
     cp += 5;
     for (i = 0; i < 3 && isdigit(*cp); i++, cp++)
@@ -455,49 +512,60 @@ static void xtrans_load_bitmap()
 
 static void xtrans_init(int reinit)
 {
+    int wp_mode;
     if (reinit)
         xtrans_load_bitmap();
 
     if (conf_get_int(conf, CONF_shading) < 0 || 255 < conf_get_int(conf, CONF_shading)) {
-        if (conf_get_int(conf, CONF_transparent_mode) == 1)
-            conf_set_int(conf, CONF_transparent_mode, 0);
         conf_set_int(conf, CONF_shading, 0);
     }
-
-    if (conf_get_int(conf, CONF_transparent_mode) == 0)
+    wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    if (!wp_mode)
         xtrans_free_background();
 
-    if (conf_get_int(conf, CONF_transparent_mode) == 1) {
-        xtrans_set_background();
+    if (wp_mode == WALLPAPER_MODE_DESKTOP) {
+        wallpaper_prepare_desktop();
         xtrans_paint_background = xtrans_paint_bg;
-    }
-    else if (conf_get_int(conf, CONF_transparent_mode) == 2) {
-        xtrans_set_bitmap();
+    } else if (wp_mode == WALLPAPER_MODE_IMAGE) {
+        wallpaper_prepare_image();
         xtrans_paint_background = xtrans_paint_bg_fwp;
-    }
+    } else if (wp_mode == WALLPAPER_MODE_DTIMG) {
+        wallpaper_prepare_dtimg();
+        xtrans_paint_background = xtrans_paint_bg;
+    } else if (wp_mode > 0)
+	conf_set_int(conf, CONF_transparent_mode, 0);
 }
 
 static void xtrans_refresh()
 {
-    if (conf_get_int(conf, CONF_transparent_mode) == 2) {
+    int wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    if (wp_mode < 0) {
+        wp_mode = -wp_mode;
+        conf_set_int(conf, CONF_transparent_mode, wp_mode);
+	xtrans_free_background();
+    }
+    if (wp_mode == WALLPAPER_MODE_IMAGE) {
 	if (conf_get_int(conf, CONF_stop_when_moving))
 	    InvalidateRect(hwnd, NULL, FALSE);
-    }
-    else if (conf_get_int(conf, CONF_transparent_mode))
-	xtrans_set_background();
+    } else if (wp_mode == WALLPAPER_MODE_DESKTOP)
+	wallpaper_prepare_desktop();
+    else if (wp_mode == WALLPAPER_MODE_DTIMG)
+        wallpaper_prepare_dtimg();
 }
 
 static void xtrans_move()
 {
-    if (conf_get_int(conf, CONF_transparent_mode) == 2 && (! conf_get_int(conf, CONF_stop_when_moving)))
+    int wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    if (wp_mode == WALLPAPER_MODE_IMAGE && !conf_get_int(conf, CONF_stop_when_moving))
 	InvalidateRect(hwnd, NULL, FALSE);
 }
 
 static void xtrans_size()
 {
-    if(conf_get_int(conf, CONF_transparent_mode) == 1)
-	conf_set_int(conf, CONF_transparent_mode, -1);
-    else if (conf_get_int(conf, CONF_transparent_mode) == 2)
+    int wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    if (wp_mode == WALLPAPER_MODE_DESKTOP || wp_mode == WALLPAPER_MODE_DTIMG)
+	conf_set_int(conf, CONF_transparent_mode, -wp_mode);
+    else if (wp_mode == WALLPAPER_MODE_IMAGE)
 	InvalidateRect(hwnd, NULL, FALSE);
 }
 
@@ -1306,8 +1374,7 @@ void cleanup_exit(int code)
     shutdown_help();
 
 	/* > transparent background patch */
-    xtrans_free_background();
-    gdip_terminate();
+    wallpaper_cleanup();
 	/* < */
 
     /* Clean up COM. */
@@ -4068,6 +4135,7 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
     static int lpDx_len = 0;
     int *lpDx_maybe;
     int len2; /* for SURROGATE PAIR */
+    int wp_mode;
 
     lattr &= LATTR_MODE;
 
@@ -4214,10 +4282,11 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
     if (line_box.right > font_width*term->cols+offset_width)
 	line_box.right = font_width*term->cols+offset_width;
 
+    wp_mode = conf_get_int(conf, CONF_transparent_mode);
     if (attr & TATTR_COMBINING)
 	SetBkMode(hdc, TRANSPARENT);
 	/* > transparent background patch */
-    else if (nbg == 258 && conf_get_int(conf, CONF_transparent_mode)) {
+    else if (nbg == 258 && wp_mode) {
         SetBkMode(hdc, TRANSPARENT);
         (*xtrans_paint_background)(hdc, x, y, line_box.right - x, font_height);
     }
@@ -4248,7 +4317,7 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
         maxlen = len;
     }
 
-    opaque = !conf_get_int(conf, CONF_transparent_mode); /* start by erasing the rectangle if no wallpaper */
+    opaque = !wp_mode; /* start by erasing the rectangle if no wallpaper */
     for (remaining = len; remaining > 0;
          text += len, remaining -= len, x += char_width * len2) {
         len = (maxlen < remaining ? maxlen : remaining);
@@ -4397,7 +4466,7 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
             general_textout2(hdc, x + xoffset,
                             y - font_height * (lattr==LATTR_BOT) + text_adjust,
                             &line_box, wbuf, len, lpDx,
-                            opaque && !(attr & TATTR_COMBINING) && !(nbg == 258 && conf_get_int(conf, CONF_transparent_mode)),
+                            opaque && !(attr & TATTR_COMBINING) && !(nbg == 258 && wp_mode),
                             !!(attr & ATTR_WIDE), in_utf (term) && term->ucsdata->iso2022);
 
             /* And the shadow bold hack. */

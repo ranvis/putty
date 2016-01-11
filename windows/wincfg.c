@@ -381,8 +381,9 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 					   conf_radiobutton_handler,
 					   I(CONF_transparent_mode),
 					   "Disabled", 'd', I(0),
-					   "xterm-like transparency", 'x', I(1),
-					   "Use bitmap file", 'b', I(2),
+					   "xterm-like transparency", 'x', I(WALLPAPER_MODE_DESKTOP),
+					   "Use bitmap file", 'b', I(WALLPAPER_MODE_IMAGE),
+					   "Image on desktop", 't', I(WALLPAPER_MODE_DTIMG),
 					   NULL );
 
 	s = ctrl_getset( b, "Window/Wallpaper", "shading",

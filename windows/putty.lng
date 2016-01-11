@@ -286,6 +286,7 @@ Transparent background mode=背景透過モード
 Disabled=無効
 xterm-like transparency=xterm 風透過
 Use bitmap file=ビットマップファイルを使用
+Image on desktop=デスクトップと画像ファイル
 Adjust transparency=透過率の調整
 Alpha value of bg image (0-255):=背景画像のアルファ値 (0-255):
 Settings for bitmap file=ビットマップファイルの設定

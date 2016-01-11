@@ -4,88 +4,120 @@
 extern Conf *conf;
 
 HBITMAP background_bmp = NULL;
-int bg_width = 0, bg_height = 0;
+HBITMAP img_bmp;
 BOOL bg_has_alpha;
+BOOL img_has_alpha;
 
-static void paint_bg_remaining(HDC hdc, int x, int y, int width, int height, const RECT *excl_rect);
-static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, int *x, int *y);
+static void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
+static void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
+static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect);
+static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, const wallpaper_paint_mode *mode, int *x, int *y);
 
-void wallpaper_paint_zoom(HDC hdc, int x, int y, int width, int height, HDC bg_hdc)
+void wallpaper_paint(HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode)
+{
+    HDC bg_hdc = CreateCompatibleDC(hdc);
+    HBITMAP prev_bmp = SelectObject(bg_hdc, hbmp);
+    int bg_w, bg_h;
+    get_bitmap_size(hbmp, &bg_w, &bg_h);
+    if (mode->place & WALLPAPER_PLACE_SHRINK)
+	wallpaper_paint_zoom(hdc, rect, bg_hdc, bg_w, bg_h, mode);
+    else
+	wallpaper_paint_tile(hdc, rect, bg_hdc, bg_w, bg_h, mode);
+    SelectObject(bg_hdc, prev_bmp);
+    DeleteDC(bg_hdc);
+}
+
+void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
 {
     RECT term_rect;
     int is_win_ratio_larger;
     int blit_x, blit_y, blit_width, blit_height;
     HRGN old_clip;
     int has_clip;
-    int placement = conf_get_int(conf, CONF_wallpaper_place);
+    int placement = mode->place;
     int is_mode_fit = !!(placement & WALLPAPER_PLACE_FIT);
     GetClientRect(hwnd, &term_rect);
-    is_win_ratio_larger = bg_width < bg_height * term_rect.right / term_rect.bottom;
+    is_win_ratio_larger = bg_w < bg_h * term_rect.right / term_rect.bottom;
     if (is_win_ratio_larger == is_mode_fit) {
 	blit_width = term_rect.right;
-	blit_height = term_rect.right * bg_height / bg_width;
+	blit_height = term_rect.right * bg_h / bg_w;
     } else {
 	blit_height = term_rect.bottom;
-	blit_width = term_rect.bottom * bg_width / bg_height;
+	blit_width = term_rect.bottom * bg_w / bg_h;
     }
-    if (!(placement & WALLPAPER_PLACE_EXPAND) && blit_width > bg_width) {
-	blit_width = bg_width;
-	blit_height = bg_height;
+    if (!(placement & WALLPAPER_PLACE_EXPAND) && blit_width > bg_w) {
+	blit_width = bg_w;
+	blit_height = bg_h;
     }
-    wallpaper_get_offset(&term_rect, blit_width, blit_height, &blit_x, &blit_y);
+    wallpaper_get_offset(&term_rect, blit_width, blit_height, mode, &blit_x, &blit_y);
     old_clip = CreateRectRgn(0, 0, 0, 0);
     has_clip = GetClipRgn(hdc, old_clip);
     if (has_clip != -1) {
 	if (has_clip == 1)
-	    IntersectClipRect(hdc, x, y, x + width, y + height);
+	    IntersectClipRect(hdc, rect->left, rect->top, rect->right, rect->bottom);
 	else {
-	    HRGN clip_rgn = CreateRectRgn(x, y, x + width, y + height);
+	    HRGN clip_rgn = CreateRectRgn(rect->left, rect->top, rect->right, rect->bottom);
 	    SelectClipRgn(hdc, clip_rgn);
 	    DeleteObject(clip_rgn);
 	}
-	SetStretchBltMode(hdc, HALFTONE);
-	StretchBlt(hdc, blit_x, blit_y, blit_width, blit_height,
-		   bg_hdc, 0, 0, bg_width, bg_height, SRCCOPY);
-	if (!is_mode_fit) {
-	    RECT update_rect;
-	    SetRect(&update_rect, blit_x, blit_y, blit_x + blit_width, blit_y + blit_height);
-	    paint_bg_remaining(hdc, x, y, width, height, &update_rect);
+	if (mode->opaque) {
+	    SetStretchBltMode(hdc, HALFTONE);
+	    StretchBlt(hdc, blit_x, blit_y, blit_width, blit_height,
+		       bg_hdc, 0, 0, bg_w, bg_h, SRCCOPY);
+	    if (!is_mode_fit) {
+		RECT update_rect;
+		SetRect(&update_rect, blit_x, blit_y, blit_x + blit_width, blit_y + blit_height);
+		paint_bg_remaining(hdc, rect, &update_rect);
+	    }
+	} else {
+	    AlphaBlend(hdc, blit_x, blit_y, blit_width, blit_height,
+		       bg_hdc, 0, 0, bg_w, bg_h, mode->bf);
 	}
 	SelectClipRgn(hdc, has_clip ? old_clip : NULL);
-    } else
-	wallpaper_fill_bgcolor(hdc, x, y, width, height);
+    } else if (mode->opaque)
+	wallpaper_fill_bgcolor(hdc, rect);
     DeleteObject(old_clip);
 }
 
-void wallpaper_paint_tile(HDC hdc, int x, int y, int width, int height, HDC bg_hdc)
+void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
 {
     POINT dest_pos;
     int rem_w, rem_h;
     int shift_x, shift_y;
     RECT term_rect, wp_rect;
-    int placement = conf_get_int(conf, CONF_wallpaper_place);
+    int placement = mode->place;
     GetClientRect(hwnd, &term_rect);
-    wallpaper_get_offset(&term_rect, bg_width, bg_height, &shift_x, &shift_y);
-    SetRect(&wp_rect, shift_x, shift_y, shift_x + bg_width, shift_y + bg_height);
+    wallpaper_get_offset(&term_rect, bg_w, bg_h, mode, &shift_x, &shift_y);
+    SetRect(&wp_rect, shift_x, shift_y, shift_x + bg_w, shift_y + bg_h);
     if (placement & WALLPAPER_PLACE_TILE_X)
 	wp_rect.left = 0, wp_rect.right = term_rect.right;
     if (placement & WALLPAPER_PLACE_TILE_Y)
 	wp_rect.top = 0, wp_rect.bottom = term_rect.bottom;
-    shift_x = bg_width - shift_x % bg_width;
-    shift_y = bg_height - shift_y % bg_height;
-    rem_h = height;
-    for (dest_pos.y = y; dest_pos.y < y + height; ) {
-	int src_y = (shift_y + dest_pos.y) % bg_height;
-	int src_h = bg_height - src_y;
-	rem_w = width;
-	for (dest_pos.x = x; dest_pos.x < x + width; ) {
-	    int src_x = (shift_x + dest_pos.x) % bg_width;
-	    int src_w = bg_width - src_x;
-	    if (PtInRect(&wp_rect, dest_pos))
-		BitBlt(hdc, dest_pos.x, dest_pos.y, min(rem_w, src_w), min(rem_h, src_h),
-		       bg_hdc, src_x, src_y, SRCCOPY);
-	    else
-		wallpaper_fill_bgcolor(hdc, dest_pos.x, dest_pos.y, min(rem_w, src_w), min(rem_h, src_h));
+    shift_x = bg_w - shift_x % bg_w;
+    shift_y = bg_h - shift_y % bg_h;
+    rem_h = rect->right - rect->left;
+    for (dest_pos.y = rect->top; dest_pos.y < rect->bottom; ) {
+	int src_y = (shift_y + dest_pos.y) % bg_h;
+	int src_h = bg_h - src_y;
+	rem_w = rect->right - rect->left;
+	for (dest_pos.x = rect->left; dest_pos.x < rect->right; ) {
+	    int src_x = (shift_x + dest_pos.x) % bg_w;
+	    int src_w = bg_w - src_x;
+	    int width = min(rem_w, src_w);
+	    int height = min(rem_h, src_h);
+	    if (PtInRect(&wp_rect, dest_pos)) {
+		if (mode->opaque) {
+		    BitBlt(hdc, dest_pos.x, dest_pos.y, width, height,
+			   bg_hdc, src_x, src_y, SRCCOPY);
+		} else {
+		    AlphaBlend(hdc, dest_pos.x, dest_pos.y, width, height,
+			   bg_hdc, src_x, src_y, width, height, mode->bf);
+		}
+	    } else if (mode->opaque) {
+	        RECT tile_rect;
+	        SetRect(&tile_rect, dest_pos.x, dest_pos.y, dest_pos.x + min(rem_w, src_w), dest_pos.y + min(rem_h, src_h));
+		wallpaper_fill_bgcolor(hdc, &tile_rect);
+	    }
 	    dest_pos.x += src_w;
 	    rem_w -= src_w;
 	}
@@ -94,7 +126,7 @@ void wallpaper_paint_tile(HDC hdc, int x, int y, int width, int height, HDC bg_h
     }
 }
 
-static void paint_bg_remaining(HDC hdc, int x, int y, int width, int height, const RECT *excl_rect)
+static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect)
 {
     HPEN pen, saved_pen;
     HBRUSH brush, saved_brush;
@@ -102,23 +134,31 @@ static void paint_bg_remaining(HDC hdc, int x, int y, int width, int height, con
     brush = CreateSolidBrush(wallpaper_get_bg_color());
     saved_pen = SelectObject(hdc, pen);
     saved_brush = SelectObject(hdc, brush);
-    if (y < excl_rect->top)
-	Rectangle(hdc, x, y, x + width, excl_rect->top);
-    if (y + height > excl_rect->bottom)
-	Rectangle(hdc, x, excl_rect->bottom, x + width, y + height);
-    if (x < excl_rect->left)
-	Rectangle(hdc, x, excl_rect->top, excl_rect->left, excl_rect->bottom);
-    if (x + width > excl_rect->right)
-	Rectangle(hdc, excl_rect->right, excl_rect->top, x + width, excl_rect->bottom);
+    if (rect->top < excl_rect->top)
+	Rectangle(hdc, rect->left, rect->top, rect->right, excl_rect->top);
+    if (rect->bottom > excl_rect->bottom)
+	Rectangle(hdc, rect->left, excl_rect->bottom, rect->right, rect->bottom);
+    if (rect->left < excl_rect->left)
+	Rectangle(hdc, rect->left, excl_rect->top, excl_rect->left, excl_rect->bottom);
+    if (rect->right > excl_rect->right)
+	Rectangle(hdc, excl_rect->right, excl_rect->top, rect->right, excl_rect->bottom);
     SelectObject(hdc, saved_pen);
     SelectObject(hdc, saved_brush);
     DeleteObject(pen);
     DeleteObject(brush);
 }
 
-static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, int *x, int *y)
+void get_bitmap_size(HBITMAP hbmp, int *width, int *height)
 {
-    int alignment = conf_get_int(conf, CONF_wallpaper_align);
+    BITMAP bitmap;
+    GetObject(hbmp, sizeof bitmap, &bitmap);
+    *width = bitmap.bmWidth;
+    *height = bitmap.bmHeight;
+}
+
+static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, const wallpaper_paint_mode *mode, int *x, int *y)
+{
+    int alignment = mode->align;
     if (alignment & WALLPAPER_ALIGN_CENTER)
 	*x = (rect->right - wp_width) / 2;
     else if (alignment & WALLPAPER_ALIGN_RIGHT)

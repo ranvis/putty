@@ -1,6 +1,14 @@
 #ifndef PUTTY_WINWALLP_H
 #define PUTTY_WINWALLP_H
 
+#include <wingdi.h>
+
+enum {
+    WALLPAPER_MODE_DESKTOP = 1,
+    WALLPAPER_MODE_IMAGE = 2,
+    WALLPAPER_MODE_DTIMG = 3,
+};
+
 enum {
     WALLPAPER_ALIGN_CENTER = 1 << 0,
     WALLPAPER_ALIGN_RIGHT = 1 << 1,
@@ -19,13 +27,20 @@ enum {
     WALLPAPER_PLACE_DEFAULT = WALLPAPER_PLACE_TILE_X | WALLPAPER_PLACE_TILE_Y,
 };
 
-extern HBITMAP background_bmp;
-extern int bg_width, bg_height;
-extern BOOL bg_has_alpha;
+typedef struct wallpaper_paint_mode_tag {
+    int place, align;
+    BOOL opaque;
+    BLENDFUNCTION bf;
+} wallpaper_paint_mode;
 
-extern void wallpaper_paint_zoom(HDC hdc, int x, int y, int width, int height, HDC bg_hdc);
-extern void wallpaper_paint_tile(HDC hdc, int x, int y, int width, int height, HDC bg_hdc);
-extern void wallpaper_fill_bgcolor(HDC hdc, int x, int y, int width, int height);
+extern HBITMAP background_bmp;
+extern HBITMAP img_bmp;
+extern BOOL bg_has_alpha;
+extern BOOL img_has_alpha;
+
+extern void wallpaper_paint(HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);
+extern void wallpaper_fill_bgcolor(HDC hdc, const RECT *rect);
+extern void get_bitmap_size(HBITMAP hbmp, int *width, int *height);
 extern COLORREF wallpaper_get_bg_color(void);
 
 /* gdiplus */
