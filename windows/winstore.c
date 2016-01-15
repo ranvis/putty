@@ -188,7 +188,7 @@ void write_setting_i(void *handle, const char *key, int value)
 {
     if (get_use_inifile()) {
 	if (handle) {
-	    char v[10];
+	    char v[32];
 	    sprintf(v, "%d", value);
 	    WritePrivateProfileString((char*) handle, key, v, inifile);
 	}

@@ -9,7 +9,6 @@ static char lngfile[MAX_PATH];
 static char lang[32];
 static char ofontname[128];
 static HFONT hfont;
-static char x[1024];
 static WNDPROC orig_wndproc_button, orig_wndproc_static,
 	       orig_wndproc_systreeview32, orig_wndproc_edit, orig_wndproc_listbox, orig_wndproc_combobox;
 static int collect = 0;
@@ -18,80 +17,88 @@ static BOOL CALLBACK defdlgproc(HWND a1, UINT a2, WPARAM a3, LPARAM a4)
     return 0;
 }
 struct prop {
+    BOOL is_unicode;
     WNDPROC oldproc;
     DLGPROC olddlgproc;
-} defaultprop = { DefWindowProc, defdlgproc };
+} defaultprop = { TRUE, DefWindowProcW, defdlgproc };
 static char propstr[] = "l10n";
 static DLGPROC lastolddlgproc;
 
 #define HOOK_TREEVIEW "xSysTreeView32"
 #define HOOK_TREEVIEW_W L"xSysTreeView32"
 
-static char *low_url_escape(char *p)
+static char *low_url_escape(const char *p)
 {
-    int i, n;
-
-    n = strlen(p);
-    for (i = 0; i < 1023 && *p; i++) {
+    static char tmp_str[1024];
+    int i;
+    for (i = 0; i < lenof(tmp_str) - 1 - 2 - 2 && *p; i++) {
 	if (i == 0 && *p == ' ' || (*p > 0 && *p < 32) || *p == '=' || *p == '%') {
-	    x[i++] = '%';
-	    x[i++] = "0123456789ABCDEF"[(*p >> 4) & 15];
-	    x[i] = (*p++ & 15)["0123456789ABCDEF"];
+	    tmp_str[i++] = '%';
+	    tmp_str[i++] = "0123456789ABCDEF"[(*p >> 4) & 15];
+	    tmp_str[i] = (*p++ & 15)["0123456789ABCDEF"];
 	} else
-	    x[i] = *p++;
+	    tmp_str[i] = *p++;
     }
-    if (i > 0 && x[i - 1] == ' ') {
-	x[i - 1] = '%';
-	x[i++] = '2';
-	x[i++] = '0';
+    if (i > 0 && tmp_str[i - 1] == ' ') {
+	tmp_str[i - 1] = '%';
+	tmp_str[i++] = '2';
+	tmp_str[i++] = '0';
     }
-    x[i] = '\0';
-    return x;
+    tmp_str[i] = '\0';
+    return tmp_str;
 }
 
-static DWORD getl10nstr(char *a, char *b, char *c, int n)
+static DWORD getl10nstr(const char *str, char *out_buf, int out_size)
 {
     DWORD r;
+    char *out;
+    char in_str[256];
+    const char *str_esc;
     {
-	char *p = a;
+	const char *p = str;
 	while (*p != '\0') {
 	    if (IsDBCSLeadByte(*p)) {
-		strncpy(c, b, n);
-		c[n - 1] = '\0';
-		return strlen(c);
+		if (out_buf != str) {
+		    strncpy(out_buf, str, out_size);
+		    out_buf[out_size - 1] = '\0';
+		}
+		return strlen(out_buf);
 	    }
 	    p++;
 	}
     }
-    r = GetPrivateProfileString(lang, low_url_escape(a), "\n:", c, n, lngfile);
-    if (c[0] == '\n') {
-	if (collect > 0 && (int)strlen(a) > collect) {
-	    char buf[1024];
-	    strcpy(buf, x);
-	    WritePrivateProfileString(lang, buf, low_url_escape(b), lngfile);
-	}
-	strncpy(c, b, n);
-	c[n - 1] = '\0';
-	return strlen(c);
+    str_esc = low_url_escape(str);
+    if (out_buf == str) {
+        str = strncpy(in_str, str, lenof(in_str));
+        in_str[lenof(in_str) - 1] = '\0';
     }
-    for (a = c; (*a = *c); a++, c++) {
-	if (*c == '%') {
+    r = GetPrivateProfileString(lang, str_esc, "\n:", out_buf, out_size, lngfile);
+    if (out_buf[0] == '\n') {
+	if (collect > 0 && (int)strlen(str) > collect)
+	    WritePrivateProfileString(lang, str_esc, str_esc, lngfile);
+	strncpy(out_buf, str, out_size);
+	out_buf[out_size - 1] = '\0';
+	return strlen(out_buf);
+    }
+    for (out = out_buf; (*out = *out_buf); out++, out_buf++) {
+	if (*out_buf == '%') {
 	    int d, e;
 
-	    if (c[1] >= '0' && c[1] <= '9')
-		d = c[1] - '0';
-	    else if (c[1] >= 'A' && c[1] <= 'F')
-		d = c[1] - 'A' + 10;
+	    if (out_buf[1] >= '0' && out_buf[1] <= '9')
+		d = out_buf[1] - '0';
+	    else if (out_buf[1] >= 'A' && out_buf[1] <= 'F')
+		d = out_buf[1] - 'A' + 10;
 	    else
 		continue;
-	    if (c[2] >= '0' && c[2] <= '9')
-		e = c[2] - '0';
-	    else if (c[2] >= 'A' && c[2] <= 'F')
-		e = c[2] - 'A' + 10;
+	    if (out_buf[2] >= '0' && out_buf[2] <= '9')
+		e = out_buf[2] - '0';
+	    else if (out_buf[2] >= 'A' && out_buf[2] <= 'F')
+		e = out_buf[2] - 'A' + 10;
 	    else
 		continue;
-	    *a = d * 16 + e;
-	    c += 2;
+	    *out = d * 16 + e;
+	    out_buf += 2;
+	    r -= 2;
 	}
     }
     return r;
@@ -108,9 +115,9 @@ static void domenu(HMENU menu)
 	b.cbSize = sizeof(MENUITEMINFO);
 	b.fMask = MIIM_TYPE;
 	b.dwTypeData = a;
-	b.cch = 256;
+	b.cch = lenof(a);
 	if (GetMenuItemInfo(menu, i, 1, &b))
-	    if (getl10nstr(a, "", a, 256))
+	    if (getl10nstr(a, a, lenof(a)))
 		SetMenuItemInfo(menu, i, 1, &b);
     }
 }
@@ -128,13 +135,18 @@ static LRESULT CALLBACK wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
       case WM_DESTROY:
 	RemoveProp(hwnd, propstr);
 	LocalFree((HANDLE)p);
-	SetWindowLong(hwnd, GWL_WNDPROC, (LONG)proc);
+	if (p->is_unicode)
+	    SetWindowLongPtrW(hwnd, GWL_WNDPROC, (LONG_PTR)proc);
+	else
+	    SetWindowLongPtrA(hwnd, GWL_WNDPROC, (LONG_PTR)proc);
 	break;
       case WM_INITMENUPOPUP:
 	domenu((HMENU)wparam);
 	break;
     }
-    return CallWindowProc(proc, hwnd, msg, wparam, lparam);
+    return p->is_unicode
+	   ? CallWindowProcW(proc, hwnd, msg, wparam, lparam)
+	   : CallWindowProcA(proc, hwnd, msg, wparam, lparam);
 }
 
 static LRESULT hook_setfont(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -154,8 +166,8 @@ static LRESULT hook_create(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LPA
     LRESULT r;
 
     r = CallWindowProc(proc, hwnd, msg, (WPARAM)hfont, lparam);
-    if (GetWindowText(hwnd, a, 256))
-	if (getl10nstr(a, "", b, 256))
+    if (GetWindowText(hwnd, a, lenof(a)))
+	if (getl10nstr(a, b, lenof(b)))
 	    SetWindowText(hwnd, b);
     return r;
 }
@@ -169,7 +181,7 @@ static LRESULT hook_tvm_insertitem(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wpa
 
     p = (TVINSERTSTRUCT*)lparam;
     q = p->item.pszText;
-    if (getl10nstr(q, "", a, 256))
+    if (getl10nstr(q, a, lenof(a)))
 	p->item.pszText = a;
     r = CallWindowProc(proc, hwnd, msg, wparam, lparam);
     p->item.pszText = q;
@@ -188,11 +200,11 @@ static LRESULT hook_tvm_getitem(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam
     q = p->pszText;
     l = p->cchTextMax;
     p->pszText = a;
-    p->cchTextMax = 256;
+    p->cchTextMax = lenof(a);
     r = CallWindowProc(proc, hwnd, msg, wparam, lparam);
     p->pszText = q;
     p->cchTextMax = l;
-    getl10nstr(a, a, a, 256);
+    getl10nstr(a, a, lenof(a));
     strncpy(q, a, l);
     return r;
 }
@@ -254,8 +266,8 @@ static LRESULT CALLBACK wndproc_listbox(HWND hwnd, UINT msg, WPARAM wparam, LPAR
       case WM_SETFONT: return hook_setfont(proc, hwnd, msg, wparam, lparam);
       case LB_ADDSTRING: {
 	char buffer[256];
-	char *text = (char *)lparam;
-	if (getl10nstr(text, "", buffer, 256))
+	char *text = (char*)lparam;
+	if (getl10nstr(text, buffer, lenof(buffer)))
 	    text = buffer;
 	return CallWindowProc(proc, hwnd, msg, wparam, (LPARAM)text);
     }
@@ -272,8 +284,8 @@ static LRESULT CALLBACK wndproc_combobox(HWND hwnd, UINT msg, WPARAM wparam, LPA
       case WM_SETFONT: return hook_setfont(proc, hwnd, msg, wparam, lparam);
       case CB_ADDSTRING: {
 	char buffer[256];
-	char *text = (char *)lparam;
-	if (getl10nstr(text, "", buffer, 256))
+	char *text = (char*)lparam;
+	if (getl10nstr(text, buffer, lenof(buffer)))
 	    text = buffer;
 	return CallWindowProc(proc, hwnd, msg, wparam, (LPARAM)text);
     }
@@ -310,14 +322,14 @@ static int getEnabled()
 		break;
 	if (i >= 0) {
 	    strcpy(&lngfile[i + 1], "lng");
-	    if (GetPrivateProfileString("Default", "Language", "", lang, 32,
+	    if (GetPrivateProfileString("Default", "Language", "", lang, lenof(lang),
 					lngfile)) {
 		HINSTANCE hinst = GetModuleHandle(NULL);
 		enabled = 1;
-		GetPrivateProfileString(lang, "_FONTNAME_", "System", fontname, 128,
+		GetPrivateProfileString(lang, "_FONTNAME_", "System", fontname, lenof(fontname),
 					lngfile);
 		GetPrivateProfileString(lang, "_OFONTNAME_", "MS Sans Serif",
-					ofontname, 128, lngfile);
+					ofontname, lenof(ofontname), lngfile);
 		fontsize = GetPrivateProfileInt(lang, "_FONTSIZE_", 10, lngfile);
 		hfont = CreateFont(fontsize, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET,
 				   0, 0, 0, 0, fontname);
@@ -361,22 +373,22 @@ static HWND override_wndproc(HWND r)
 
     if (!r)
 	return r;
-    GetClassName(r, classname, 256);
-    GetWindowText(r, windowname, 256);
+    GetClassName(r, classname, lenof(classname));
+    GetWindowText(r, windowname, lenof(windowname));
     style = GetWindowLong(r, GWL_STYLE);
     parent = GetParent(r);
     type = TYPE_OFF;
     if (!(style & WS_CHILD)) {
 	if (!strcmp(classname, "PuTTY"))
 	    type = TYPE_MAIN;
-	else if (getl10nstr(windowname, "", buf, 256))
+	else if (getl10nstr(windowname, buf, lenof(buf)))
 	    type = TYPE_OTHER;
     }
     if (type == TYPE_OFF)
 	return r;
     if (type == TYPE_OTHER) {
-	if (GetWindowText(r, buf, 256))
-	    if (getl10nstr(buf, "", buf, 256))
+	if (GetWindowText(r, buf, lenof(buf)))
+	    if (getl10nstr(buf, buf, lenof(buf)))
 		SetWindowText(r, buf);
     }
     if (type == TYPE_MAIN)
@@ -389,8 +401,10 @@ static HWND override_wndproc(HWND r)
 		break;
 	    }
 	    *qq = defaultprop;
-	    qq->oldproc = (WNDPROC)SetWindowLong(r, GWL_WNDPROC,
-						 (LONG)wndproc);
+	    qq->is_unicode = IsWindowUnicode(r);
+	    qq->oldproc = qq->is_unicode
+			  ? (WNDPROC)SetWindowLongPtrW(r, GWL_WNDPROC, (LONG_PTR)wndproc)
+			  : (WNDPROC)SetWindowLongPtrA(r, GWL_WNDPROC, (LONG_PTR)wndproc);
 	} while (0);
     return r;
 }
@@ -404,8 +418,8 @@ static void translate_children(HWND hwnd)
     a = GetWindow(hwnd, GW_CHILD);
     while (a) {
 	translate_children(a);
-	if (GetWindowText(a, buf, 256))
-	    if (getl10nstr(buf, "", buf, 256))
+	if (GetWindowText(a, buf, lenof(buf)))
+	    if (getl10nstr(buf, buf, lenof(buf)))
 		SetWindowText(a, buf);
 	if (GetObject((HGDIOBJ)SendMessage(a, WM_GETFONT, 0, 0),
 		      sizeof(l), &l)) {
@@ -443,14 +457,14 @@ static BOOL CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpar
 #undef MessageBoxA
 int xMessageBoxA(HWND a1, LPCSTR a2, LPCSTR a3, UINT a4)
 {
-    char *b2 = (char *)a2, *b3 = (char *)a3;
+    char *b2 = (char*)a2, *b3 = (char*)a3;
     char c2[256], c3[256];
 
     if (!getEnabled())
 	return MessageBoxA(a1, a2, a3, a4);
-    if (getl10nstr(b2, "", c2, 256))
+    if (getl10nstr(b2, c2, lenof(c2)))
 	b2 = c2;
-    if (getl10nstr(b3, "", c3, 256))
+    if (getl10nstr(b3, c3, lenof(c3)))
 	b3 = c3;
     return MessageBoxA(a1, b2, b3, a4);
 }
@@ -519,12 +533,11 @@ HWND xCreateDialogParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5
     return r;
 }
 
-char *l10n_dupstr(char *s)
+char *l10n_dupstr(const char *s)
 {
-    char *a = s;
+    const char *a = s;
     char b[256];
-
-    if (getEnabled() && getl10nstr(s, "", b, 256))
+    if (getEnabled() && getl10nstr(s, b, lenof(b)))
 	a = b;
     return dupstr(a);
 }
@@ -553,7 +566,7 @@ int xsprintf(char *buffer, const char *format, ...)
     va_list args;
     va_start(args, format);
     if (getEnabled()) {
-	if (getl10nstr((char *)format, "", format2, 1024))
+	if (getl10nstr(format, format2, lenof(format2)))
 	    format = format2;
     }
     r = vsprintf(buffer, format, args);
@@ -571,7 +584,7 @@ int xvsnprintf(char *buffer, int size, const char *format, va_list args)
 {
     char format2[1024];
     if (getEnabled()) {
-	if (getl10nstr((char *)format, "", format2, 1024))
+	if (getl10nstr(format, format2, lenof(format2)))
 	    format = format2;
     }
     return vsnprintf(buffer, size, format, args);
@@ -579,22 +592,16 @@ int xvsnprintf(char *buffer, int size, const char *format, va_list args)
 
 static int getOpenSaveFilename(OPENFILENAME *ofn, int (WINAPI *f)(OPENFILENAME *))
 {
-    char buft[256];
-    char bufft[256];
-    char buff[256];
+    char title[256];
+    char file_title[256];
+    char filter[256];
     if (getEnabled()) {
-	if (ofn->lpstrTitle != NULL) {
-	    if (getl10nstr((char *)ofn->lpstrTitle, "", buft, 256))
-		ofn->lpstrTitle = buft;
-	}
-	if (ofn->lpstrFileTitle != NULL) {
-	    if (getl10nstr((char *)ofn->lpstrFileTitle, "", bufft, 256))
-		ofn->lpstrFileTitle = bufft;
-	}
-	if (ofn->lpstrFilter != NULL) {
-	    if (getl10nstr((char *)ofn->lpstrFilter, "", buff, 256))
-		ofn->lpstrFilter = buff;
-	}
+	if (ofn->lpstrTitle != NULL && getl10nstr(ofn->lpstrTitle, title, lenof(title)))
+	    ofn->lpstrTitle = title;
+	if (ofn->lpstrFileTitle != NULL && getl10nstr(ofn->lpstrFileTitle, file_title, lenof(file_title)))
+	    ofn->lpstrFileTitle = file_title;
+	if (ofn->lpstrFilter != NULL && getl10nstr(ofn->lpstrFilter, filter, lenof(filter)))
+	    ofn->lpstrFilter = filter;
     }
     return f(ofn);
 }
@@ -614,7 +621,7 @@ int xGetSaveFileNameA(OPENFILENAMEA *ofn)
 BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 {
     char buf[256];
-    if (getl10nstr((char *)text, "", buf, 256))
+    if (getl10nstr(text, buf, lenof(buf)))
 	text = buf;
     return SetDlgItemText(dialog, id, text);
 }
@@ -622,7 +629,7 @@ BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text)
 {
     char buf[256];
-    if (getl10nstr((char *)text, "", buf, 256))
+    if (getl10nstr(text, buf, lenof(buf)))
 	text = buf;
     return AppendMenu(menu, flags, id, text);
 }

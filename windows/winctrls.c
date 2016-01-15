@@ -43,7 +43,7 @@ void ctlposinit(struct ctlpos *cp, HWND hwnd,
 {
     RECT r, r2;
     cp->hwnd = hwnd;
-    cp->font = l10n_getfont (SendMessage(hwnd, WM_GETFONT, 0, 0));
+    cp->font = l10n_getfont((HFONT)SendMessage(hwnd, WM_GETFONT, 0, 0));
     cp->ypos = topborder;
     GetClientRect(hwnd, &r);
     r2.left = r2.top = 0;
