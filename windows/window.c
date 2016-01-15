@@ -233,8 +233,7 @@ static void ExtTextOutW2 (HDC, int, int, UINT, const RECT *, WCHAR *, UINT, cons
 /* */
 
 static int ime_mode = 0;
-static wchar_t ime_w[1024];
-static char ime_m[512];
+LRESULT wndproc_document_feed(RECONVERTSTRING *rs);
 
 /* > transparent background patch */
 void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
@@ -3801,47 +3800,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 	return 0;
       case WM_IME_REQUEST:
 	switch (wParam) {
-	case IMR_DOCUMENTFEED:
-	  {
-	    RECONVERTSTRING *re = (RECONVERTSTRING *)lParam;
-	    int size = term->cols;
-	    if (size > 511) {
-	      size = 511;
-	     }
-	    if (re) {
-	      int i;
-	      unsigned long uc;
-	      int c = 0;
-	      char *str = (char *)re + sizeof(RECONVERTSTRING);
-
-	      for (i = 0; i < size; i++) {
-		uc = term->disptext[term->dispcursy]->chars[i].chr;
-		if ((uc == UCSWIDE) || DIRECT_CHAR(uc)) {
-		  continue;
-		}
-		if (DIRECT_FONT(uc)) {
-		  uc &= ~CSET_MASK;
-		}
-		ime_w[c++] = uc;
-	      }
-	      ime_w[c] = L'\0';
-	      size++;
-	      WideCharToMultiByte(CP_ACP, 0, ime_w, -1, ime_m, size, NULL, NULL);
-
-	      re->dwSize = sizeof(RECONVERTSTRING) + size;
-	      re->dwVersion = 0;
-	      re->dwStrLen = size;
-	      re->dwStrOffset = sizeof(RECONVERTSTRING);
-	      re->dwCompStrLen = 0;
-	      re->dwCompStrOffset = 0;
-	      re->dwTargetStrLen = 0;
-	      re->dwTargetStrOffset = term->dispcursx;
-	      memcpy((void *)str, (void *)ime_m, size);
-	    } else {
-	      size++;
-	    }
-	    return sizeof(RECONVERTSTRING) + size;
-	  }
+	  case IMR_DOCUMENTFEED:
+	    return wndproc_document_feed((RECONVERTSTRING *)lParam);
 	}
 	break;
       default:
@@ -3907,6 +3867,122 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
      * DefWindowProc() for default processing.
      */
     return DefWindowProcW(hwnd, message, wParam, lParam);
+}
+
+/* terminal.c macro */
+#define IS_SPACE_CHR(chr) \
+	((chr) == 0x20 || (DIRECT_CHAR(chr) && ((chr) & 0xFF) == 0x20))
+
+static int get_terminal_text(const pos *start, const pos *end, WCHAR *str, int str_max)
+{
+    int len = 0;
+    int x = start->x, y = start->y;
+    while (y < end->y || (y == end->y && x <= end->x)) {
+	const termline *ldata = index234(term->screen, y);
+	int x_end = ldata->cols - 1;
+	if (!(ldata->lattr & LATTR_WRAPPED)) {
+	    while (x_end) {
+		unsigned long uc = ldata->chars[x_end].chr;
+		if (!IS_SPACE_CHR(uc) || ldata->chars[x_end].cc_next)
+		    break;
+		x_end--;
+	    }
+	} else if (ldata->lattr & LATTR_WRAPPED2)
+	    x_end--;
+	if (y == end->y)
+	    x_end = min(x_end, end->x - 1);
+	for (; x <= x_end; x++) {
+	    unsigned long uc = ldata->chars[x].chr;
+	    unsigned long type = uc & CSET_MASK;
+	    if (uc == UCSWIDE)
+		continue;
+	    if (type == CSET_LINEDRW || type == CSET_SCOACS)
+		uc = ' ';
+	    else if (type == CSET_ASCII) {
+		uc = term->ucsdata->unitab_line[uc & 0xFF];
+		type = uc & CSET_MASK;
+	    }
+	    if (type == CSET_ACP)
+		uc = term->ucsdata->unitab_font[uc & 0xFF];
+	    else if (type == CSET_OEMCP)
+		uc = term->ucsdata->unitab_oemcp[uc & 0xFF];
+	    if (uc < ' ')
+		continue;
+	    if (uc >= 0x10000 && uc < 0x110000) {
+		if (len + 2 <= str_max) {
+		    str[len++] = (WCHAR)HIGH_SURROGATE_OF(uc);
+		    str[len++] = (WCHAR)LOW_SURROGATE_OF(uc);
+		} else
+		    str[len++] = ' ';
+	    } else
+		str[len++] = (WCHAR)uc;
+	    if (len == str_max)
+		break;
+	    if (ldata->chars[x].cc_next)
+		x += ldata->chars[x].cc_next - 1;
+	}
+	x = 0;
+	y++;
+    }
+    return len;
+}
+
+LRESULT wndproc_document_feed(RECONVERTSTRING *rs)
+{
+    WCHAR str[256 * 3];
+    pos curs, start, end;
+    int len, len_b, pos, pos_b, comp_b;
+    size_t size;
+    HIMC himc;
+    int ctx_len = lenof(str) / 3;
+    ctx_len = min(ctx_len, term->cols);
+    curs.x = term->dispcursx, curs.y = term->dispcursy;
+    start = end = curs;
+    if (!start.x && start.y)
+	start.x = term->cols - ctx_len, start.y--;
+    else
+	start.x -= ctx_len;
+    start.x = max(0, start.x);
+    end.x += ctx_len;
+    end.x = min(term->cols, end.x);
+    pos = get_terminal_text(&start, &curs, str, lenof(str));
+    len = pos + get_terminal_text(&curs, &end, &str[pos], lenof(str) - pos);
+    himc = ImmGetContext(hwnd);
+    comp_b = ImmGetCompositionStringW(himc, GCS_COMPSTR, NULL, 0);
+    if (comp_b < 0) {
+	ImmReleaseContext(hwnd, himc);
+	return 0;
+    }
+    len_b = len * sizeof(WCHAR);
+    size = sizeof *rs + len_b + comp_b + sizeof(WCHAR);
+    if (rs) {
+	WCHAR *out = (WCHAR*)((char*)rs + sizeof *rs);
+	if (!rs->dwSize)
+	    rs->dwSize = size;
+	else if (rs->dwSize < size) {
+	    ImmReleaseContext(hwnd, himc);
+	    return 0;
+	}
+	pos_b = pos * sizeof(WCHAR);
+	memcpy(out, str, pos_b);
+	if (comp_b) {
+	    comp_b = ImmGetCompositionStringW(himc, GCS_COMPSTR, &out[pos], comp_b);
+	    if (comp_b < 0)
+		comp_b = 0;
+	}
+	memcpy(&out[pos + comp_b / sizeof(WCHAR)], &str[pos], len_b - pos_b);
+	len += comp_b / sizeof(WCHAR);
+	out[len] = 0;
+	rs->dwVersion = 0;
+	rs->dwStrLen = len;
+	rs->dwStrOffset = sizeof *rs;
+	rs->dwCompStrLen = comp_b / sizeof(WCHAR);
+	rs->dwCompStrOffset = pos_b;
+	rs->dwTargetStrLen = len - pos;
+	rs->dwTargetStrOffset = pos_b + comp_b;
+    }
+    ImmReleaseContext(hwnd, himc);
+    return (LRESULT)size;
 }
 
 /*
