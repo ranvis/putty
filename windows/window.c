@@ -1810,10 +1810,6 @@ debug(("\n           rect: [%d,%d %d,%d]\n", newrc.left, newrc.top, newrc.right,
 	    newrc.right = lprc->left + xn - x;
 	    newrc.top = lprc->top;
 	    newrc.bottom = lprc->bottom;
-	  if(!iso2022)
-	    ExtTextOutW(hdc, xp, y, ETO_CLIPPED | (opaque ? ETO_OPAQUE : 0),
-			&newrc, lpString+i, j-i, lpDx+i);
-	  else
 	    ExtTextOutW2(hdc, xp, y, ETO_CLIPPED | (opaque ? ETO_OPAQUE : 0),
 			&newrc, lpString+i, j-i, lpDx+i, wide);
 	}
@@ -4181,20 +4177,6 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
     SelectObject(hdc, fonts[nfont]);
     SetTextColor(hdc, fg);
     SetBkColor(hdc, bg);
-	/* > transparent background patch */
-	if (conf_get_int(conf, CONF_transparent_mode) && (nbg == 258)) {
-        SetBkMode(hdc, TRANSPARENT);
-        (*xtrans_paint_background)(hdc, x, y, char_width * len, font_height);
-	}
-    else {
-	/* < */
-    if (attr & TATTR_COMBINING)
-	SetBkMode(hdc, TRANSPARENT);
-    else
-	SetBkMode(hdc, OPAQUE);
-	/* > transparent background patch */
-    }
-	/* < */
     line_box.left = x;
     line_box.top = y;
     line_box.right = x + char_width * len;
@@ -4221,6 +4203,17 @@ void do_text_internal(Context ctx, int x, int y, wchar_t *text, int len,
     /* Only want the left half of double width lines */
     if (line_box.right > font_width*term->cols+offset_width)
 	line_box.right = font_width*term->cols+offset_width;
+
+    if (attr & TATTR_COMBINING)
+	SetBkMode(hdc, TRANSPARENT);
+	/* > transparent background patch */
+    else if (nbg == 258 && conf_get_int(conf, CONF_transparent_mode)) {
+        SetBkMode(hdc, TRANSPARENT);
+        (*xtrans_paint_background)(hdc, x, y, line_box.right - x, font_height);
+    }
+	/* < */
+    else
+	SetBkMode(hdc, OPAQUE);
 
     if (font_varpitch) {
         /*
@@ -6534,7 +6527,9 @@ static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT *rc,
     int f;
     int w95;
     LONG cx2;
-    int dxval = dx ? *dx : 0;
+    HDC dc = NULL, dc2;
+    HBITMAP oldbm;
+    int bk_mode = 0;
     extern int iso2022_win95flag;
     if (!dx) {
 	ExtTextOutW(hdc, x, y, opt, rc, str, cnt, dx);
@@ -6544,81 +6539,89 @@ static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT *rc,
     rc2 = *rc;
     w95 = wide ? iso2022_win95flag : 0;
     while (cnt) {
+	int dxsum = 0;
 	cx2 = 0;
-	for (i = 0; i < cnt; i++) {
-	    GetTextExtentPoint32W(hdc, &str[i], 1, &s);
-	    if ((s.cx > dxval || s.cx * 4 < dxval * 3) != f)
+	for (i = 0; i < cnt; ) {
+	    int cto, cdx = 0;
+	    for (cto = 0; (!cto || !cdx) && i + cto < cnt; cto++)
+		cdx += dx[i + cto]; /* process zero width chars at once */
+	    GetTextExtentPoint32W(hdc, &str[i], cto, &s);
+	    if ((s.cx > cdx || s.cx * 4 < cdx * 3) != f)
 		break;
 	    if (f && cx2 != s.cx) {
 		if (i)
 		    break;
 		cx2 = s.cx;
 	    }
-	    if ((w95 && !f) || (0x590 <= str[i] && str[i] <= 0x5ff)) {
-		i++;
+	    dxsum += cdx;
+	    i += cto;
+	    if (w95 && !f)
 		break;
-	    }
 	}
 	if (i) {
 	    cnt -= i;
-	    rc2.right = cnt ? rc2.left + dxval * i : rc->right;
+	    rc2.right = cnt ? rc2.left + dxsum : rc->right;
 	    if (f) {
-		HDC dc;
-		HBITMAP bm, oldbm;
+		HBITMAP bm;
 		RECT rc3;
-
 		GetTextExtentPoint32W(hdc, str, i, &s);
 		rc3.left = rc3.top = 0;
-		rc3.right = s.cx;
+		rc3.right = max(s.cx, dxsum);
 		rc3.bottom = s.cy;
-		dc = CreateCompatibleDC(hdc);
-		bm = CreateBitmap(max(s.cx, dxval * i), s.cy, 1, 1, 0);
-		oldbm = SelectObject(dc, bm);
-		SelectObject(dc, GetCurrentObject(hdc, OBJ_FONT));
-		SetTextAlign(dc, TA_TOP | TA_LEFT | TA_NOUPDATECP);
-		SetBkColor(dc, RGB(255, 255, 255));
-		SetTextColor(dc, RGB(0, 0, 0));
-		SetBkMode(dc, OPAQUE);
-		ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rc3, str, i, 0);
-		SetStretchBltMode(dc, BLACKONWHITE);
-		StretchBlt(dc, 0, 0, dxval * i, s.cy,
-			   dc, 0, 0, s.cx, s.cy, SRCCOPY);
-		{
-		    HDC dc2;
-		    HBITMAP bm2, oldbm2;
+		bm = CreateBitmap(rc3.right, s.cy, 1, 1, 0);
+		if (!dc) {
+		    dc = CreateCompatibleDC(hdc);
+		    oldbm = SelectObject(dc, bm);
+		    SelectObject(dc, GetCurrentObject(hdc, OBJ_FONT));
+		    SetTextAlign(dc, TA_TOP | TA_LEFT | TA_NOUPDATECP);
+		    SetBkColor(dc, RGB(255, 255, 255));
+		    SetTextColor(dc, RGB(0, 0, 0));
+		    SetBkMode(dc, OPAQUE);
+		    SetStretchBltMode(dc, BLACKONWHITE);
 		    dc2 = CreateCompatibleDC(hdc);
+		} else
+		    SelectObject(dc, bm);
+		ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rc3, str, i, 0);
+		StretchBlt(dc, 0, 0, dxsum, s.cy, dc, 0, 0, s.cx, s.cy, SRCCOPY);
+		{
+		    HBITMAP bm2, oldbm2;
 		    bm2 = CreateCompatibleBitmap(hdc, rc2.right - rc2.left, rc2.bottom - rc2.top);
 		    oldbm2 = SelectObject(dc2, bm2);
-		    if (opt & ETO_OPAQUE) {
+		    SetTextColor(dc2, RGB(0, 0, 0));
+		    SetBkColor(dc2, RGB(255, 255, 255));
+		    if (!bk_mode)
+			bk_mode = GetBkMode(hdc);
+		    if (opt & ETO_OPAQUE || bk_mode == OPAQUE) {
 			RECT a;
-
 			SetRect(&a, 0, 0, rc2.right - rc2.left, rc2.bottom - rc2.top);
 			SetBkColor(dc2, GetBkColor(hdc));
 			ExtTextOut(dc2, 0, 0, ETO_OPAQUE, &a, "", 0, 0);
+			SetBkColor(dc2, RGB(255, 255, 255));
 		    } else
 			BitBlt(dc2, 0, 0, rc2.right - rc2.left, rc2.bottom - rc2.top,
 			       hdc, rc2.left, rc2.top, SRCCOPY);
-		    SetTextColor(dc2, RGB(0, 0, 0));
-		    SetBkColor(dc2, RGB(255, 255, 255));
-		    BitBlt(dc2, x - rc2.left, y - rc2.top, dxval * i, s.cy, dc, 0, 0, SRCAND);
+		    BitBlt(dc2, x - rc2.left, y - rc2.top, dxsum, s.cy, dc, 0, 0, SRCAND);
 		    SetBkColor(dc2, RGB(0, 0, 0));
 		    SetTextColor(dc2, GetTextColor(hdc));
-		    BitBlt(dc2, x - rc2.left, y - rc2.top, dxval * i, s.cy, dc, 0, 0, SRCPAINT);
+		    BitBlt(dc2, x - rc2.left, y - rc2.top, dxsum, s.cy, dc, 0, 0, SRCPAINT);
 		    BitBlt(hdc, rc2.left, rc2.top, rc2.right - rc2.left, rc2.bottom - rc2.top,
 			   dc2, 0, 0, SRCCOPY);
 		    SelectObject(dc2, oldbm2);
-		    DeleteDC(dc2);
 		    DeleteObject(bm2);
 		}
-		SelectObject(dc, oldbm);
-		DeleteDC(dc);
 		DeleteObject(bm);
 	    } else
 		ExtTextOutW(hdc, x, y, opt, &rc2, str, i, dx);
-	    x += dxval * i;
+	    x += dxsum;
 	    str += i;
+	    dx += i;
 	    rc2.left = rc2.right;
 	}
 	f = !f;
+    }
+    if (dc) {
+	SelectObject(dc, oldbm);
+	DeleteDC(dc);
+	DeleteDC(dc2);
     }
 }

@@ -205,7 +205,7 @@ iso2022_tgetbuf (struct iso2022_data *this)
 }
 
 int
-iso2022_width (struct iso2022_data *this, wchar_t c)
+iso2022_width (struct iso2022_data *this, unsigned int c)
 {
   int width;
 
@@ -222,7 +222,7 @@ iso2022_width (struct iso2022_data *this, wchar_t c)
 }
 
 int
-iso2022_width_sub (struct iso2022_data *this, wchar_t c)
+iso2022_width_sub (struct iso2022_data *this, unsigned int c)
 {
   if (this->rcv.width == 0)
     {
@@ -1936,7 +1936,7 @@ xMultiByteToWideChar (UINT a1, DWORD a2, LPCSTR a3, int a4, LPWSTR a5, int a6)
   unsigned long w;
 
   if (!f)
-    f = GetProcAddress (GetModuleHandle ("kernel32"), "MultiByteToWideChar");
+    (FARPROC)f = GetProcAddress (GetModuleHandle ("kernel32"), "MultiByteToWideChar");
   if (a1 != CP_UTF8)
     return f (a1, a2, a3, a4, a5, a6);
   if (a4 == -1)
@@ -1964,10 +1964,13 @@ xMultiByteToWideChar (UINT a1, DWORD a2, LPCSTR a3, int a4, LPWSTR a5, int a6)
 	{
 	  while (--j)
 	    w = (w << 6) | (a3[++i] & 0x3f);
-	  if (w >= 0x10000UL)
-	    w = (unsigned long)L'?';
-	  if (k < a6)
-	    a5[k] = w;
+	  if (w >= 0x10000) {
+	    if (k + 1 >= a6)
+	      break;
+	    a5[k++] = (WCHAR)HIGH_SURROGATE_OF(w);
+	    a5[k] = (WCHAR)LOW_SURROGATE_OF(w);
+	  } else if (k < a6)
+	    a5[k] = (WCHAR)w;
 	  else if (k == a6)
 	    break;
 	  k++;
@@ -1991,7 +1994,7 @@ xWideCharToMultiByte (UINT a1, DWORD a2, LPCWSTR a3, int a4, LPSTR a5, int a6,
   unsigned char b[10];
 
   if (!f)
-    f = GetProcAddress (GetModuleHandle ("kernel32"), "WideCharToMultiByte");
+    (FARPROC)f = GetProcAddress (GetModuleHandle ("kernel32"), "WideCharToMultiByte");
   if (a1 != CP_UTF8)
     return f (a1, a2, a3, a4, a5, a6, a7, a8);
   if (a4 == -1)
@@ -2002,12 +2005,18 @@ xWideCharToMultiByte (UINT a1, DWORD a2, LPCWSTR a3, int a4, LPSTR a5, int a6,
     {
       w = a3[i];
       if (w < 0x80)
-	j = 1, b[0] = w;
+	j = 1, b[0] = (unsigned char)w;
       else if (w < 0x800)
 	j = 2, b[1] = 0x80 | (w & 0x3f), b[0] = 0xc0 | ((w >> 6) & 0x1f);
-      else
+      else if (!IS_SURROGATE(w))
 	j = 3, b[2] = 0x80 | (w & 0x3f),
 	  b[1] = 0x80 | ((w >> 6) & 0x3f), b[0] = 0xe0 | ((w >> 12) & 0x0f);
+      else if (IS_LOW_SURROGATE(w) && i + 1 < a4) {
+	unsigned long ww = FROM_SURROGATES(w, a3[i + 1]);
+	j = 4, b[3] = 0x80 | (ww & 0x3f), b[2] = 0x80 | ((ww >> 6) & 0x3f),
+	  b[1] = 0x80 | ((ww >> 12) & 0x3f), b[0] = 0xf0 | ((ww >> 18) & 0x7);
+      } else
+	j = 1, b[0] = '?';
       if (k + j <= a6 || a6 == -1)
 	{
 	  if (a6 == -1)

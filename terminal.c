@@ -3162,7 +3162,7 @@ static void term_out(Terminal *term)
 		    if (DIRECT_CHAR(c))
 			width = 1;
 		    if (iso2022)
-			width = iso2022_width (iso2022, (wchar_t)c);
+			width = iso2022_width (iso2022, c);
 		    if (!width)
 			width = (term->cjk_ambig_wide ?
 				 mk_wcwidth_cjk((unsigned int) c) :
