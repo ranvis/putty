@@ -1028,13 +1028,11 @@ int decode_codepage(const char *cp_name)
     int codepage = -1;
     CPINFO cpinfo;
 
-    if (cp_name && *cp_name) {
-	if (!iso2022_init_test (cp_name))
-	    cp_name = "UTF-8";
-    }
-
     if (!cp_name || !*cp_name)
         return CP_UTF8;                /* default */
+
+    if (!iso2022_init_test (cp_name))
+	cp_name = "UTF-8";
 
     for (cpi = cp_list; cpi->name; cpi++) {
         s = cp_name;

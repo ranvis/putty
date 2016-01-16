@@ -140,8 +140,6 @@ void *open_settings_w(const char *sessionname, char **errmsg)
     if (get_use_inifile()) {
 	char* keyname = generate_keyname(p);
 	WritePrivateProfileString(keyname, "Present", "1", inifile);
-	WritePrivateProfileString(keyname, "ISO2022", NULL, inifile);
-	WritePrivateProfileString(keyname, "ISO2022initstr", NULL, inifile);
 	return keyname;
     }
     ret = RegCreateKey(HKEY_CURRENT_USER, puttystr, &subkey1);
@@ -160,8 +158,6 @@ void *open_settings_w(const char *sessionname, char **errmsg)
 	return NULL;
     }
     sfree(p);
-    RegDeleteValue (sesskey, "ISO2022");  /* for compatibility with old patch */
-    RegDeleteValue (sesskey, "ISO2022initstr");
     return (void *) sesskey;
 }
 

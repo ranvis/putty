@@ -271,8 +271,8 @@ const char *cp_enumerate(int index)
 	"MS_Kanji/Auto-Detect Japanese",
 	"Shift_JIS/Auto-Detect Japanese",
     };
-    if (index <= sizeof cp_add / sizeof cp_add[0])
-	return cp_add[index - 1];
+    if (index < sizeof cp_add / sizeof cp_add[0])
+	return cp_add[index];
     else
 	index -= sizeof cp_add / sizeof cp_add[0];
     charset = charset_localenc_nth(index);

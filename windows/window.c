@@ -6536,6 +6536,10 @@ static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT *rc,
     LONG cx2;
     int dxval = dx ? *dx : 0;
     extern int iso2022_win95flag;
+    if (!dx) {
+	ExtTextOutW(hdc, x, y, opt, rc, str, cnt, dx);
+	return;
+    }
     f = 0;
     rc2 = *rc;
     w95 = wide ? iso2022_win95flag : 0;
