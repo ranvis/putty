@@ -6525,117 +6525,96 @@ void agent_schedule_callback(void (*callback)(void *, void *, int),
 }
 
 /* (opt & ETO_CLIPPED) must not be zero. */
-static void
-ExtTextOutW2 (HDC hdc, int x, int y, UINT opt, const RECT *rc,
-	      WCHAR *str, UINT cnt, const int *dx, int wide)
+static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT *rc,
+			 WCHAR *str, UINT cnt, const int *dx, int wide)
 {
-  unsigned int i;
-  SIZE s;
-  RECT rc2;
-  int f;
-  int w95;
-  LONG cx2;
-  int dxval = dx ? *dx : 0;
-  extern int iso2022_win95flag;
-
-  f = 0;
-  rc2 = *rc;
-  w95 = wide ? iso2022_win95flag : 0;
-  while (cnt)
-    {
-      cx2 = 0;
-      for (i = 0 ; i < cnt ; i++)
-	{
-	  GetTextExtentPoint32W (hdc, &str[i], 1, &s);
-	  if ((s.cx > dxval ||
-	       s.cx * 4 < dxval * 3) != f)
-	    break;
-	  if (f && cx2 != s.cx)
-	    {
-	      if (i)
+    unsigned int i;
+    SIZE s;
+    RECT rc2;
+    int f;
+    int w95;
+    LONG cx2;
+    int dxval = dx ? *dx : 0;
+    extern int iso2022_win95flag;
+    f = 0;
+    rc2 = *rc;
+    w95 = wide ? iso2022_win95flag : 0;
+    while (cnt) {
+	cx2 = 0;
+	for (i = 0; i < cnt; i++) {
+	    GetTextExtentPoint32W(hdc, &str[i], 1, &s);
+	    if ((s.cx > dxval || s.cx * 4 < dxval * 3) != f)
 		break;
-	      cx2 = s.cx;
+	    if (f && cx2 != s.cx) {
+		if (i)
+		    break;
+		cx2 = s.cx;
 	    }
-	  if ((w95 && !f) || (0x590 <= str[i] && str[i] <= 0x5ff))
-	    {
-	      i++;
-	      break;
+	    if ((w95 && !f) || (0x590 <= str[i] && str[i] <= 0x5ff)) {
+		i++;
+		break;
 	    }
 	}
-      if (i)
-	{
-	  cnt -= i;
-	  rc2.right = cnt ? rc2.left + dxval * i : rc->right;
-	  if (f)
-	    {
-	      HDC dc;
-	      HBITMAP bm, oldbm;
-	      RECT rc3;
+	if (i) {
+	    cnt -= i;
+	    rc2.right = cnt ? rc2.left + dxval * i : rc->right;
+	    if (f) {
+		HDC dc;
+		HBITMAP bm, oldbm;
+		RECT rc3;
 
-	      GetTextExtentPoint32W (hdc, str, i, &s);
-	      rc3.left = rc3.top = 0;
-	      rc3.right = s.cx;
-	      rc3.bottom = s.cy;
-	      dc = CreateCompatibleDC (hdc);
-	      bm = CreateBitmap (max (s.cx, dxval * i),
-				 s.cy, 1, 1, 0);
-	      oldbm = SelectObject (dc, bm);
-	      SelectObject (dc, GetCurrentObject (hdc, OBJ_FONT));
-	      SetTextAlign (dc, TA_TOP | TA_LEFT | TA_NOUPDATECP);
-	      SetBkColor (dc, RGB (255, 255, 255));
-	      SetTextColor (dc, RGB (0, 0, 0));
-	      SetBkMode (dc, OPAQUE);
-	      ExtTextOutW (dc, 0, 0, ETO_OPAQUE, &rc3, str, i, 0);
-	      SetStretchBltMode (dc, BLACKONWHITE);
-	      StretchBlt (dc, 0, 0, dxval * i, s.cy,
-			  dc, 0, 0, s.cx, s.cy, SRCCOPY);
-	      {
-		HDC dc2;
-		HBITMAP bm2, oldbm2;
+		GetTextExtentPoint32W(hdc, str, i, &s);
+		rc3.left = rc3.top = 0;
+		rc3.right = s.cx;
+		rc3.bottom = s.cy;
+		dc = CreateCompatibleDC(hdc);
+		bm = CreateBitmap(max(s.cx, dxval * i), s.cy, 1, 1, 0);
+		oldbm = SelectObject(dc, bm);
+		SelectObject(dc, GetCurrentObject(hdc, OBJ_FONT));
+		SetTextAlign(dc, TA_TOP | TA_LEFT | TA_NOUPDATECP);
+		SetBkColor(dc, RGB(255, 255, 255));
+		SetTextColor(dc, RGB(0, 0, 0));
+		SetBkMode(dc, OPAQUE);
+		ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rc3, str, i, 0);
+		SetStretchBltMode(dc, BLACKONWHITE);
+		StretchBlt(dc, 0, 0, dxval * i, s.cy,
+			   dc, 0, 0, s.cx, s.cy, SRCCOPY);
+		{
+		    HDC dc2;
+		    HBITMAP bm2, oldbm2;
+		    dc2 = CreateCompatibleDC(hdc);
+		    bm2 = CreateCompatibleBitmap(hdc, rc2.right - rc2.left, rc2.bottom - rc2.top);
+		    oldbm2 = SelectObject(dc2, bm2);
+		    if (opt & ETO_OPAQUE) {
+			RECT a;
 
-		dc2 = CreateCompatibleDC (hdc);
-		bm2 = CreateCompatibleBitmap (hdc,
-					      rc2.right - rc2.left,
-					      rc2.bottom - rc2.top);
-		oldbm2 = SelectObject (dc2, bm2);
-		if (opt & ETO_OPAQUE)
-		  {
-		    RECT a;
-
-		    SetRect (&a, 0, 0, rc2.right - rc2.left,
-			     rc2.bottom - rc2.top);
-		    SetBkColor (dc2, GetBkColor (hdc));
-		    ExtTextOut (dc2, 0, 0, ETO_OPAQUE, &a, "", 0, 0);
-		  }
-		else
-		  BitBlt (dc2, 0, 0, rc2.right - rc2.left,
-			  rc2.bottom - rc2.top, hdc, rc2.left, rc2.top,
-			  SRCCOPY);
-		SetTextColor (dc2, RGB (0, 0, 0));
-		SetBkColor (dc2, RGB (255, 255, 255));
-		BitBlt (dc2, x - rc2.left, y - rc2.top, dxval * i,
-			s.cy, dc, 0, 0, SRCAND);
-		SetBkColor (dc2, RGB (0, 0, 0));
-		SetTextColor (dc2, GetTextColor (hdc));
-		BitBlt (dc2, x - rc2.left, y - rc2.top, dxval * i,
-			s.cy, dc, 0, 0, SRCPAINT);
-		BitBlt (hdc, rc2.left, rc2.top, rc2.right - rc2.left,
-			rc2.bottom - rc2.top, dc2, 0, 0,
-			SRCCOPY);
-		SelectObject (dc2, oldbm2);
-		DeleteDC (dc2);
-		DeleteObject (bm2);
-	      }
-	      SelectObject(dc, oldbm);
-	      DeleteDC(dc);
-	      DeleteObject(bm);
-	    }
-	  else
-	    ExtTextOutW (hdc, x, y, opt, &rc2, str, i, dx);
-	  x += dxval * i;
-	  str += i;
-	  rc2.left = rc2.right;
+			SetRect(&a, 0, 0, rc2.right - rc2.left, rc2.bottom - rc2.top);
+			SetBkColor(dc2, GetBkColor(hdc));
+			ExtTextOut(dc2, 0, 0, ETO_OPAQUE, &a, "", 0, 0);
+		    } else
+			BitBlt(dc2, 0, 0, rc2.right - rc2.left, rc2.bottom - rc2.top,
+			       hdc, rc2.left, rc2.top, SRCCOPY);
+		    SetTextColor(dc2, RGB(0, 0, 0));
+		    SetBkColor(dc2, RGB(255, 255, 255));
+		    BitBlt(dc2, x - rc2.left, y - rc2.top, dxval * i, s.cy, dc, 0, 0, SRCAND);
+		    SetBkColor(dc2, RGB(0, 0, 0));
+		    SetTextColor(dc2, GetTextColor(hdc));
+		    BitBlt(dc2, x - rc2.left, y - rc2.top, dxval * i, s.cy, dc, 0, 0, SRCPAINT);
+		    BitBlt(hdc, rc2.left, rc2.top, rc2.right - rc2.left, rc2.bottom - rc2.top,
+			   dc2, 0, 0, SRCCOPY);
+		    SelectObject(dc2, oldbm2);
+		    DeleteDC(dc2);
+		    DeleteObject(bm2);
+		}
+		SelectObject(dc, oldbm);
+		DeleteDC(dc);
+		DeleteObject(bm);
+	    } else
+		ExtTextOutW(hdc, x, y, opt, &rc2, str, i, dx);
+	    x += dxval * i;
+	    str += i;
+	    rc2.left = rc2.right;
 	}
-      f = !f;
+	f = !f;
     }
 }
