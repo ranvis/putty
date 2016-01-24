@@ -1380,6 +1380,15 @@ void cleanup_exit(int code)
     /* Clean up COM. */
     CoUninitialize();
 
+#ifdef DEBUG
+    if (logctx)
+	log_free(logctx), logctx = NULL;
+    if (term)
+	term_free(term), term = NULL;
+    if (conf)
+	conf_free(conf), conf = NULL;
+#endif
+
     exit(code);
 }
 
@@ -3802,7 +3811,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 			luni_send(ldisc, (unsigned short *)(buff+i), 1, 1);
                     }
 		}
-		free(buff);
+		sfree(buff);
 	    }
 	    ImmReleaseContext(hwnd, hIMC);
 	    return 1;

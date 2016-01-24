@@ -1422,7 +1422,7 @@ void term_copy_stuff_from_conf(Terminal *term)
 	char *answerback = conf_get_str(term->conf, CONF_answerback);
 	int maxlen = strlen(answerback);
 
-	term->answerback = snewn(maxlen, char);
+	term->answerback = sresize(term->answerback, maxlen, char);
 	term->answerbacklen = 0;
 
 	while (*answerback) {
@@ -1609,6 +1609,7 @@ Terminal *term_init(Conf *myconf, struct unicode_data *ucsdata,
     term->termstate = TOPLEVEL;
     term->selstate = NO_SELECTION;
     term->curstype = 0;
+    term->answerback = NULL;
 
     term_copy_stuff_from_conf(term);
 
