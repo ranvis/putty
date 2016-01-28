@@ -2180,7 +2180,7 @@ void setup_config_box(struct controlbox *b, int midsession,
 			  HELPCTX(ssh_share),
 			  conf_checkbox_handler,
 			  I(CONF_ssh_connection_sharing));
-	    ctrl_checkbox(s, "Ask on sharing", 'a',
+	    ctrl_checkbox(s, "Ask on sharing", 'k',
 			  HELPCTX(ssh_share),
 			  conf_checkbox_handler,
 			  I(CONF_ssh_connection_sharing_ask));

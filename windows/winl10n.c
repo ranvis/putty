@@ -57,13 +57,8 @@ static DWORD getl10nstr(const char *str, char *out_buf, int out_size)
     {
 	const char *p = str;
 	while (*p != '\0') {
-	    if (IsDBCSLeadByte(*p)) {
-		if (out_buf != str) {
-		    strncpy(out_buf, str, out_size);
-		    out_buf[out_size - 1] = '\0';
-		}
-		return strlen(out_buf);
-	    }
+	    if (IsDBCSLeadByte(*p))
+		return 0;
 	    p++;
 	}
     }
@@ -76,9 +71,7 @@ static DWORD getl10nstr(const char *str, char *out_buf, int out_size)
     if (out_buf[0] == '\n') {
 	if (collect > 0 && (int)strlen(str) > collect)
 	    WritePrivateProfileString(lang, str_esc, str_esc, lngfile);
-	strncpy(out_buf, str, out_size);
-	out_buf[out_size - 1] = '\0';
-	return strlen(out_buf);
+	return 0;
     }
     for (out = out_buf; (*out = *out_buf); out++, out_buf++) {
 	if (*out_buf == '%') {
@@ -206,6 +199,7 @@ static LRESULT hook_tvm_getitem(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam
     p->cchTextMax = l;
     getl10nstr(a, a, lenof(a));
     strncpy(q, a, l);
+    q[l - 1] = '\0';
     return r;
 }
 
@@ -381,7 +375,7 @@ static HWND override_wndproc(HWND r)
     if (!(style & WS_CHILD)) {
 	if (!strcmp(classname, "PuTTY"))
 	    type = TYPE_MAIN;
-	else if (getl10nstr(windowname, buf, lenof(buf)))
+	else
 	    type = TYPE_OTHER;
     }
     if (type == TYPE_OFF)
@@ -457,7 +451,7 @@ static BOOL CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpar
 #undef MessageBoxA
 int xMessageBoxA(HWND a1, LPCSTR a2, LPCSTR a3, UINT a4)
 {
-    char *b2 = (char*)a2, *b3 = (char*)a3;
+    const char *b2 = a2, *b3 = a3;
     char c2[256], c3[256];
 
     if (!getEnabled())
