@@ -40,6 +40,7 @@ extern BOOL img_has_alpha;
 
 extern void wallpaper_paint(HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);
 extern void wallpaper_fill_bgcolor(HDC hdc, const RECT *rect);
+extern HBITMAP create_large_bitmap(HDC hdc, int width, int height);
 extern void get_bitmap_size(HBITMAP hbmp, int *width, int *height);
 extern COLORREF wallpaper_get_bg_color(void);
 

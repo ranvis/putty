@@ -942,6 +942,7 @@ void cleanup_exit(int);
     X(INT, NONE, wallpaper_place) \
     X(INT, NONE, wallpaper_align) \
     X(INT, NONE, stop_when_moving) \
+    X(INT, NONE, use_ddb) \
     X(FILENAME, NONE, bgimg_file) \
 	/* < */ \
     X(FILENAME, NONE, iconfile) \

@@ -664,6 +664,7 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_i(sesskey, "WallpaperPlacement", conf_get_int(conf, CONF_wallpaper_place));
     write_setting_i(sesskey, "WallpaperAlignment", conf_get_int(conf, CONF_wallpaper_align));
     write_setting_i( sesskey, "StoppedToDraw", conf_get_int(conf, CONF_stop_when_moving));
+    write_setting_i( sesskey, "WallpaperUseSysRes", conf_get_int(conf, CONF_use_ddb));
     write_setting_filename( sesskey, "BackgroundImageFile", conf_get_filename(conf, CONF_bgimg_file));
     /* < */
     write_setting_i(sesskey, "ConnectionSharing", conf_get_int(conf, CONF_ssh_connection_sharing));
@@ -1036,6 +1037,7 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppi(sesskey, "WallpaperPlacement", WALLPAPER_PLACE_DEFAULT, conf, CONF_wallpaper_place);
     gppi(sesskey, "WallpaperAlignment", WALLPAPER_ALIGN_DEFAULT, conf, CONF_wallpaper_align);
     gppi(sesskey, "StoppedToDraw", 0, conf, CONF_stop_when_moving);
+    gppi(sesskey, "WallpaperUseSysRes", 0, conf, CONF_use_ddb);
     gppfile(sesskey, "BackgroundImageFile", conf, CONF_bgimg_file);
     /* < */
     gppi(sesskey, "ConnectionSharing", 0, conf, CONF_ssh_connection_sharing);

@@ -310,6 +310,7 @@ Bottom left=左下
 Bottom=下
 Bottom right=右下
 Suspend updating when moving window=ウインドウの移動時には描画しない
+Use System Res=システムリソース
 Bitmap file to use for background:=背景に使用するビットマップファイル
 Select bitmap file for background=背景用ビットマップファイルの選択
 Select image file for background=背景用画像ファイルの選択

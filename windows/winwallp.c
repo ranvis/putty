@@ -148,6 +148,22 @@ static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect)
     DeleteObject(brush);
 }
 
+HBITMAP create_large_bitmap(HDC hdc, int width, int height)
+{
+    HBITMAP bmp = conf_get_int(conf, CONF_use_ddb) ? CreateCompatibleBitmap(hdc, width, height) : NULL;
+    if (bmp == NULL) {
+	BITMAPINFOHEADER bmp_info = {sizeof(BITMAPINFOHEADER)};
+	void *pixels;
+	bmp_info.biWidth = width;
+	bmp_info.biHeight = height;
+	bmp_info.biPlanes = 1;
+	bmp_info.biBitCount = max(16, GetDeviceCaps(hdc, BITSPIXEL)); /* no multimonitor thing */
+	bmp_info.biCompression= BI_RGB;
+	bmp = CreateDIBSection(hdc, (BITMAPINFO *)&bmp_info, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
+    }
+    return bmp;
+}
+
 void get_bitmap_size(HBITMAP hbmp, int *width, int *height)
 {
     BITMAP bitmap;

@@ -325,7 +325,7 @@ static void wallpaper_prepare_desktop()
     GetClientRect(hwnd, &rect);
     hdc = GetDC(hwnd);
     if (background_bmp == NULL)
-	background_bmp = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+	background_bmp = create_large_bitmap(hdc, rect.right, rect.bottom);
     bg_dc = CreateCompatibleDC(hdc);
     prev_bmp = SelectObject(bg_dc, background_bmp);
     if (shading != 255)
@@ -358,7 +358,7 @@ static void wallpaper_prepare_dtimg()
     if (img_bmp == NULL && path[0] != '\0') {
 	if (is_path_bmp(path)) {
 	    img_bmp = LoadImage(0, path, IMAGE_BITMAP, 0, 0,
-				LR_LOADFROMFILE | LR_SHARED);
+				(conf_get_int(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
 	    img_has_alpha = FALSE;
 	} else {
 	    img_bmp = gdip_load_image(path);
@@ -373,7 +373,7 @@ static void wallpaper_prepare_dtimg()
     GetClientRect(hwnd, &rect);
     hdc = GetDC(hwnd);
     if (background_bmp == NULL)
-	background_bmp = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+	background_bmp = create_large_bitmap(hdc, rect.right, rect.bottom);
     bg_dc = CreateCompatibleDC(hdc);
     prev_bmp = SelectObject(bg_dc, background_bmp);
     PaintDesktop(hdc);
@@ -409,7 +409,7 @@ static void wallpaper_prepare_image()
 	xtrans_free_background();
 	if (is_path_bmp(path)) {
 	    background_bmp = LoadImage(0, path, IMAGE_BITMAP, 0, 0,
-				       LR_LOADFROMFILE | LR_SHARED);
+				       (conf_get_int(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
             bg_has_alpha = FALSE;
         } else {
             background_bmp = gdip_load_image(path);
@@ -435,7 +435,7 @@ static void wallpaper_prepare_image()
         memhdc = CreateCompatibleDC(hdc);
         memhdc_mask = CreateCompatibleDC(hdc);
         defbmp = SelectObject(memhdc, background_bmp);
-        bmp_mask = CreateCompatibleBitmap(hdc, bg_width, bg_height);
+        bmp_mask = create_large_bitmap(hdc, bg_width, bg_height);
         ReleaseDC(hwnd, hdc);
         defbmp_mask = SelectObject(memhdc_mask, bmp_mask);
 
@@ -493,7 +493,7 @@ static void xtrans_load_bitmap()
      */
     xtrans_free_background();
     background_bmp = LoadImage(0, pass, IMAGE_BITMAP, 0, 0,
-                               LR_LOADFROMFILE | LR_SHARED);
+                               (conf_get_int(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
     bg_has_alpha = FALSE;
     xtrans_bitmap_changed();
     conf_set_int(conf, CONF_transparent_mode, WALLPAPER_MODE_IMAGE);

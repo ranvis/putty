@@ -398,9 +398,14 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		      wallpaper_dropdown_handler, I(CONF_wallpaper_place));
 	ctrl_droplist(s, "Alignment:", 'n', 40, HELPCTX(no_help),
 		      wallpaper_dropdown_handler, I(CONF_wallpaper_align));
-	ctrl_checkbox( s, "Use alpha-blending", 'u',
+	ctrl_columns(s, 2, 60, 40);
+	c = ctrl_checkbox( s, "Use alpha-blending", 'u',
 				   HELPCTX(no_help),
 				   conf_checkbox_handler, I(CONF_use_alphablend) );
+	c->generic.column = 0;
+	c = ctrl_checkbox(s, "Use System Res", 'r', HELPCTX(no_help), conf_checkbox_handler, I(CONF_use_ddb));
+	c->generic.column = 1;
+	ctrl_columns(s, 1, 100);
 	ctrl_checkbox( s, "Suspend updating when moving window", 's',
 				   HELPCTX(no_help),
 				   conf_checkbox_handler, I(CONF_stop_when_moving) );
