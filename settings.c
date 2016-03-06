@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "putty.h"
 #include "storage.h"
+#include "winwallp.h"
 
 /* The cipher order given here is the default order. */
 static const struct keyvalwhere ciphernames[] = {
@@ -574,7 +575,7 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_i(sesskey, "Xterm256Colour", conf_get_int(conf, CONF_xterm_256_colour));
     write_setting_i(sesskey, "BoldAsColour", conf_get_int(conf, CONF_bold_style)-1);
 
-    for (i = 0; i < 22; i++) {
+    for (i = 0; i < 24; i++) {
 	char buf[20], buf2[30];
 	sprintf(buf, "Colour%d", i);
 	sprintf(buf2, "%d,%d,%d",
@@ -648,7 +649,26 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_i(sesskey, "SerialParity", conf_get_int(conf, CONF_serparity));
     write_setting_i(sesskey, "SerialFlowControl", conf_get_int(conf, CONF_serflow));
     write_setting_s(sesskey, "WindowClass", conf_get_str(conf, CONF_winclass));
+    write_setting_i(sesskey, "AltMetaBit", conf_get_int(conf, CONF_alt_metabit));
+    write_setting_i(sesskey, "CtrlTabSwitch", conf_get_int(conf, CONF_ctrl_tab_switch));
+    write_setting_i(sesskey, "SwitchSkipMin", conf_get_int(conf, CONF_switch_skip_min));
+    write_setting_i(sesskey, "RightAltKey", conf_get_int(conf, CONF_rightaltkey));
+    write_setting_filename(sesskey, "IconFile", conf_get_filename(conf, CONF_iconfile));
+    write_setting_i(sesskey, "Use5Casis", conf_get_int(conf, CONF_use_5casis));
+    write_setting_i(sesskey, "TermX", conf_get_int(conf, CONF_x));
+    write_setting_i(sesskey, "TermY", conf_get_int(conf, CONF_y));
+    /* > transparent background patch */
+    write_setting_i( sesskey, "TransparentMode", conf_get_int(conf, CONF_transparent_mode));
+    write_setting_i( sesskey, "Shading", conf_get_int(conf, CONF_shading));
+    write_setting_i( sesskey, "UseAlphaBlend", conf_get_int(conf, CONF_use_alphablend));
+    write_setting_i(sesskey, "WallpaperPlacement", conf_get_int(conf, CONF_wallpaper_place));
+    write_setting_i(sesskey, "WallpaperAlignment", conf_get_int(conf, CONF_wallpaper_align));
+    write_setting_i( sesskey, "StoppedToDraw", conf_get_int(conf, CONF_stop_when_moving));
+    write_setting_i( sesskey, "WallpaperUseSysRes", conf_get_int(conf, CONF_use_ddb));
+    write_setting_filename( sesskey, "BackgroundImageFile", conf_get_filename(conf, CONF_bgimg_file));
+    /* < */
     write_setting_i(sesskey, "ConnectionSharing", conf_get_int(conf, CONF_ssh_connection_sharing));
+    write_setting_i(sesskey, "ConnectionSharingAsk", conf_get_int(conf, CONF_ssh_connection_sharing_ask));
     write_setting_i(sesskey, "ConnectionSharingUpstream", conf_get_int(conf, CONF_ssh_connection_sharing_upstream));
     write_setting_i(sesskey, "ConnectionSharingDownstream", conf_get_int(conf, CONF_ssh_connection_sharing_downstream));
     wmap(sesskey, "SSHManualHostKeys", conf, CONF_ssh_manual_hostkeys, FALSE);
@@ -885,13 +905,14 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppi(sesskey, "Xterm256Colour", 1, conf, CONF_xterm_256_colour);
     i = gppi_raw(sesskey, "BoldAsColour", 1); conf_set_int(conf, CONF_bold_style, i+1);
 
-    for (i = 0; i < 22; i++) {
+    for (i = 0; i < 24; i++) {
 	static const char *const defaults[] = {
 	    "187,187,187", "255,255,255", "0,0,0", "85,85,85", "0,0,0",
 	    "0,255,0", "0,0,0", "85,85,85", "187,0,0", "255,85,85",
 	    "0,187,0", "85,255,85", "187,187,0", "255,255,85", "0,0,187",
 	    "85,85,255", "187,0,187", "255,85,255", "0,187,187",
-	    "85,255,255", "187,187,187", "255,255,255"
+	    "85,255,255", "187,187,187", "255,255,255", 
+	    "0,0,0", "255,0,0"
 	};
 	char buf[20], *buf2;
 	int c0, c1, c2;
@@ -939,7 +960,11 @@ void load_open_settings(void *sesskey, Conf *conf)
      * The empty default for LineCodePage will be converted later
      * into a plausible default for the locale.
      */
-    gpps(sesskey, "LineCodePage", "", conf, CONF_line_codepage);
+    {
+        char buf[32];
+        get_l10n_setting("_LINECODEPAGE_", buf, sizeof (buf));
+        gpps(sesskey, "LineCodePage", buf, conf, CONF_line_codepage);
+    }
     gppi(sesskey, "CJKAmbigWide", 0, conf, CONF_cjk_ambig_wide);
     gppi(sesskey, "UTF8Override", 1, conf, CONF_utf8_override);
     gpps(sesskey, "Printer", "", conf, CONF_printer);
@@ -997,7 +1022,26 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppi(sesskey, "SerialParity", SER_PAR_NONE, conf, CONF_serparity);
     gppi(sesskey, "SerialFlowControl", SER_FLOW_XONXOFF, conf, CONF_serflow);
     gpps(sesskey, "WindowClass", "", conf, CONF_winclass);
+    gppi(sesskey, "AltMetaBit", 0, conf, CONF_alt_metabit);
+    gppi(sesskey, "CtrlTabSwitch", 0, conf, CONF_ctrl_tab_switch);
+    gppi(sesskey, "SwitchSkipMin", 0, conf, CONF_switch_skip_min);
+    gppi(sesskey, "RightAltKey", 0, conf, CONF_rightaltkey);
+    gppfile(sesskey, "IconFile", conf, CONF_iconfile);
+    gppi(sesskey, "Use5Casis", 0, conf, CONF_use_5casis);
+    gppi(sesskey, "TermX", CW_USEDEFAULT, conf, CONF_x);
+    gppi(sesskey, "TermY", CW_USEDEFAULT, conf, CONF_y);
+    /* > transparent background patch */
+    gppi(sesskey, "TransparentMode", 0, conf, CONF_transparent_mode);
+    gppi(sesskey, "Shading", 0, conf, CONF_shading);
+    gppi(sesskey, "UseAlphaBlend", 0, conf, CONF_use_alphablend);
+    gppi(sesskey, "WallpaperPlacement", WALLPAPER_PLACE_DEFAULT, conf, CONF_wallpaper_place);
+    gppi(sesskey, "WallpaperAlignment", WALLPAPER_ALIGN_DEFAULT, conf, CONF_wallpaper_align);
+    gppi(sesskey, "StoppedToDraw", 0, conf, CONF_stop_when_moving);
+    gppi(sesskey, "WallpaperUseSysRes", 0, conf, CONF_use_ddb);
+    gppfile(sesskey, "BackgroundImageFile", conf, CONF_bgimg_file);
+    /* < */
     gppi(sesskey, "ConnectionSharing", 0, conf, CONF_ssh_connection_sharing);
+    gppi(sesskey, "ConnectionSharingAsk", 0, conf, CONF_ssh_connection_sharing_ask);
     gppi(sesskey, "ConnectionSharingUpstream", 1, conf, CONF_ssh_connection_sharing_upstream);
     gppi(sesskey, "ConnectionSharingDownstream", 1, conf, CONF_ssh_connection_sharing_downstream);
     gppmap(sesskey, "SSHManualHostKeys", conf, CONF_ssh_manual_hostkeys);

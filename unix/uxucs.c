@@ -137,6 +137,7 @@ int init_ucs(struct unicode_data *ucsdata, char *linecharset,
      */
     if (ucsdata->line_codepage == CS_NONE)
 	ucsdata->line_codepage = decode_codepage(linecharset);
+    ucsdata->iso2022 = !iso2022_init (&ucsdata->iso2022_data, linecharset, 1);
 
     /*
      * If line_codepage is _still_ CS_NONE, we assume we're using
@@ -253,6 +254,27 @@ const char *cp_name(int codepage)
 const char *cp_enumerate(int index)
 {
     int charset;
+    static const char *cp_add[] = {
+	"UTF-8 (CJK)",
+	"UTF-8 (Non-CJK)",
+
+	"EUC-JP",
+	"ISO-2022-JP",
+	"MS_Kanji",
+	"Shift_JIS",
+	"EUC-KR",
+	"Big5",
+	"EUC-CN",
+
+	"UTF-8/Auto-Detect Japanese",
+	"EUC-JP/Auto-Detect Japanese",
+	"MS_Kanji/Auto-Detect Japanese",
+	"Shift_JIS/Auto-Detect Japanese",
+    };
+    if (index < sizeof cp_add / sizeof cp_add[0])
+	return cp_add[index];
+    else
+	index -= sizeof cp_add / sizeof cp_add[0];
     charset = charset_localenc_nth(index);
     if (charset == CS_NONE) {
         /* "Use font encoding" comes after all the named charsets */
@@ -265,6 +287,10 @@ const char *cp_enumerate(int index)
 
 int decode_codepage(char *cp_name)
 {
+    if (cp_name && *cp_name) {
+	if (!iso2022_init_test (cp_name))
+	    cp_name = "UTF-8";
+    }
     if (!cp_name || !*cp_name)
 	return CS_UTF8;
     return charset_from_localenc(cp_name);

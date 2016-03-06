@@ -148,6 +148,7 @@ struct ssh_sharing_state {
     unsigned nextid;                 /* preferred id for next connstate */
     Ssh ssh;                         /* instance of the ssh backend */
     char *server_verstring;          /* server version string after "SSH-" */
+    Conf *conf;
 };
 
 struct share_globreq;
@@ -1929,6 +1930,11 @@ static int share_listen_accepting(Plug plug,
     const char *err;
     char *peerinfo;
 
+    if (conf_get_int(sharestate->conf, CONF_ssh_connection_sharing_ask) &&
+	!platform_ssh_share_ask(sharestate->sockname)) {
+	return 1;
+    }
+
     /*
      * A new downstream has connected to us.
      */
@@ -2067,6 +2073,7 @@ Socket ssh_connection_sharing_init(const char *host, int port,
     sharestate = snew(struct ssh_sharing_state);
     sharestate->fn = &listen_fn_table;
     sharestate->listensock = NULL;
+    sharestate->conf = conf;
 
     /*
      * Now hand off to a per-platform routine that either connects to

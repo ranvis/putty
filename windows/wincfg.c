@@ -9,6 +9,9 @@
 #include "putty.h"
 #include "dialog.h"
 #include "storage.h"
+#include "winwallp.h"
+
+static void wallpaper_dropdown_handler(union control *ctrl, void *dlg, void *data, int event);
 
 static void about_handler(union control *ctrl, void *dlg,
 			  void *data, int event)
@@ -109,6 +112,12 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
     ctrl_checkbox(s, "Control-Alt is different from AltGr", 'd',
 		  HELPCTX(keyboard_ctrlalt),
 		  conf_checkbox_handler, I(CONF_ctrlaltkeys));
+    ctrl_checkbox(s, "Right-Alt acts as it is", 'l',
+		  HELPCTX(no_help),
+		  conf_checkbox_handler, I(CONF_rightaltkey));
+    ctrl_checkbox(s, "Set meta bit on Alt (instead of escape-char)", 'm',
+		  HELPCTX(no_help),
+		  conf_checkbox_handler, I(CONF_alt_metabit));
 
     /*
      * Windows allows an arbitrary .WAV to be played as a bell, and
@@ -139,9 +148,9 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		c->radio.buttons =
 		    sresize(c->radio.buttons, c->radio.nbuttons, char *);
 		c->radio.buttons[c->radio.nbuttons-1] =
-		    dupstr("Play a custom sound file");
+		    l10n_dupstr("Play a custom sound file");
 		c->radio.buttons[c->radio.nbuttons-2] =
-		    dupstr("Beep using the PC speaker");
+		    l10n_dupstr("Beep using the PC speaker");
 		c->radio.buttondata =
 		    sresize(c->radio.buttondata, c->radio.nbuttons, intorptr);
 		c->radio.buttondata[c->radio.nbuttons-1] = I(BELL_WAVEFILE);
@@ -208,6 +217,11 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		  HELPCTX(translation_cyrillic),
 		  conf_checkbox_handler,
 		  I(CONF_xlat_capslockcyr));
+    if (!midsession)
+	ctrl_checkbox(s, "Use character code 5c as is", 't',
+		  HELPCTX(no_help),
+		  conf_checkbox_handler,
+		  I(CONF_use_5casis));
 
     /*
      * On Windows we can use but not enumerate translation tables
@@ -238,11 +252,11 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		c->radio.buttons =
 		    sresize(c->radio.buttons, c->radio.nbuttons, char *);
 		c->radio.buttons[c->radio.nbuttons-3] =
-		    dupstr("Font has XWindows encoding");
+		    l10n_dupstr("Font has XWindows encoding");
 		c->radio.buttons[c->radio.nbuttons-2] =
-		    dupstr("Use font in both ANSI and OEM modes");
+		    l10n_dupstr("Use font in both ANSI and OEM modes");
 		c->radio.buttons[c->radio.nbuttons-1] =
-		    dupstr("Use font in OEM mode only");
+		    l10n_dupstr("Use font in OEM mode only");
 		c->radio.buttondata =
 		    sresize(c->radio.buttondata, c->radio.nbuttons, intorptr);
 		c->radio.buttondata[c->radio.nbuttons-3] = I(VT_XWINDOWS);
@@ -345,6 +359,77 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		  HELPCTX(behaviour_altenter),
 		  conf_checkbox_handler,
 		  I(CONF_fullscreenonaltenter));
+    if (!midsession) {
+	ctrl_checkbox(s, "Switch PuTTY windows with Ctrl-Tab", 's',
+		  HELPCTX(no_help),
+		  conf_checkbox_handler, I(CONF_ctrl_tab_switch));
+	ctrl_checkbox(s, "Skip minimized windows", 'm',
+		  HELPCTX(no_help),
+		  conf_checkbox_handler, I(CONF_switch_skip_min));
+    }
+
+	/* > transparent background patch */
+    /*
+     * The Window/Wallpaper panel.
+     */
+    ctrl_settitle(b, "Window/Wallpaper", "Options controlling wallpaper");
+
+	s = ctrl_getset( b, "Window/Wallpaper", "wallpaper",
+					 "Transparent background mode" );
+    ctrl_radiobuttons( s, NULL, NO_SHORTCUT, 1,
+					   HELPCTX(no_help),
+					   conf_radiobutton_handler,
+					   I(CONF_transparent_mode),
+					   "Disabled", 'd', I(0),
+					   "xterm-like transparency", 'x', I(WALLPAPER_MODE_DESKTOP),
+					   "Use bitmap file", 'b', I(WALLPAPER_MODE_IMAGE),
+					   "Image on desktop", 't', I(WALLPAPER_MODE_DTIMG),
+					   NULL );
+
+	s = ctrl_getset( b, "Window/Wallpaper", "shading",
+					 "Adjust transparency" );
+	ctrl_editbox( s, "Alpha value of bg image (0-255):", 'l', 20,
+				  HELPCTX(no_help),
+				  conf_editbox_handler, I(CONF_shading), I(-1) );
+
+	s = ctrl_getset( b, "Window/Wallpaper", "imgfile",
+					 "Settings for bitmap file" );
+	ctrl_droplist(s, "Placement:", 'p', 40, HELPCTX(no_help),
+		      wallpaper_dropdown_handler, I(CONF_wallpaper_place));
+	ctrl_droplist(s, "Alignment:", 'n', 40, HELPCTX(no_help),
+		      wallpaper_dropdown_handler, I(CONF_wallpaper_align));
+	ctrl_columns(s, 2, 60, 40);
+	c = ctrl_checkbox( s, "Use alpha-blending", 'u',
+				   HELPCTX(no_help),
+				   conf_checkbox_handler, I(CONF_use_alphablend) );
+	c->generic.column = 0;
+	c = ctrl_checkbox(s, "Use System Res", 'r', HELPCTX(no_help), conf_checkbox_handler, I(CONF_use_ddb));
+	c->generic.column = 1;
+	ctrl_columns(s, 1, 100);
+	ctrl_checkbox( s, "Suspend updating when moving window", 's',
+				   HELPCTX(no_help),
+				   conf_checkbox_handler, I(CONF_stop_when_moving) );
+    {
+	/* GDI+ is available by default on Windows XP+ */
+	int has_gdip = (osVersion.dwMajorVersion > 5 || (osVersion.dwMajorVersion == 5 && osVersion.dwMinorVersion >= 1));
+	ctrl_filesel( s, "Bitmap file to use for background:", NO_SHORTCUT,
+				  has_gdip ? FILTER_IMAGE_FILES_GDIP : FILTER_IMAGE_FILES,
+				  FALSE, has_gdip ? "Select image file for background" : "Select bitmap file for background",
+				  HELPCTX(no_help),
+				  conf_filesel_handler, I(CONF_bgimg_file) );
+    }
+	/* < */
+
+    /*
+     * The icon for Windows title bar
+     */
+    if (!midsession) {
+	s = ctrl_getset(b, "Window/Icon", "icon", NULL);
+	ctrl_filesel(s, "The icon on title bar", 'i',
+		 FILTER_ICON_FILES, FALSE, "Select icon file",
+		 HELPCTX(no_help),
+		 conf_filesel_handler, I(CONF_iconfile));
+    }
 
     /*
      * Windows supports a local-command proxy. This also means we
@@ -362,7 +447,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		c->radio.buttons =
 		    sresize(c->radio.buttons, c->radio.nbuttons, char *);
 		c->radio.buttons[c->radio.nbuttons-1] =
-		    dupstr("Local");
+		    l10n_dupstr("Local");
 		c->radio.buttondata =
 		    sresize(c->radio.buttondata, c->radio.nbuttons, intorptr);
 		c->radio.buttondata[c->radio.nbuttons-1] = I(PROXY_CMD);
@@ -376,7 +461,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		c->generic.context.i == CONF_proxy_telnet_command) {
 		assert(c->generic.handler == conf_editbox_handler);
 		sfree(c->generic.label);
-		c->generic.label = dupstr("Telnet command, or local"
+		c->generic.label = l10n_dupstr("Telnet command, or local"
 					  " proxy command");
 		break;
 	    }
@@ -399,5 +484,68 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		     NULL, FALSE, "Select X authority file",
 		     HELPCTX(ssh_tunnels_xauthority),
 		     conf_filesel_handler, I(CONF_xauthfile));
+    }
+}
+
+typedef struct {
+    const char *name;
+    int val;
+} DropdownItem;
+
+static void wallpaper_dropdown_handler(union control *ctrl, void *dlg, void *data, int event)
+{
+    static const DropdownItem align_items[] = {
+	{"Center", WALLPAPER_ALIGN_CENTER | WALLPAPER_ALIGN_MIDDLE},
+	{"Top left", 0},
+	{"Top", WALLPAPER_ALIGN_CENTER},
+	{"Top right", WALLPAPER_ALIGN_RIGHT},
+	{"Left", WALLPAPER_ALIGN_MIDDLE},
+	{"Right", WALLPAPER_ALIGN_RIGHT | WALLPAPER_ALIGN_MIDDLE},
+	{"Bottom left", WALLPAPER_ALIGN_BOTTOM},
+	{"Bottom", WALLPAPER_ALIGN_CENTER | WALLPAPER_ALIGN_BOTTOM},
+	{"Bottom right", WALLPAPER_ALIGN_RIGHT | WALLPAPER_ALIGN_BOTTOM},
+	{NULL, 0},
+    }, place_items[] = {
+	{"Original size", WALLPAPER_PLACE_ORIGINAL},
+	{"Tile", WALLPAPER_PLACE_TILE_X | WALLPAPER_PLACE_TILE_Y},
+	{"Tile horizontally", WALLPAPER_PLACE_TILE_X},
+	{"Tile vertically", WALLPAPER_PLACE_TILE_Y},
+	{"Zoom", WALLPAPER_PLACE_SHRINK | WALLPAPER_PLACE_EXPAND},
+	{"Shrink only", WALLPAPER_PLACE_SHRINK},
+	{"Fit", WALLPAPER_PLACE_SHRINK | WALLPAPER_PLACE_EXPAND | WALLPAPER_PLACE_FIT},
+	{NULL, 0},
+    };
+    const DropdownItem *items;
+    int conf_item = ctrl->listbox.context.i;
+    Conf *conf = (Conf *)data;
+    items = (conf_item == CONF_wallpaper_align) ? align_items : place_items;
+    if (event == EVENT_REFRESH) {
+	int i, count;
+	int old_val = conf_get_int(conf, conf_item);
+        /* ref says the following updates cause retriggering EVENT_REFRESH */
+	dlg_update_start(ctrl, dlg);
+	dlg_listbox_clear(ctrl, dlg);
+	for (i = 0; items[i].name; i++)
+	    dlg_listbox_addwithid(ctrl, dlg, items[i].name, items[i].val);
+	count = i;
+	for (i = 0; i < count; i++) {
+	    if (old_val == items[i].val) {
+		dlg_listbox_select(ctrl, dlg, i);
+		break;
+	    }
+	}
+	if (i == count) { /* an unsupported setting was chosen */
+	    dlg_listbox_select(ctrl, dlg, 0);
+	    old_val = items[0].val;
+	}
+	dlg_update_done(ctrl, dlg);
+	conf_set_int(conf, conf_item, old_val); /* restore */
+    } else if (event == EVENT_SELCHANGE) {
+	int id, index = dlg_listbox_index(ctrl, dlg);
+	if (index < 0)
+	    id = items[0].val;
+	else
+	    id = dlg_listbox_getid(ctrl, dlg, index);
+	conf_set_int(conf, conf_item, id);
     }
 }

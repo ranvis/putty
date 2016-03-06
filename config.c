@@ -508,8 +508,9 @@ static void codepage_handler(union control *ctrl, void *dlg,
 	int i;
 	const char *cp, *thiscp;
 	dlg_update_start(ctrl, dlg);
-	thiscp = cp_name(decode_codepage(conf_get_str(conf,
-						      CONF_line_codepage)));
+	thiscp = conf_get_str(conf, CONF_line_codepage);
+	if (decode_codepage (thiscp) != CP_UTF8 || iso2022_init_test (thiscp))
+	thiscp = cp_name(decode_codepage(thiscp));
 	dlg_listbox_clear(ctrl, dlg);
 	for (i = 0; (cp = cp_enumerate(i)) != NULL; i++)
 	    dlg_listbox_add(ctrl, dlg, cp);
@@ -518,6 +519,8 @@ static void codepage_handler(union control *ctrl, void *dlg,
 	dlg_update_done(ctrl, dlg);
     } else if (event == EVENT_VALCHANGE) {
 	char *codepage = dlg_editbox_get(ctrl, dlg);
+	conf_set_str(conf, CONF_line_codepage, codepage);
+	if (decode_codepage (codepage) != CP_UTF8 || iso2022_init_test (codepage))
 	conf_set_str(conf, CONF_line_codepage,
 		     cp_name(decode_codepage(codepage)));
 	sfree(codepage);
@@ -793,7 +796,8 @@ static const char *const colours[] = {
     "ANSI Blue", "ANSI Blue Bold",
     "ANSI Magenta", "ANSI Magenta Bold",
     "ANSI Cyan", "ANSI Cyan Bold",
-    "ANSI White", "ANSI White Bold"
+    "ANSI White", "ANSI White Bold",
+    "Cursor Text(IME ON)", "Cursor Colour(IME ON)",
 };
 
 static void colour_handler(union control *ctrl, void *dlg,
@@ -2176,6 +2180,10 @@ void setup_config_box(struct controlbox *b, int midsession,
 			  HELPCTX(ssh_share),
 			  conf_checkbox_handler,
 			  I(CONF_ssh_connection_sharing));
+	    ctrl_checkbox(s, "Ask on sharing", 'k',
+			  HELPCTX(ssh_share),
+			  conf_checkbox_handler,
+			  I(CONF_ssh_connection_sharing_ask));
 
             ctrl_text(s, "Permitted roles in a shared connection:",
                       HELPCTX(ssh_share));

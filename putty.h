@@ -145,6 +145,64 @@ struct sesslist {
     char *buffer;		       /* so memory can be freed later */
 };
 
+struct iso2022struct
+{
+  unsigned char buf[100];
+  int buflen, bufoff;
+  struct g
+  {
+    enum
+    {
+      UNKNOWN, UNSUPPORTED, US_ASCII, JISX0201_ROMAN, JISX0201_KATAKANA,
+      JISC6226_1978, JISX0208_1983, JISX0208_1990, JISX0212_1990,
+      JISX0213_1, JISX0213_2, JISX0213_2004_1, MS_KANJI,
+      GB2312_80, CSIC_SET1, CSIC_SET2, CSIC_SET3, CSIC_SET4, CSIC_SET5,
+      CSIC_SET6, CSIC_SET7, KSC5601_1987, BIG5,
+      ISO8859_1, ISO8859_2, ISO8859_3, ISO8859_4, ISO8859_5,
+      ISO8859_6, ISO8859_7, ISO8859_8, ISO8859_9, ISO8859_10,
+      VT100GRAPHICS,
+      ISO646_1973IRV, BS4730, NATS_PRIMARY_FINLAND_SWEDEN,
+      NATS_PRIMARY_DENMARK_NORWAY, DIN66003, NFZ62010_1973,
+      ISO646_ITALIAN, ISO646_SPANISH,
+      UTF8CJK, UTF8NONCJK,
+    } type;
+    int len;
+  } g0, g1, g2, g3, *gl, *gr, *ssl, *ssr, lgr, *usgr, uslgr;
+  int jisx02081990flag;
+  int esc;
+  int width;
+  int lockgr, uslockgr;
+  int ssgr;
+  int transchar;
+  enum {
+    SWITCH_UTF8_NONE,
+    SWITCH_UTF8_TO_UTF8,
+    SWITCH_UTF8_FROM_UTF8,
+  } switch_utf8;
+  unsigned char *ins;
+  unsigned char *insw;
+  int inslen;
+};
+
+#define AUTODETECT_BUFLEN 10
+
+struct iso2022_data {
+  int win95flag;
+  struct iso2022struct rcv, trns;
+  unsigned char initstring[512];
+  struct {
+    int n;
+    struct {
+      int n;
+      struct iso2022_autodetect_jp {
+	int e;
+	unsigned char buf[AUTODETECT_BUFLEN];
+	int buflen;
+      } eucjp, mskanji, utf8cjk;
+    } jp;
+  } autodetect;
+};
+
 struct unicode_data {
     char **uni_tbl;
     int dbcs_screenfont;
@@ -156,6 +214,8 @@ struct unicode_data {
     wchar_t unitab_xterm[256];
     wchar_t unitab_oemcp[256];
     unsigned char unitab_ctrl[256];
+    int iso2022;
+    struct iso2022_data iso2022_data;
 };
 
 #define LGXF_OVR  1		       /* existing logfile overwrite */
@@ -868,13 +928,32 @@ void cleanup_exit(int);
     X(INT, NONE, shadowboldoffset) \
     X(INT, NONE, crhaslf) \
     X(STR, NONE, winclass) \
+    X(INT, NONE, alt_metabit)		       /* set meta instead of escape */ \
+    X(INT, NONE, ctrl_tab_switch)	       /* switch PuTTY windows with Ctrl+Tab */ \
+    X(INT, NONE, switch_skip_min) \
+    X(INT, NONE, rightaltkey) \
+    X(INT, NONE, use_5casis) \
+    X(INT, NONE, x) \
+    X(INT, NONE, y) \
+	/* > transparent background patch */ \
+	X(INT, NONE, transparent_mode) \
+	X(INT, NONE, shading) \
+	X(INT, NONE, use_alphablend) \
+    X(INT, NONE, wallpaper_place) \
+    X(INT, NONE, wallpaper_align) \
+    X(INT, NONE, stop_when_moving) \
+    X(INT, NONE, use_ddb) \
+    X(FILENAME, NONE, bgimg_file) \
+	/* < */ \
+    X(FILENAME, NONE, iconfile) \
+    X(INT, NONE, ssh_connection_sharing_ask) \
 
 /* Now define the actual enum of option keywords using that macro. */
 #define CONF_ENUM_DEF(valtype, keytype, keyword) CONF_ ## keyword,
 enum config_primary_key { CONFIG_OPTIONS(CONF_ENUM_DEF) N_CONFIG_OPTIONS };
 #undef CONF_ENUM_DEF
 
-#define NCFGCOLOURS 22 /* number of colours in CONF_colours above */
+#define NCFGCOLOURS 24 /* number of colours in CONF_colours above */
 
 /* Functions handling configuration structures. */
 Conf *conf_new(void);		       /* create an empty configuration */
@@ -1132,7 +1211,7 @@ int wc_to_mb(int codepage, int flags, const wchar_t *wcstr, int wclen,
 	     struct unicode_data *ucsdata);
 wchar_t xlat_uskbd2cyrllic(int ch);
 int check_compose(int first, int second);
-int decode_codepage(char *cp_name);
+int decode_codepage(const char *cp_name);
 const char *cp_enumerate (int index);
 const char *cp_name(int codepage);
 void get_unitab(int codepage, wchar_t * unitab, int ftype);
@@ -1443,6 +1522,31 @@ void request_callback_notifications(toplevel_callback_notify_fn_t notify,
 #define add_session_to_jumplist(x) ((void)0)
 #define remove_session_from_jumplist(x) ((void)0)
 #endif
+
+/*
+ * Exports from iso2022.c
+ */
+int iso2022_init (struct iso2022_data *this, const char *p, int mode);
+int iso2022_init_test (const char *p);
+void iso2022_transmit (struct iso2022_data *this, unsigned char c);
+void iso2022_put (struct iso2022_data *this, unsigned char c);
+void iso2022_clearesc (struct iso2022_data *this);
+int iso2022_width (struct iso2022_data *this, unsigned int c);
+int iso2022_width_sub (struct iso2022_data *this, unsigned int c);
+unsigned char iso2022_tgetbuf (struct iso2022_data *this);
+unsigned char iso2022_getbuf (struct iso2022_data *this);
+void iso2022_settranschar (struct iso2022_data *this, int value);
+void iso2022_tbufclear (struct iso2022_data *this);
+int iso2022_tbuflen (struct iso2022_data *this);
+int iso2022_buflen (struct iso2022_data *this);
+void iso2022_autodetect_put (struct iso2022_data *this, unsigned char *buf,
+			     int nchars);
+
+/*
+ * Exports from winl10n.c/uxl10n.c
+ */
+char *l10n_dupstr(const char *);
+int get_l10n_setting(const char* keyname, char* buf, int size);
 
 /* SURROGATE PAIR */
 #define HIGH_SURROGATE_START 0xd800

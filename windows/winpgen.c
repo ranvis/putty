@@ -22,8 +22,15 @@
 #define WM_DONEKEY (WM_APP + 1)
 
 #define DEFAULT_KEYSIZE 2048
+#define DEFAULT_DSA_KEYSIZE 1024
 
 static char *cmdline_keyfile = NULL;
+
+/*
+ * Export from l10n
+ */
+BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text);
+BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text);
 
 /*
  * Print a modal (Really Bad) message box and perform a fatal exit.
@@ -387,7 +394,7 @@ static void setupbigedit1(HWND hwnd, int id, int idstatic, struct RSAKey *key)
     buffer = dupprintf("%d %s %s %s", bignum_bitcount(key->modulus),
 		       dec1, dec2, key->comment);
     SetDlgItemText(hwnd, id, buffer);
-    SetDlgItemText(hwnd, idstatic,
+    l10nSetDlgItemText(hwnd, idstatic,
 		   "&Public key for pasting into authorized_keys file:");
     sfree(dec1);
     sfree(dec2);
@@ -418,7 +425,7 @@ static void setupbigedit2(HWND hwnd, int id, int idstatic,
     *p++ = ' ';
     strcpy(p, key->comment);
     SetDlgItemText(hwnd, id, buffer);
-    SetDlgItemText(hwnd, idstatic, "&Public key for pasting into "
+    l10nSetDlgItemText(hwnd, idstatic, "&Public key for pasting into "
 		   "OpenSSH authorized_keys file:");
     sfree(pub_blob);
     sfree(buffer);
@@ -513,6 +520,12 @@ enum {
     controlidstart = 100,
     IDC_QUIT,
     IDC_TITLE,
+    IDC_BOX_GENERATE,
+    IDC_TYPESTATIC, IDC_KEYSSH1, IDC_KEYSSH2RSA, IDC_KEYSSH2DSA,
+    IDC_BITSSTATIC, IDC_BITS,
+    IDC_GENSTATIC, IDC_GENERATE,
+    IDC_BOX_LOAD,
+    IDC_LOADSTATIC, IDC_LOAD,
     IDC_BOX_KEY,
     IDC_NOKEY,
     IDC_GENERATING,
@@ -522,13 +535,7 @@ enum {
     IDC_COMMENTSTATIC, IDC_COMMENTEDIT,
     IDC_PASSPHRASE1STATIC, IDC_PASSPHRASE1EDIT,
     IDC_PASSPHRASE2STATIC, IDC_PASSPHRASE2EDIT,
-    IDC_BOX_ACTIONS,
-    IDC_GENSTATIC, IDC_GENERATE,
-    IDC_LOADSTATIC, IDC_LOAD,
     IDC_SAVESTATIC, IDC_SAVE, IDC_SAVEPUB,
-    IDC_BOX_PARAMS,
-    IDC_TYPESTATIC, IDC_KEYSSH1, IDC_KEYSSH2RSA, IDC_KEYSSH2DSA,
-    IDC_BITSSTATIC, IDC_BITS,
     IDC_ABOUT,
     IDC_GIVEHELP,
     IDC_IMPORT, IDC_EXPORT_OPENSSH, IDC_EXPORT_SSHCOM
@@ -687,7 +694,7 @@ void load_key_file(HWND hwnd, struct MainDlgState *state,
             pps.comment = comment;
 	    dlgret = DialogBoxParam(hinst,
 				    MAKEINTRESOURCE(210),
-				    NULL, PassphraseProc,
+				    hwnd, PassphraseProc,
 				    (LPARAM) &pps);
 	    if (!dlgret) {
 		ret = -2;
@@ -804,7 +811,7 @@ void load_key_file(HWND hwnd, struct MainDlgState *state,
 		    "use the \"Save private key\" command to\n"
 		    "save it in PuTTY's own format.",
 		    key_type_to_str(realtype));
-	    MessageBox(NULL, msg, "PuTTYgen Notice",
+	    MessageBox(hwnd, msg, "PuTTYgen Notice",
 		       MB_OK | MB_ICONINFORMATION);
 	}
     }
@@ -814,7 +821,7 @@ void load_key_file(HWND hwnd, struct MainDlgState *state,
 /*
  * Dialog-box function for the main PuTTYgen dialog box.
  */
-static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
+static int CALLBACK MainDlgProc(HWND mainwnd, UINT msg,
 				WPARAM wParam, LPARAM lParam)
 {
     static const char generating_msg[] =
@@ -823,6 +830,9 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 	"Please generate some randomness by moving the mouse over the blank area.";
     struct MainDlgState *state;
 
+    if (hwnd == NULL)
+    	hwnd = mainwnd;
+#define hwnd mainwnd
     switch (msg) {
       case WM_INITDIALOG:
         if (has_help())
@@ -850,39 +860,39 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 	    menu = CreateMenu();
 
 	    menu1 = CreateMenu();
-	    AppendMenu(menu1, MF_ENABLED, IDC_LOAD, "&Load private key");
-	    AppendMenu(menu1, MF_ENABLED, IDC_SAVEPUB, "Save p&ublic key");
-	    AppendMenu(menu1, MF_ENABLED, IDC_SAVE, "&Save private key");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_LOAD, "&Load private key");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_SAVEPUB, "Save p&ublic key");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_SAVE, "&Save private key");
 	    AppendMenu(menu1, MF_SEPARATOR, 0, 0);
-	    AppendMenu(menu1, MF_ENABLED, IDC_QUIT, "E&xit");
-	    AppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1, "&File");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_QUIT, "E&xit");
+	    l10nAppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1, "&File");
 	    state->filemenu = menu1;
 
 	    menu1 = CreateMenu();
-	    AppendMenu(menu1, MF_ENABLED, IDC_GENERATE, "&Generate key pair");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_GENERATE, "&Generate key pair");
 	    AppendMenu(menu1, MF_SEPARATOR, 0, 0);
-	    AppendMenu(menu1, MF_ENABLED, IDC_KEYSSH1, "SSH-&1 key (RSA)");
-	    AppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2RSA, "SSH-2 &RSA key");
-	    AppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2DSA, "SSH-2 &DSA key");
-	    AppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1, "&Key");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH1, "SSH-&1 key (RSA)");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2RSA, "SSH-2 &RSA key");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2DSA, "SSH-2 &DSA key");
+	    l10nAppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1, "&Key");
 	    state->keymenu = menu1;
 
 	    menu1 = CreateMenu();
-	    AppendMenu(menu1, MF_ENABLED, IDC_IMPORT, "&Import key");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_IMPORT, "&Import key");
 	    AppendMenu(menu1, MF_SEPARATOR, 0, 0);
-	    AppendMenu(menu1, MF_ENABLED, IDC_EXPORT_OPENSSH,
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_EXPORT_OPENSSH,
 		       "Export &OpenSSH key");
-	    AppendMenu(menu1, MF_ENABLED, IDC_EXPORT_SSHCOM,
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_EXPORT_SSHCOM,
 		       "Export &ssh.com key");
-	    AppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1,
+	    l10nAppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1,
 		       "Con&versions");
 	    state->cvtmenu = menu1;
 
 	    menu1 = CreateMenu();
-	    AppendMenu(menu1, MF_ENABLED, IDC_ABOUT, "&About");
+	    l10nAppendMenu(menu1, MF_ENABLED, IDC_ABOUT, "&About");
 	    if (has_help())
-		AppendMenu(menu1, MF_ENABLED, IDC_GIVEHELP, "&Help");
-	    AppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1, "&Help");
+		l10nAppendMenu(menu1, MF_ENABLED, IDC_GIVEHELP, "&Help");
+	    l10nAppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT) menu1, "&Help");
 
 	    SetMenu(hwnd, menu);
 	}
@@ -908,6 +918,19 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 	    /* Accelerators used: acglops1rbd */
 
 	    ctlposinit(&cp, hwnd, 4, 4, 4);
+	    beginbox(&cp, "Generate a public/private key pair", IDC_BOX_GENERATE);
+	    radioline(&cp, "Type of key to generate:", IDC_TYPESTATIC, 3,
+		      "SSH-&1 (RSA)", IDC_KEYSSH1,
+		      "SSH-2 &RSA", IDC_KEYSSH2RSA,
+		      "SSH-2 &DSA", IDC_KEYSSH2DSA, NULL);
+	    staticedit(&cp, "Number of &bits in a generated key:",
+		       IDC_BITSSTATIC, IDC_BITS, 20);
+	    staticbtn(&cp, "", IDC_GENSTATIC, "&Generate", IDC_GENERATE);
+	    endbox(&cp);
+	    beginbox(&cp, "Load an existing private key file", IDC_BOX_LOAD);
+	    staticbtn(&cp, "",
+		      IDC_LOADSTATIC, "&Load", IDC_LOAD);
+	    endbox(&cp);
 	    beginbox(&cp, "Key", IDC_BOX_KEY);
 	    cp2 = cp;
 	    statictext(&cp2, "No key.", 1, IDC_NOKEY);
@@ -928,23 +951,9 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 			   IDC_PASSPHRASE1EDIT, 75);
 	    staticpassedit(&cp, "C&onfirm passphrase:",
 			   IDC_PASSPHRASE2STATIC, IDC_PASSPHRASE2EDIT, 75);
-	    endbox(&cp);
-	    beginbox(&cp, "Actions", IDC_BOX_ACTIONS);
-	    staticbtn(&cp, "Generate a public/private key pair",
-		      IDC_GENSTATIC, "&Generate", IDC_GENERATE);
-	    staticbtn(&cp, "Load an existing private key file",
-		      IDC_LOADSTATIC, "&Load", IDC_LOAD);
 	    static2btn(&cp, "Save the generated key", IDC_SAVESTATIC,
 		       "Save p&ublic key", IDC_SAVEPUB,
 		       "&Save private key", IDC_SAVE);
-	    endbox(&cp);
-	    beginbox(&cp, "Parameters", IDC_BOX_PARAMS);
-	    radioline(&cp, "Type of key to generate:", IDC_TYPESTATIC, 3,
-		      "SSH-&1 (RSA)", IDC_KEYSSH1,
-		      "SSH-2 &RSA", IDC_KEYSSH2RSA,
-		      "SSH-2 &DSA", IDC_KEYSSH2DSA, NULL);
-	    staticedit(&cp, "Number of &bits in a generated key:",
-		       IDC_BITSSTATIC, IDC_BITS, 20);
 	    endbox(&cp);
 	}
 	CheckRadioButton(hwnd, IDC_KEYSSH1, IDC_KEYSSH2DSA, IDC_KEYSSH2RSA);
@@ -990,7 +999,7 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 		sfree(state->entropy);
 		state->collecting_entropy = FALSE;
 
-		SetDlgItemText(hwnd, IDC_GENERATING, generating_msg);
+		l10nSetDlgItemText(hwnd, IDC_GENERATING, generating_msg);
 		SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETRANGE, 0,
 				   MAKELPARAM(0, PROGRESSRANGE));
 		SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
@@ -1028,6 +1037,8 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 				     LOWORD(wParam));
 		CheckMenuRadioItem(state->keymenu, IDC_KEYSSH1, IDC_KEYSSH2DSA,
 				   LOWORD(wParam), MF_BYCOMMAND);
+		if (LOWORD(wParam) == IDC_KEYSSH2DSA)
+		    SetDlgItemInt(hwnd, IDC_BITS, DEFAULT_DSA_KEYSIZE, FALSE);
 	    }
 	    break;
 	  case IDC_QUIT:
@@ -1093,7 +1104,7 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 		    SetDlgItemInt(hwnd, IDC_BITS, 256, FALSE);
 		}
 		ui_set_state(hwnd, state, 1);
-		SetDlgItemText(hwnd, IDC_GENERATING, entropy_msg);
+		l10nSetDlgItemText(hwnd, IDC_GENERATING, entropy_msg);
 		state->key_exists = FALSE;
 		state->collecting_entropy = TRUE;
 
@@ -1259,6 +1270,10 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 		}
 	    }
 	    break;
+	  case IDC_KEYDISPLAY:
+	    if (HIWORD(wParam) == EN_SETFOCUS)
+		SendMessage(GetDlgItem(hwnd, IDC_KEYDISPLAY), EM_SETSEL, 0, -1);
+	    break;
 	  case IDC_LOAD:
 	  case IDC_IMPORT:
 	    if (HIWORD(wParam) != BN_CLICKED)
@@ -1422,6 +1437,7 @@ static int CALLBACK MainDlgProc(HWND hwnd, UINT msg,
 	return 0;
     }
     return 0;
+#undef hwnd
 }
 
 void cleanup_exit(int code)
