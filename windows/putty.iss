@@ -15,8 +15,8 @@
 AppName={cm:MyAppName}
 AppVerName={cm:MyAppVerName}
 VersionInfoTextVersion={cm:MyVersionInfo}
-AppVersion=0.66
-VersionInfoVersion=0.66.0.0
+AppVersion=0.67
+VersionInfoVersion=0.67.0.0
 AppPublisher=Simon Tatham
 AppPublisherURL=http://www.chiark.greenend.org.uk/~sgtatham/putty/
 AppReadmeFile={app}\README.txt
