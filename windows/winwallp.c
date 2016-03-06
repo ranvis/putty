@@ -95,7 +95,7 @@ void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
 	wp_rect.top = 0, wp_rect.bottom = term_rect.bottom;
     shift_x = bg_w - shift_x % bg_w;
     shift_y = bg_h - shift_y % bg_h;
-    rem_h = rect->right - rect->left;
+    rem_h = rect->bottom - rect->top;
     for (dest_pos.y = rect->top; dest_pos.y < rect->bottom; ) {
 	int src_y = (shift_y + dest_pos.y) % bg_h;
 	int src_h = bg_h - src_y;
