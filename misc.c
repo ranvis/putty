@@ -1038,7 +1038,7 @@ int smemeq(const void *av, const void *bv, size_t len)
 
 int strstartswith(const char *s, const char *t)
 {
-    return !memcmp(s, t, strlen(t));
+    return !strncmp(s, t, strlen(t));
 }
 
 int strendswith(const char *s, const char *t)
