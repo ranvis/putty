@@ -1,7 +1,8 @@
 ; -*- no -*-
 ;
-; -- Inno Setup installer script for PuTTY and its related tools.
-;    Last tested with Inno Setup 5.0.8.
+; -- Legacy Inno Setup installer script for PuTTY and its related tools.
+;    Last tested with Inno Setup 5.5.9.
+;    (New work should go to the MSI installer; see installer.wxs.)
 ;
 ; TODO for future releases:
 ;
@@ -12,11 +13,11 @@
 ;    UninstallDisplayIcon, though.
 
 [Setup]
-AppName={cm:MyAppName}
-AppVerName={cm:MyAppVerName}
-VersionInfoTextVersion={cm:MyVersionInfo}
-AppVersion=0.67
-VersionInfoVersion=0.67.0.0
+AppName=PuTTY
+AppVerName=PuTTY version 0.68
+VersionInfoTextVersion=Release 0.68
+AppVersion=0.68
+VersionInfoVersion=0.68.0.0
 AppPublisher=Simon Tatham
 AppPublisherURL=http://www.chiark.greenend.org.uk/~sgtatham/putty/
 AppReadmeFile={app}\README.txt
@@ -30,7 +31,7 @@ Compression=zip/9
 AllowNoIcons=yes
 AppId=PuTTY
 PrivilegesRequired=none
-OutputBaseFilename=putty-0.63-JP_Y-setup
+OutputBaseFilename=installer
 
 [Languages]
 Name: "eng"; MessagesFile: "compiler:Default.isl,Default.isl"
@@ -56,12 +57,12 @@ Name: source; Description: "{cm:SourceComponentDescription}"; Types: Full
 ; reboot" option, but the developers have no interest in adding one.
 ; NB: apparently, using long (non-8.3) filenames with restartreplace is a
 ; bad idea. (Not that we do.)
-Source: "putty.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
-Source: "pageant.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
-Source: "puttygen.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
-Source: "pscp.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
-Source: "psftp.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
-Source: "plink.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
+Source: "build32\putty.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
+Source: "build32\pageant.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
+Source: "build32\puttygen.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
+Source: "build32\pscp.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
+Source: "build32\psftp.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
+Source: "build32\plink.exe"; DestDir: "{app}"; Flags: promptifolder replacesameversion restartreplace uninsrestartdelete
 Source: "website.url"; DestDir: "{app}"; Flags: restartreplace uninsrestartdelete
 Source: "..\doc\putty.chm"; DestDir: "{app}"; Flags: restartreplace uninsrestartdelete
 Source: "..\doc\putty.hlp"; DestDir: "{app}"; Flags: restartreplace uninsrestartdelete
@@ -137,3 +138,19 @@ begin
     else
       Result := ExpandConstant('{userappdata}');
 end;
+
+[Messages]
+; Since it's possible for the user to be asked to restart their computer,
+; we should override the default messages to explain exactly why, so they
+; can make an informed decision. (Especially as 95% of users won't need or
+; want to restart; see rant above.)
+FinishedRestartLabel=One or more [name] programs are still running. Setup will not replace these program files until you restart your computer. Would you like to restart now?
+; This message is popped up in a message box on a /SILENT install.
+FinishedRestartMessage=One or more [name] programs are still running.%nSetup will not replace these program files until you restart your computer.%n%nWould you like to restart now?
+; ...and this comes up if you try to uninstall.
+UninstalledAndNeedsRestart=One or more %1 programs are still running.%nThe program files will not be removed until your computer is restarted.%n%nWould you like to restart now?
+; Old versions of this installer used to prompt to remove saved settings
+; and the like after the point this message was printed, so it seems
+; polite to warn people that that no longer happens.
+ConfirmUninstall=Are you sure you want to completely remove %1 and all of its components?%n%nNote that this will not remove any saved sessions or random seed file that %1 has created. These are harmless to leave on your system, but if you want to remove them, you should answer No here and run 'putty.exe -cleanup' before you uninstall.
+
