@@ -263,7 +263,7 @@ static INT_PTR CALLBACK PassphraseProc(HWND hwnd, UINT msg,
 	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
 		     SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 	p = (struct PassphraseProcStruct *) lParam;
-	SetWindowLong(hwnd, DWL_USER, (LONG) lParam);
+	SetWindowLongPtr(hwnd, DWLP_USER, lParam);
 	passphrase = p->passphrase;
 	if (p->comment)
 	    SetDlgItemText(hwnd, 101, p->comment);
@@ -274,7 +274,7 @@ static INT_PTR CALLBACK PassphraseProc(HWND hwnd, UINT msg,
       case WM_COMMAND:
 	switch (LOWORD(wParam)) {
 	  case IDOK:
-	    p = (struct PassphraseProcStruct*) GetWindowLong(hwnd, DWL_USER);
+	    p = (struct PassphraseProcStruct*) GetWindowLongPtr(hwnd, DWLP_USER);
 	    p->save = SendDlgItemMessage(hwnd, 103, BM_GETCHECK, 0, 0) == BST_CHECKED;
 	    if (*passphrase)
 		EndDialog(hwnd, 1);
@@ -585,7 +585,7 @@ struct ConfirmAcceptAgentProcStruct {
     int timeout;
 };
 
-BOOL CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
+INT_PTR CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
     BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text);
 
     switch (message) {
@@ -593,7 +593,7 @@ BOOL CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam, L
         {
             struct ConfirmAcceptAgentProcStruct* info = (struct ConfirmAcceptAgentProcStruct*) lParam;
             const char* s;
-            SetWindowLong(dialog, DWL_USER, (LONG) lParam);
+            SetWindowLongPtr(dialog, DWLP_USER, lParam);
             switch (info->type) {
             case SSH1_AGENTC_RSA_CHALLENGE:
             case SSH2_AGENTC_SIGN_REQUEST:
@@ -634,7 +634,7 @@ BOOL CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam, L
 
     case WM_TIMER:
         if (wParam == 1) {
-            struct ConfirmAcceptAgentProcStruct* info = (struct ConfirmAcceptAgentProcStruct*) GetWindowLong(dialog, DWL_USER);
+            struct ConfirmAcceptAgentProcStruct* info = (struct ConfirmAcceptAgentProcStruct*) GetWindowLongPtr(dialog, DWLP_USER);
             if ((int) (GetTickCount() - info->tickCount) > info->timeout * 1000) {
                 SendDlgItemMessage(dialog, 102, BM_SETCHECK, BST_UNCHECKED, 0);
                 SendMessage(dialog, WM_COMMAND, MAKEWPARAM(info->dont_ask_again > 0 ? IDYES : IDNO, BN_CLICKED), 0);
@@ -648,7 +648,7 @@ BOOL CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam, L
         case MAKEWPARAM(IDYES, BN_CLICKED):
         case MAKEWPARAM(IDNO, BN_CLICKED):
             {
-                struct ConfirmAcceptAgentProcStruct* info = (struct ConfirmAcceptAgentProcStruct*) GetWindowLong(dialog, DWL_USER);
+                struct ConfirmAcceptAgentProcStruct* info = (struct ConfirmAcceptAgentProcStruct*) GetWindowLongPtr(dialog, DWLP_USER);
                 info->dont_ask_again = SendDlgItemMessage(dialog, 102, BM_GETCHECK, 0, 0) == BST_CHECKED;
                 EndDialog(dialog, LOWORD(wParam));
             }
@@ -1429,7 +1429,6 @@ int flags = FLAG_SYNCAGENT;
 
 int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 {
-    BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text);
     WNDCLASS wndclass;
     MSG msg;
     const char *command = NULL;

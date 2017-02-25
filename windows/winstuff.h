@@ -618,7 +618,7 @@ int xMessageBoxA(HWND, LPCSTR, LPCSTR, UINT);
 HWND xCreateWindowExA(DWORD, LPCSTR, LPCSTR, DWORD, int, int,
                       int, int, HWND, HMENU, HINSTANCE, LPVOID);
 HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
-int xDialogBoxParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
+INT_PTR xDialogBoxParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
 HWND xCreateDialogParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
 #define MessageBoxA xMessageBoxA
 #define CreateWindowExA xCreateWindowExA
@@ -630,14 +630,16 @@ int xvsnprintf(char*,int,const char*, va_list args);
 int xGetOpenFileNameA(OPENFILENAMEA* ofn);
 int xGetSaveFileNameA(OPENFILENAMEA* ofn);
 #define sprintf xsprintf
-#ifdef _WINDOWS
+#if defined _WINDOWS && !defined __WINE__ && _MSC_VER < 1900
 #define _vsnprintf xvsnprintf
 #else//_WINDOWS
+#define HAS_VSNPRINTF
 #define vsnprintf xvsnprintf
 #endif//_WINDOWS
 #define GetOpenFileNameA xGetOpenFileNameA
 #define GetSaveFileNameA xGetSaveFileNameA
 HFONT l10n_getfont (HFONT);
 void l10n_created_window (HWND);
+BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text);
 
 #endif

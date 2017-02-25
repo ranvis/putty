@@ -1117,7 +1117,6 @@ static void log_dialog_exited(struct log_dialog_struct* dialog_data) {
 }
 
 static void log_dialog_systray(struct log_dialog_struct* dialog_data, int id, int message) {
-    BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text);
     if(message == WM_RBUTTONUP) {
 	POINT cursorpos;
 	GetCursorPos(&cursorpos);
@@ -1197,7 +1196,6 @@ static void log_dialog_timer_hide(struct log_dialog_struct* dialog_data) {
 }
 
 static void log_dialog_context_menu(struct log_dialog_struct* dialog_data, HWND ctrl, int xPos, int yPos) {
-    BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text);
     if (GetDlgCtrlID(ctrl) == IDC_LOGLIST) {
 	int result;
 	POINT pt = {xPos, yPos};

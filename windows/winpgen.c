@@ -31,7 +31,6 @@ static char *cmdline_keyfile = NULL;
  * Export from l10n
  */
 BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text);
-BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text);
 
 /*
  * Print a modal (Really Bad) message box and perform a fatal exit.

@@ -12,11 +12,11 @@ static HFONT hfont;
 static WNDPROC orig_wndproc_button, orig_wndproc_static,
 	       orig_wndproc_systreeview32, orig_wndproc_edit, orig_wndproc_listbox, orig_wndproc_combobox;
 static int collect = 0;
-static BOOL CALLBACK defdlgproc(HWND a1, UINT a2, WPARAM a3, LPARAM a4)
+static INT_PTR CALLBACK defdlgproc(HWND a1, UINT a2, WPARAM a3, LPARAM a4)
 {
     return 0;
 }
-struct prop {
+static struct prop {
     BOOL is_unicode;
     WNDPROC oldproc;
     DLGPROC olddlgproc;
@@ -129,9 +129,9 @@ static LRESULT CALLBACK wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
 	RemoveProp(hwnd, propstr);
 	LocalFree((HANDLE)p);
 	if (p->is_unicode)
-	    SetWindowLongPtrW(hwnd, GWL_WNDPROC, (LONG_PTR)proc);
+	    SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)proc);
 	else
-	    SetWindowLongPtrA(hwnd, GWL_WNDPROC, (LONG_PTR)proc);
+	    SetWindowLongPtrA(hwnd, GWLP_WNDPROC, (LONG_PTR)proc);
 	break;
       case WM_INITMENUPOPUP:
 	domenu((HMENU)wparam);
@@ -397,8 +397,8 @@ static HWND override_wndproc(HWND r)
 	    *qq = defaultprop;
 	    qq->is_unicode = IsWindowUnicode(r);
 	    qq->oldproc = qq->is_unicode
-			  ? (WNDPROC)SetWindowLongPtrW(r, GWL_WNDPROC, (LONG_PTR)wndproc)
-			  : (WNDPROC)SetWindowLongPtrA(r, GWL_WNDPROC, (LONG_PTR)wndproc);
+			  ? (WNDPROC)SetWindowLongPtrW(r, GWLP_WNDPROC, (LONG_PTR)wndproc)
+			  : (WNDPROC)SetWindowLongPtrA(r, GWLP_WNDPROC, (LONG_PTR)wndproc);
 	} while (0);
     return r;
 }
@@ -425,7 +425,7 @@ static void translate_children(HWND hwnd)
     }
 }
 
-static BOOL CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+static INT_PTR CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 {
     DLGPROC proc;
     struct prop *p;
@@ -506,7 +506,7 @@ HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName
 }
 
 #undef DialogBoxParamA
-int xDialogBoxParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5)
+INT_PTR xDialogBoxParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5)
 {
     if (!getEnabled())
 	return DialogBoxParamA(a1, a2, a3, a4, a5);
@@ -568,7 +568,7 @@ int xsprintf(char *buffer, const char *format, ...)
     return r;
 }
 
-#ifdef _WINDOWS
+#ifndef HAS_VSNPRINTF
 #undef _vsnprintf
 #define vsnprintf _vsnprintf
 #else
@@ -620,7 +620,7 @@ BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
     return SetDlgItemText(dialog, id, text);
 }
 
-BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text)
+BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text)
 {
     char buf[256];
     if (getl10nstr(text, buf, lenof(buf)))

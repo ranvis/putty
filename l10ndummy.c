@@ -16,7 +16,7 @@ int xsprintf(char* buffer, const char* format, ...)
     return r;
 }
 
-#ifdef _WINDOWS
+#ifndef HAS_VSNPRINTF
 #undef _vsnprintf
 #define vsnprintf _vsnprintf
 #else

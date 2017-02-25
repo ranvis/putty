@@ -729,7 +729,6 @@ static int CALLBACK PasswdProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT id, LPCSTR text);
     static int menuinprogress;
     static UINT WM_TASKBARCREATED = 0;
     if (WM_TASKBARCREATED == 0)
