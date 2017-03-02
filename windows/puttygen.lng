@@ -53,6 +53,7 @@ Load an existing private key file=既存の秘密鍵の読み込み
 Save the generated key=生成した鍵の保存
 Type of key to generate:=生成する鍵の種類:
 Number of &bits in a generated key:=生成する鍵のビット数(&B):
+Cur&ve to use for generating this key:=生成する鍵の曲線(&V):
 (nothing to configure for this key type)=(この種類の鍵は設定項目がありません)
 Out of thread resources=スレッドリソースが不足しています。
 Key generation error=鍵生成でのエラー

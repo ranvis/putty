@@ -629,6 +629,7 @@ Select session log file name=ログファイルの選択
 About %25s=%25sについて
 More signals=その他のシグナル
 Repeat key exchange=鍵交換を再実行
+Cache new host key type=新しい種類のホスト鍵をキャッシュ
 __UNUSED_BELOW__=MAYBE
 Adjust the use of the window title=ウィンドウタイトルの使用の調整
 Avoid ever using icon title=これまでのアイコンタイトルの使用を避ける

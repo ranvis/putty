@@ -113,10 +113,10 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		  HELPCTX(keyboard_ctrlalt),
 		  conf_checkbox_handler, I(CONF_ctrlaltkeys));
     ctrl_checkbox(s, "Right-Alt acts as it is", 'l',
-		  HELPCTX(no_help),
+		  HELPCTX(keyboard_rightalt),
 		  conf_checkbox_handler, I(CONF_rightaltkey));
     ctrl_checkbox(s, "Set meta bit on Alt (instead of escape-char)", 'm',
-		  HELPCTX(no_help),
+		  HELPCTX(keyboard_altmeta),
 		  conf_checkbox_handler, I(CONF_alt_metabit));
 
     /*
@@ -219,7 +219,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		  I(CONF_xlat_capslockcyr));
     if (!midsession)
 	ctrl_checkbox(s, "Use character code 5c as is", 't',
-		  HELPCTX(no_help),
+		  HELPCTX(translation_use5casis),
 		  conf_checkbox_handler,
 		  I(CONF_use_5casis));
 
@@ -361,10 +361,10 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 		  I(CONF_fullscreenonaltenter));
     if (!midsession) {
 	ctrl_checkbox(s, "Switch PuTTY windows with Ctrl-Tab", 's',
-		  HELPCTX(no_help),
+		  HELPCTX(behaviour_switchwin),
 		  conf_checkbox_handler, I(CONF_ctrl_tab_switch));
 	ctrl_checkbox(s, "Skip minimized windows", 'm',
-		  HELPCTX(no_help),
+		  HELPCTX(behaviour_switchskipmin),
 		  conf_checkbox_handler, I(CONF_switch_skip_min));
     }
 
@@ -377,7 +377,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 	s = ctrl_getset( b, "Window/Wallpaper", "wallpaper",
 					 "Transparent background mode" );
     ctrl_radiobuttons( s, NULL, NO_SHORTCUT, 1,
-					   HELPCTX(no_help),
+					   HELPCTX(wallpaper_backmode),
 					   conf_radiobutton_handler,
 					   I(CONF_transparent_mode),
 					   "Disabled", 'd', I(0),
@@ -389,25 +389,25 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 	s = ctrl_getset( b, "Window/Wallpaper", "shading",
 					 "Adjust transparency" );
 	ctrl_editbox( s, "Alpha value of bg image (0-255):", 'l', 20,
-				  HELPCTX(no_help),
+				  HELPCTX(wallpaper_backtrans),
 				  conf_editbox_handler, I(CONF_shading), I(-1) );
 
 	s = ctrl_getset( b, "Window/Wallpaper", "imgfile",
 					 "Settings for bitmap file" );
-	ctrl_droplist(s, "Placement:", 'p', 40, HELPCTX(no_help),
+	ctrl_droplist(s, "Placement:", 'p', 40, HELPCTX(wallpaper_backimage),
 		      wallpaper_dropdown_handler, I(CONF_wallpaper_place));
-	ctrl_droplist(s, "Alignment:", 'n', 40, HELPCTX(no_help),
+	ctrl_droplist(s, "Alignment:", 'n', 40, HELPCTX(wallpaper_backimage),
 		      wallpaper_dropdown_handler, I(CONF_wallpaper_align));
 	ctrl_columns(s, 2, 60, 40);
 	c = ctrl_checkbox( s, "Use alpha-blending", 'u',
-				   HELPCTX(no_help),
+				   HELPCTX(wallpaper_backimage),
 				   conf_checkbox_handler, I(CONF_use_alphablend) );
 	c->generic.column = 0;
-	c = ctrl_checkbox(s, "Use System Res", 'r', HELPCTX(no_help), conf_checkbox_handler, I(CONF_use_ddb));
+	c = ctrl_checkbox(s, "Use System Res", 'r', HELPCTX(wallpaper_backimage), conf_checkbox_handler, I(CONF_use_ddb));
 	c->generic.column = 1;
 	ctrl_columns(s, 1, 100);
 	ctrl_checkbox( s, "Suspend updating when moving window", 's',
-				   HELPCTX(no_help),
+				   HELPCTX(wallpaper_backimage),
 				   conf_checkbox_handler, I(CONF_stop_when_moving) );
     {
 	/* GDI+ is available by default on Windows XP+ */
@@ -415,7 +415,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 	ctrl_filesel( s, "Bitmap file to use for background:", NO_SHORTCUT,
 				  has_gdip ? FILTER_IMAGE_FILES_GDIP : FILTER_IMAGE_FILES,
 				  FALSE, has_gdip ? "Select image file for background" : "Select bitmap file for background",
-				  HELPCTX(no_help),
+				  HELPCTX(wallpaper_backimage),
 				  conf_filesel_handler, I(CONF_bgimg_file) );
     }
 	/* < */
@@ -427,7 +427,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, int has_help,
 	s = ctrl_getset(b, "Window/Icon", "icon", NULL);
 	ctrl_filesel(s, "The icon on title bar", 'i',
 		 FILTER_ICON_FILES, FALSE, "Select icon file",
-		 HELPCTX(no_help),
+		 HELPCTX(icon_titlebar),
 		 conf_filesel_handler, I(CONF_iconfile));
     }
 
