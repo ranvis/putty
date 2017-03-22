@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "putty.h"
 
-static char lngfile[MAX_PATH];
+static const char *lngfile = "";
 static char lang[32];
 static char ofontname[128];
 static HFONT hfont;
@@ -287,6 +287,68 @@ static LRESULT CALLBACK wndproc_combobox(HWND hwnd, UINT msg, WPARAM wparam, LPA
     return CallWindowProc(proc, hwnd, msg, wparam, lparam);
 }
 
+DECL_WINDOWS_FUNCTION(static, BOOL, GetUserPreferredUILanguages, (DWORD dwFlags, PULONG pulNumLanguages, PZZWSTR pwszLanguagesBuffer, PULONG pcchLanguagesBuffer));
+static char *lng_path;
+
+static int try_lng_path(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    sfree(lng_path);
+    lng_path = dupvprintf(fmt, ap);
+    va_end(ap);
+    return GetFileAttributes(lng_path) != INVALID_FILE_ATTRIBUTES;
+}
+
+static const char *get_lng_file_path()
+{
+    char exe_path[MAX_PATH];
+    char *dot_pos, *exe_name;
+    LANGID lang_id;
+    if (!GetModuleFileName(NULL, exe_path, MAX_PATH)) {
+	return "";
+    }
+    dot_pos = strrchr(exe_path, '.');
+    exe_name = strrchr(exe_path, '\\');
+    if (!dot_pos || !exe_name) {
+	return "";
+    }
+    *dot_pos = 0;
+    *exe_name++ = 0;
+    if (try_lng_path("%s\\%s.lng", exe_path, exe_name)) {
+	return lng_path;
+    }
+    if (!p_GetUserPreferredUILanguages) {
+	GET_WINDOWS_FUNCTION(GetModuleHandle("kernel32.dll"), GetUserPreferredUILanguages);
+    }
+    if (p_GetUserPreferredUILanguages) {
+	ULONG num_langs, lang_size = 0;
+	WCHAR *langs, *lang_w;
+	if (p_GetUserPreferredUILanguages(MUI_LANGUAGE_ID, &num_langs, NULL, &lang_size)) {
+	    langs = lang_w = snewn(lang_size, WCHAR);
+	    if (p_GetUserPreferredUILanguages(MUI_LANGUAGE_ID, &num_langs, langs, &lang_size)) {
+		while (num_langs--) {
+		    char lang[8];
+		    int lang_len = WideCharToMultiByte(CP_ACP, 0, lang_w, wcslen(lang_w), lang, sizeof lang, NULL, NULL);
+		    lang[lang_len] = 0;
+		    if (try_lng_path("%s\\lang\\%s\\%s.lng", exe_path, lang, exe_name)) {
+			sfree(langs);
+			return lng_path;
+		    }
+		    lang_w += wcslen(lang_w) + 1;
+		}
+	    }
+	    sfree(langs);
+	}
+    } else {
+	lang_id = GetUserDefaultUILanguage();
+	if (try_lng_path("%s\\lang\\%04x\\%s.lng", exe_path, lang_id, exe_name)) {
+	    return lng_path;
+	}
+    }
+    return "";
+}
+
 static int getEnabled()
 {
     static int enabled = -1;
@@ -310,12 +372,8 @@ static int getEnabled()
 	};
 
 	enabled = 0;
-	GetModuleFileName(0, lngfile, MAX_PATH);
-	for (i = strlen(lngfile); i >= 0; i--)
-	    if (lngfile[i] == '.')
-		break;
-	if (i >= 0) {
-	    strcpy(&lngfile[i + 1], "lng");
+	lngfile = get_lng_file_path();
+	if (*lngfile) {
 	    if (GetPrivateProfileString("Default", "Language", "", lang, lenof(lang),
 					lngfile)) {
 		HINSTANCE hinst = GetModuleHandle(NULL);

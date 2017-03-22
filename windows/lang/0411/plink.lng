@@ -1,0 +1,8 @@
+[Default]
+Language=Japanese
+
+[Japanese]
+SSH connection sharing=SSH Ú‘±‚Ì‹¤—L
+Permit sharing an existing SSH connection %25s?=Šù‘¶‚Ì SSH Ú‘± %s ‚ğ‹¤—L‚µ‚Ü‚·‚©?
+Yes=‚Í‚¢
+No=‚¢‚¢‚¦
