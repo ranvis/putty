@@ -538,7 +538,7 @@ GLOBAL int restricted_acl;
 #ifndef LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR
 #define LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR 0x00000100
 #endif
-#if _MSC_VER < 1400
+#if _MSC_VER < 1400 || WINVER < 0x0602
 typedef PVOID DLL_DIRECTORY_COOKIE;
 #endif
 
@@ -657,6 +657,7 @@ int xGetSaveFileNameA(OPENFILENAMEA* ofn);
 #define sprintf xsprintf
 #if defined _WINDOWS && !defined __WINE__ && _MSC_VER < 1900
 #define _vsnprintf xvsnprintf
+typedef WCHAR *PZZWSTR;
 #else//_WINDOWS
 #define HAS_VSNPRINTF
 #define vsnprintf xvsnprintf

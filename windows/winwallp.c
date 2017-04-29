@@ -227,11 +227,12 @@ int gdip_init(void)
     module = load_system32_dll("gdiplus.dll");
     if (!module)
 	return 0;
-    if (!GET_WINDOWS_FUNCTION(module, GdiplusStartup)
-	|| !GET_WINDOWS_FUNCTION(module, GdiplusShutdown)
-	|| !GET_WINDOWS_FUNCTION(module, GdipCreateBitmapFromFile)
-	|| !GET_WINDOWS_FUNCTION(module, GdipCreateHBITMAPFromBitmap)
-	|| !GET_WINDOWS_FUNCTION(module, GdipDisposeImage)) {
+    /* omit fancy type checking so that we don't have to include C++ headers */
+    if (!GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdiplusStartup)
+	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdiplusShutdown)
+	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateBitmapFromFile)
+	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateHBITMAPFromBitmap)
+	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipDisposeImage)) {
 	FreeLibrary(module);
 	return 0;
     }
