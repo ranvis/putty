@@ -14,10 +14,10 @@
 
 [Setup]
 AppName=PuTTY
-AppVerName=PuTTY version 0.68
-VersionInfoTextVersion=Release 0.68
-AppVersion=0.68
-VersionInfoVersion=0.68.0.0
+AppVerName=PuTTY version 0.69
+VersionInfoTextVersion=Release 0.69
+AppVersion=0.69
+VersionInfoVersion=0.69.0.0
 AppPublisher=Simon Tatham
 AppPublisherURL=http://www.chiark.greenend.org.uk/~sgtatham/putty/
 AppReadmeFile={app}\README.txt
@@ -83,7 +83,7 @@ Source: "..\..\putty-doc\putty-0.62-JP_Y.patch"; DestDir: "{app}"; Components: s
 Source: "puttyd.ico"; DestDir: "{app}"; Components: source
 
 [Icons]
-Name: "{group}\{cm:PuTTYShortcutName}"; Filename: "{app}\putty.exe"
+Name: "{group}\{cm:PuTTYShortcutName}"; Filename: "{app}\putty.exe"; AppUserModelID: "SimonTatham.PuTTY"
 ; We have to fall back from the .chm to the older .hlp file on some Windows
 ; versions.
 Name: "{group}\{cm:PuTTYManualShortcutName}"; Filename: "{app}\putty.chm"; MinVersion: 4.1,5.0
@@ -92,8 +92,8 @@ Name: "{group}\{cm:PuTTYWebSiteShortcutName}"; Filename: "{app}\website.url"
 Name: "{group}\{cm:PSFTPShortcutName}"; Filename: "{app}\psftp.exe"
 Name: "{group}\{cm:PuTTYgenShortcutName}"; Filename: "{app}\puttygen.exe"
 Name: "{group}\{cm:PageantShortcutName}"; Filename: "{app}\pageant.exe"
-Name: "{commondesktop}\{cm:PuTTYShortcutName}"; Filename: "{app}\putty.exe"; Tasks: desktopicon and common
-Name: "{userdesktop}\{cm:PuTTYShortcutName}"; Filename: "{app}\putty.exe"; Tasks: desktopicon and not common
+Name: "{commondesktop}\{cm:PuTTYShortcutName}"; Filename: "{app}\putty.exe"; Tasks: desktopicon\common; AppUserModelID: "SimonTatham.PuTTY"
+Name: "{userdesktop}\{cm:PuTTYShortcutName}"; Filename: "{app}\putty.exe"; Tasks: desktopicon\user; AppUserModelID: "SimonTatham.PuTTY"
 ; Putting this in {commonappdata} doesn't seem to work, on 98SE at least.
 Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{cm:PuTTYShortcutName}"; Filename: "{app}\putty.exe"; Tasks: quicklaunchicon
 
@@ -153,4 +153,3 @@ UninstalledAndNeedsRestart=One or more %1 programs are still running.%nThe progr
 ; and the like after the point this message was printed, so it seems
 ; polite to warn people that that no longer happens.
 ConfirmUninstall=Are you sure you want to completely remove %1 and all of its components?%n%nNote that this will not remove any saved sessions or random seed file that %1 has created. These are harmless to leave on your system, but if you want to remove them, you should answer No here and run 'putty.exe -cleanup' before you uninstall.
-
