@@ -436,6 +436,7 @@ Allow GSSAPI credential delegation=GSSAPI クレデンシャル委譲を許可する
 Preference order for GSSAPI libraries:=GSSAPI ライブラリの優先順位:
 User-supplied GSSAPI library path:=ユーザ設定の GSSAPI ライブラリのパス:
 User-specified GSSAPI DLL=ユーザ設定の GSSAPI DLL
+Select library file=ライブラリファイルを選択
 
 Remote terminal settings=リモート端末設定
 Don't allocate a pseudo-terminal=疑似端末を割り当てない
@@ -443,6 +444,8 @@ Don't allocate a pseudo-terminal=疑似端末を割り当てない
 Terminal modes=端末モード
 Terminal modes to send:=送信する端末モード:
 Mode:=モード:
+For selected mode, send:=選択したモードで以下を送信:
+Nothing=なし
 Value:=値:
 This:=これ:
 
@@ -452,6 +455,7 @@ Enable X11 forwarding=X11 転送を有効にする
 X display location=X ディスプレイの場所
 Remote X11 authentication protocol=リモート X11 認証プロトコル
 X authority file for local display=ローカルディスプレイの X authority ファイル
+Select X authority file=X 認可ファイルを選択
 
 Options controlling SSH port forwarding=SSH ポート転送のオプション
 Port forwarding=ポート転送
