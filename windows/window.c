@@ -338,7 +338,7 @@ static void wallpaper_prepare_desktop()
     if (shading != 0)
 	PaintDesktop(hdc);
     bf.SourceConstantAlpha = (BYTE)shading;
-    AlphaBlend(bg_dc, 0, 0, rect.right, rect.bottom,
+    msimg_alphablend(bg_dc, 0, 0, rect.right, rect.bottom,
 	       hdc, 0, 0, rect.right, rect.bottom, bf);
     SelectObject(bg_dc, prev_bmp);
     DeleteDC(bg_dc);
@@ -397,7 +397,7 @@ static void wallpaper_prepare_dtimg()
 	prev_img_bmp = SelectObject(img_dc, px_bmp);
 	SetRect(&px_rect, 0, 0, 1, 1);
 	wallpaper_fill_bgcolor(img_dc, &px_rect);
-	AlphaBlend(bg_dc, 0, 0, rect.right, rect.bottom,
+	msimg_alphablend(bg_dc, 0, 0, rect.right, rect.bottom,
 		   img_dc, 0, 0, 1, 1, bf);
 	SelectObject(img_dc, prev_img_bmp);
 	DeleteDC(img_dc);
@@ -446,7 +446,7 @@ static void wallpaper_prepare_image()
 
 	SetRect(&rect, 0, 0, bg_width, bg_height);
 	wallpaper_fill_bgcolor(memhdc_mask, &rect);
-	AlphaBlend(memhdc_mask, 0, 0, bg_width, bg_height,
+	msimg_alphablend(memhdc_mask, 0, 0, bg_width, bg_height,
 		   memhdc, 0, 0, bg_width, bg_height, bf);
 
         SelectObject(memhdc_mask, defbmp_mask);

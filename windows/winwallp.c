@@ -8,6 +8,18 @@ HBITMAP img_bmp;
 BOOL bg_has_alpha;
 BOOL img_has_alpha;
 
+DECL_WINDOWS_FUNCTION(static, BOOL, AlphaBlend, (HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn));
+
+BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn)
+{
+    static HMODULE module;
+    if (!module)
+    	module = load_system32_dll("msimg32.dll");
+    if (!module || !p_AlphaBlend && !GET_WINDOWS_FUNCTION(module, AlphaBlend))
+        return FALSE;
+    return p_AlphaBlend(hdcDest, xoriginDest, yoriginDest, wDest, hDest, hdcSrc, xoriginSrc, yoriginSrc, wSrc, hSrc, ftn);
+}
+
 static void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
 static void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
 static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect);
@@ -70,7 +82,7 @@ void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
 		paint_bg_remaining(hdc, rect, &update_rect);
 	    }
 	} else {
-	    AlphaBlend(hdc, blit_x, blit_y, blit_width, blit_height,
+	    msimg_alphablend(hdc, blit_x, blit_y, blit_width, blit_height,
 		       bg_hdc, 0, 0, bg_w, bg_h, mode->bf);
 	}
 	SelectClipRgn(hdc, has_clip ? old_clip : NULL);
@@ -110,7 +122,7 @@ void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
 		    BitBlt(hdc, dest_pos.x, dest_pos.y, width, height,
 			   bg_hdc, src_x, src_y, SRCCOPY);
 		} else {
-		    AlphaBlend(hdc, dest_pos.x, dest_pos.y, width, height,
+		    msimg_alphablend(hdc, dest_pos.x, dest_pos.y, width, height,
 			   bg_hdc, src_x, src_y, width, height, mode->bf);
 		}
 	    } else if (mode->opaque) {
