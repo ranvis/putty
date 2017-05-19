@@ -14,9 +14,9 @@ BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, 
 {
     static HMODULE module;
     if (!module)
-    	module = load_system32_dll("msimg32.dll");
+	module = load_system32_dll("msimg32.dll");
     if (!module || !p_AlphaBlend && !GET_WINDOWS_FUNCTION(module, AlphaBlend))
-        return FALSE;
+	return FALSE;
     return p_AlphaBlend(hdcDest, xoriginDest, yoriginDest, wDest, hDest, hdcSrc, xoriginSrc, yoriginSrc, wSrc, hSrc, ftn);
 }
 
