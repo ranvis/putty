@@ -230,7 +230,7 @@ static INT_PTR CALLBACK AboutProc(HWND hwnd, UINT msg,
 	  case IDA_WEB:
 	    /* Load web browser */
 	    ShellExecute(hwnd, "open",
-			 "http://www.ranvis.com/putty",
+			 "https://www.ranvis.com/putty",
 			 0, 0, SW_SHOWDEFAULT);
 	    return 0;
 	}
