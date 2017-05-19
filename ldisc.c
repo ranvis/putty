@@ -144,7 +144,7 @@ void ldisc_send(void *handle, const char *buf, int len, int interactive)
 	if (!iso2022) a1 (a2, a3, a4); \
 	else { \
 	    char a[100]; \
-	    char *p = a3; \
+	    const char *p = a3; \
 	    int b = 0; \
 	    int l; \
 	    l = a4; \

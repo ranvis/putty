@@ -418,7 +418,6 @@ static HWND override_wndproc(HWND r)
     char classname[256];
     char windowname[256];
     DWORD style;
-    HWND parent;
     struct prop *qq;
     char buf[256];
     enum { TYPE_OFF, TYPE_MAIN, TYPE_OTHER } type;
@@ -428,7 +427,6 @@ static HWND override_wndproc(HWND r)
     GetClassName(r, classname, lenof(classname));
     GetWindowText(r, windowname, lenof(windowname));
     style = GetWindowLong(r, GWL_STYLE);
-    parent = GetParent(r);
     type = TYPE_OFF;
     if (!(style & WS_CHILD)) {
 	if (!strcmp(classname, "PuTTY"))
