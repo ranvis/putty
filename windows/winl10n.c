@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include "putty.h"
 
-static const char *lngfile = "";
-static char lang[32];
-static char ofontname[128];
+static const WCHAR *lng_path = L"";
+static WCHAR lng_section[32];
+static WCHAR ofontname[128];
 static HFONT hfont;
 static WNDPROC orig_wndproc_button, orig_wndproc_static,
 	       orig_wndproc_systreeview32, orig_wndproc_edit, orig_wndproc_listbox, orig_wndproc_combobox;
@@ -24,12 +24,12 @@ static struct prop {
 static char propstr[] = "l10n";
 static DLGPROC lastolddlgproc;
 
-#define HOOK_TREEVIEW "xSysTreeView32"
-#define HOOK_TREEVIEW_W L"xSysTreeView32"
+#define WC_HOOK(orig) ("x" WC_##orig)
+#define WC_HOOKW(orig) (L"x" WC_##orig##W)
 
-static char *low_url_escape(const char *p)
+static WCHAR *low_url_escape(const WCHAR *p)
 {
-    static char tmp_str[1024];
+    static WCHAR tmp_str[1024];
     int i;
     for (i = 0; i < lenof(tmp_str) - 1 - 2 - 2 && *p; i++) {
 	if (i == 0 && *p == ' ' || (*p > 0 && *p < 32) || *p == '=' || *p == '%') {
@@ -48,46 +48,64 @@ static char *low_url_escape(const char *p)
     return tmp_str;
 }
 
-static DWORD getl10nstr(const char *str, char *out_buf, int out_size)
+static int uchex_to_int(int ch)
 {
-    DWORD r;
-    char *out;
-    char in_str[256];
-    const char *str_esc;
+    if (ch >= '0' && ch <= '9')
+	return ch - '0';
+    if (ch >= 'A' && ch <= 'F')
+	return ch - 'A' + 10;
+    return -1;
+}
+
+static int mbs_to_ws(const char *str, WCHAR *wstr, int wstr_size)
+{
+    int result = MultiByteToWideChar(CP_ACP, 0, str, -1, wstr, wstr_size);
+    if (!result) {
+	wstr[wstr_size - 1] = '\0';
+    }
+    return result;
+}
+
+static int ws_to_mbs(const WCHAR *wstr, char *str, int str_size)
+{
+    int result = WideCharToMultiByte(CP_ACP, 0, wstr, -1, str, str_size, NULL, NULL);
+    if (!result) {
+	str[str_size - 1] = '\0';
+    }
+    return result;
+}
+
+static int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
+{
+    int r;
+    WCHAR *out;
+    WCHAR in_str[256];
+    const WCHAR *str_esc;
     {
-	const char *p = str;
+	const WCHAR *p = str;
 	while (*p != '\0') {
-	    if (IsDBCSLeadByte(*p))
+	    if (*p > 0x7e)
 		return 0;
 	    p++;
 	}
     }
     str_esc = low_url_escape(str);
     if (out_buf == str) {
-        str = strncpy(in_str, str, lenof(in_str));
-        in_str[lenof(in_str) - 1] = '\0';
+	str = memcpy(in_str, str, sizeof in_str);
+	in_str[lenof(in_str) - 1] = '\0';
     }
-    r = GetPrivateProfileString(lang, str_esc, "\n:", out_buf, out_size, lngfile);
+    r = GetPrivateProfileStringW(lng_section, str_esc, L"\n:", out_buf, out_size, lng_path);
     if (out_buf[0] == '\n') {
-	if (collect > 0 && (int)strlen(str) > collect)
-	    WritePrivateProfileString(lang, str_esc, str_esc, lngfile);
+	if (collect > 0 && (int)wcslen(str) > collect)
+	    WritePrivateProfileStringW(lng_section, str_esc, str_esc, lng_path);
 	return 0;
     }
     for (out = out_buf; (*out = *out_buf); out++, out_buf++) {
 	if (*out_buf == '%') {
 	    int d, e;
-
-	    if (out_buf[1] >= '0' && out_buf[1] <= '9')
-		d = out_buf[1] - '0';
-	    else if (out_buf[1] >= 'A' && out_buf[1] <= 'F')
-		d = out_buf[1] - 'A' + 10;
-	    else
+	    if ((d = uchex_to_int(out_buf[1])) < 0)
 		continue;
-	    if (out_buf[2] >= '0' && out_buf[2] <= '9')
-		e = out_buf[2] - '0';
-	    else if (out_buf[2] >= 'A' && out_buf[2] <= 'F')
-		e = out_buf[2] - 'A' + 10;
-	    else
+	    if ((e = uchex_to_int(out_buf[2])) < 0)
 		continue;
 	    *out = d * 16 + e;
 	    out_buf += 2;
@@ -97,21 +115,62 @@ static DWORD getl10nstr(const char *str, char *out_buf, int out_size)
     return r;
 }
 
+static int cwstrtranslate(const char *str, WCHAR *out_buf, int out_size)
+{
+    WCHAR in_str[256];
+    {
+	int i;
+	for (i = 0; i < lenof(in_str) - 1 && str[i]; i++) {
+	    if (IsDBCSLeadByte(str[i]))
+		return 0;
+	    in_str[i] = str[i];
+	}
+	in_str[i] = 0;
+    }
+    return strtranslate(in_str, out_buf, out_size);
+}
+
+static int cwstrtranslatefb(const char *str, WCHAR *out_buf, int out_size)
+{
+    int result = cwstrtranslate(str, out_buf, out_size);
+    if (!result) {
+	result = mbs_to_ws(str, out_buf, out_size);
+	if (!result) {
+	    wcsncpy(out_buf, L"?", out_size);
+	    out_buf[out_size - 1] = 0;
+	    result = (int)wcslen(out_buf);
+	}
+    }
+    return result;
+}
+
+static int ccstrtranslate(const char *str, char *out_buf, int out_size)
+{
+    WCHAR *w_buf = snewn(out_size, WCHAR);
+    int r = cwstrtranslate(str, w_buf, out_size);
+    if (r) {
+	ws_to_mbs(w_buf, out_buf, out_size);
+	r = (int)strlen(out_buf);
+    }
+    sfree(w_buf);
+    return r;
+}
+
 static void domenu(HMENU menu)
 {
     int i, n;
-    char a[256];
-    MENUITEMINFO b;
+    WCHAR a[256];
+    MENUITEMINFOW b;
 
     n = GetMenuItemCount(menu);
     for (i = 0; i < n; i++) {
-	b.cbSize = sizeof(MENUITEMINFO);
+	b.cbSize = sizeof(MENUITEMINFOW);
 	b.fMask = MIIM_TYPE;
 	b.dwTypeData = a;
 	b.cch = lenof(a);
-	if (GetMenuItemInfo(menu, i, 1, &b))
-	    if (getl10nstr(a, a, lenof(a)))
-		SetMenuItemInfo(menu, i, 1, &b);
+	if (GetMenuItemInfoW(menu, i, 1, &b))
+	    if (strtranslate(a, a, lenof(a)))
+		SetMenuItemInfoW(menu, i, 1, &b);
     }
 }
 
@@ -138,16 +197,16 @@ static LRESULT CALLBACK wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
 	break;
     }
     return p->is_unicode
-	   ? CallWindowProcW(proc, hwnd, msg, wparam, lparam)
-	   : CallWindowProcA(proc, hwnd, msg, wparam, lparam);
+	? CallWindowProcW(proc, hwnd, msg, wparam, lparam)
+	: CallWindowProcA(proc, hwnd, msg, wparam, lparam);
 }
 
 static LRESULT hook_setfont(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-    LOGFONT a;
+    LOGFONTW a;
 
-    if (wparam && GetObject((HGDIOBJ)wparam, sizeof(a), &a)) {
-	if (!stricmp(a.lfFaceName, ofontname))
+    if (wparam && GetObjectW((HGDIOBJ)wparam, sizeof(a), &a)) {
+	if (!_wcsicmp(a.lfFaceName, ofontname))
 	    return CallWindowProc(proc, hwnd, msg, (WPARAM)hfont, lparam);
     }
     return CallWindowProc(proc, hwnd, msg, wparam, lparam);
@@ -155,52 +214,30 @@ static LRESULT hook_setfont(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LP
 
 static LRESULT hook_create(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-    char a[256], b[256];
-    LRESULT r;
+    WCHAR text[256], trtext[256];
+    LRESULT result;
 
-    r = CallWindowProc(proc, hwnd, msg, (WPARAM)hfont, lparam);
-    if (GetWindowText(hwnd, a, lenof(a)))
-	if (getl10nstr(a, b, lenof(b)))
-	    SetWindowText(hwnd, b);
-    return r;
+    result = CallWindowProc(proc, hwnd, msg, (WPARAM)hfont, lparam);
+    if (GetWindowTextW(hwnd, text, lenof(text)))
+	if (strtranslate(text, trtext, lenof(trtext)))
+	    SetWindowTextW(hwnd, trtext);
+    return result;
 }
 
 static LRESULT hook_tvm_insertitem(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-    TVINSERTSTRUCT *p;
-    char *q;
-    char a[256];
-    LRESULT r;
+    TVINSERTSTRUCTW *p;
+    WCHAR *text;
+    WCHAR trtext[256];
+    LRESULT result;
 
-    p = (TVINSERTSTRUCT*)lparam;
-    q = p->item.pszText;
-    if (getl10nstr(q, a, lenof(a)))
-	p->item.pszText = a;
-    r = CallWindowProc(proc, hwnd, msg, wparam, lparam);
-    p->item.pszText = q;
-    return r;
-}
-
-static LRESULT hook_tvm_getitem(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
-    TVITEM *p;
-    char *q;
-    char a[256];
-    int l;
-    LRESULT r;
-
-    p = (TVITEM*)lparam;
-    q = p->pszText;
-    l = p->cchTextMax;
-    p->pszText = a;
-    p->cchTextMax = lenof(a);
-    r = CallWindowProc(proc, hwnd, msg, wparam, lparam);
-    p->pszText = q;
-    p->cchTextMax = l;
-    getl10nstr(a, a, lenof(a));
-    strncpy(q, a, l);
-    q[l - 1] = '\0';
-    return r;
+    p = (TVINSERTSTRUCTW*)lparam;
+    text = p->item.pszText;
+    if (strtranslate(text, trtext, lenof(trtext)))
+	p->item.pszText = trtext;
+    result = CallWindowProc(proc, hwnd, msg, wparam, lparam);
+    p->item.pszText = text;
+    return result;
 }
 
 static LRESULT CALLBACK wndproc_button(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -235,7 +272,7 @@ static LRESULT CALLBACK wndproc_systreeview32(HWND hwnd, UINT msg, WPARAM wparam
     switch (msg) {
       case WM_SETFONT: return hook_setfont(proc, hwnd, msg, wparam, lparam);
       case TVM_INSERTITEM: return hook_tvm_insertitem(proc, hwnd, msg, wparam, lparam);
-      case TVM_GETITEM: return hook_tvm_getitem(proc, hwnd, msg, wparam, lparam);
+      /* case TVM_GETITEM: counter-translate text, if caller needs one */
     }
     return CallWindowProc(proc, hwnd, msg, wparam, lparam);
 }
@@ -259,9 +296,9 @@ static LRESULT CALLBACK wndproc_listbox(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     switch (msg) {
       case WM_SETFONT: return hook_setfont(proc, hwnd, msg, wparam, lparam);
       case LB_ADDSTRING: {
-	char buffer[256];
-	char *text = (char*)lparam;
-	if (getl10nstr(text, buffer, lenof(buffer)))
+	WCHAR buffer[256];
+	WCHAR *text = (WCHAR *)lparam;
+	if (strtranslate(text, buffer, lenof(buffer)))
 	    text = buffer;
 	return CallWindowProc(proc, hwnd, msg, wparam, (LPARAM)text);
     }
@@ -277,9 +314,9 @@ static LRESULT CALLBACK wndproc_combobox(HWND hwnd, UINT msg, WPARAM wparam, LPA
     switch (msg) {
       case WM_SETFONT: return hook_setfont(proc, hwnd, msg, wparam, lparam);
       case CB_ADDSTRING: {
-	char buffer[256];
-	char *text = (char*)lparam;
-	if (getl10nstr(text, buffer, lenof(buffer)))
+	WCHAR buffer[256];
+	WCHAR *text = (WCHAR *)lparam;
+	if (strtranslate(text, buffer, lenof(buffer)))
 	    text = buffer;
 	return CallWindowProc(proc, hwnd, msg, wparam, (LPARAM)text);
     }
@@ -288,36 +325,35 @@ static LRESULT CALLBACK wndproc_combobox(HWND hwnd, UINT msg, WPARAM wparam, LPA
 }
 
 DECL_WINDOWS_FUNCTION(static, BOOL, GetUserPreferredUILanguages, (DWORD dwFlags, PULONG pulNumLanguages, PZZWSTR pwszLanguagesBuffer, PULONG pcchLanguagesBuffer));
-static char *lng_path;
 
-static int try_lng_path(const char *fmt, ...)
+static char *try_lng_path(const char *fmt, ...)
 {
+    char *path;
     va_list ap;
     va_start(ap, fmt);
-    sfree(lng_path);
-    lng_path = dupvprintf(fmt, ap);
+    path = dupvprintf(fmt, ap);
     va_end(ap);
-    return GetFileAttributes(lng_path) != INVALID_FILE_ATTRIBUTES;
+    if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES)
+	return path;
+    sfree(path);
+    return NULL;
 }
 
-static const char *get_lng_file_path()
+static char *get_lng_file_path()
 {
     char exe_path[MAX_PATH];
-    char *dot_pos, *exe_name;
+    char *dot_pos, *exe_name, *path;
     LANGID lang_id;
-    if (!GetModuleFileName(NULL, exe_path, MAX_PATH)) {
-	return "";
-    }
+    if (!GetModuleFileName(NULL, exe_path, MAX_PATH))
+	return NULL;
     dot_pos = strrchr(exe_path, '.');
     exe_name = strrchr(exe_path, '\\');
-    if (!dot_pos || !exe_name) {
-	return "";
-    }
+    if (!dot_pos || !exe_name)
+	return NULL;
     *dot_pos = 0;
     *exe_name++ = 0;
-    if (try_lng_path("%s\\%s.lng", exe_path, exe_name)) {
-	return lng_path;
-    }
+    if ((path = try_lng_path("%s\\%s.lng", exe_path, exe_name)) != NULL)
+	return path;
     if (!p_GetUserPreferredUILanguages) {
 	GET_WINDOWS_FUNCTION(GetModuleHandle("kernel32.dll"), GetUserPreferredUILanguages);
     }
@@ -329,11 +365,10 @@ static const char *get_lng_file_path()
 	    if (p_GetUserPreferredUILanguages(MUI_LANGUAGE_ID, &num_langs, langs, &lang_size)) {
 		while (num_langs--) {
 		    char lang[8];
-		    int lang_len = WideCharToMultiByte(CP_ACP, 0, lang_w, wcslen(lang_w), lang, sizeof lang, NULL, NULL);
-		    lang[lang_len] = 0;
-		    if (try_lng_path("%s\\lang\\%s\\%s.lng", exe_path, lang, exe_name)) {
+		    int lang_len = ws_to_mbs(lang_w, lang, sizeof lang);
+		    if ((path = try_lng_path("%s\\lang\\%s\\%s.lng", exe_path, lang, exe_name)) != NULL) {
 			sfree(langs);
-			return lng_path;
+			return path;
 		    }
 		    lang_w += wcslen(lang_w) + 1;
 		}
@@ -342,11 +377,24 @@ static const char *get_lng_file_path()
 	}
     } else {
 	lang_id = GetUserDefaultUILanguage();
-	if (try_lng_path("%s\\lang\\%04x\\%s.lng", exe_path, lang_id, exe_name)) {
-	    return lng_path;
-	}
+	if ((path = try_lng_path("%s\\lang\\%04x\\%s.lng", exe_path, lang_id, exe_name)) != NULL)
+	    return path;
     }
-    return "";
+    return NULL;
+}
+
+static WCHAR *get_lng_file_path_w()
+{
+    int w_len;
+    WCHAR *lng_path_w;
+    char *lng_path_a = get_lng_file_path();
+    if (!lng_path_a)
+	return NULL;
+    w_len = MultiByteToWideChar(CP_ACP, 0, lng_path_a, -1, NULL, 0);
+    lng_path_w = snewn(w_len, WCHAR);
+    MultiByteToWideChar(CP_ACP, 0, lng_path_a, -1, lng_path_w, w_len);
+    sfree(lng_path_a);
+    return lng_path_w;
 }
 
 static int getEnabled()
@@ -354,50 +402,51 @@ static int getEnabled()
     static int enabled = -1;
     if (enabled == -1) {
 	int i;
-	char fontname[128];
 	int fontsize;
 	struct {
-	    char *classname;
-	    char *newclassname;
+	    WCHAR *classname;
+	    WCHAR *newclassname;
 	    WNDPROC *orig_wndproc;
 	    WNDPROC new_wndproc;
 	} b[] = {
-	    { "Button", "xButton", &orig_wndproc_button, wndproc_button },
-	    { "Static", "xStatic", &orig_wndproc_static, wndproc_static },
-	    { WC_TREEVIEW, HOOK_TREEVIEW, &orig_wndproc_systreeview32, wndproc_systreeview32 },
-	    { "Edit", "xEdit", &orig_wndproc_edit, wndproc_edit },
-	    { "ListBox", "xListBox", &orig_wndproc_listbox, wndproc_listbox },
-	    { "ComboBox", "xComboBox", &orig_wndproc_combobox, wndproc_combobox },
+	    { WC_BUTTONW, WC_HOOKW(BUTTON), &orig_wndproc_button, wndproc_button },
+	    { WC_STATICW, WC_HOOKW(STATIC), &orig_wndproc_static, wndproc_static },
+	    { WC_TREEVIEWW, WC_HOOKW(TREEVIEW), &orig_wndproc_systreeview32, wndproc_systreeview32 },
+	    { WC_EDITW, WC_HOOKW(EDIT), &orig_wndproc_edit, wndproc_edit },
+	    { WC_LISTBOXW, WC_HOOKW(LISTBOX), &orig_wndproc_listbox, wndproc_listbox },
+	    { WC_COMBOBOXW, WC_HOOKW(COMBOBOX), &orig_wndproc_combobox, wndproc_combobox },
 	    { NULL }
 	};
 
 	enabled = 0;
-	lngfile = get_lng_file_path();
-	if (*lngfile) {
-	    if (GetPrivateProfileString("Default", "Language", "", lang, lenof(lang),
-					lngfile)) {
+	lng_path = get_lng_file_path_w();
+	if (lng_path) {
+	    if (GetPrivateProfileStringW(L"Default", L"Language", L"", lng_section, lenof(lng_section),
+		lng_path)) {
 		HINSTANCE hinst = GetModuleHandle(NULL);
+		WCHAR fontname[128];
 		enabled = 1;
-		GetPrivateProfileString(lang, "_FONTNAME_", "System", fontname, lenof(fontname),
-					lngfile);
-		GetPrivateProfileString(lang, "_OFONTNAME_", "MS Sans Serif",
-					ofontname, lenof(ofontname), lngfile);
-		fontsize = GetPrivateProfileInt(lang, "_FONTSIZE_", 10, lngfile);
-		hfont = CreateFont(fontsize, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET,
-				   0, 0, 0, 0, fontname);
+		GetPrivateProfileStringW(lng_section, L"_FONTNAME_", L"System", fontname, lenof(fontname),
+		    lng_path);
+		GetPrivateProfileStringW(lng_section, L"_OFONTNAME_", L"MS Sans Serif",
+		    ofontname, lenof(ofontname), lng_path);
+		fontsize = GetPrivateProfileIntW(lng_section, L"_FONTSIZE_", 10, lng_path);
+		hfont = CreateFontW(fontsize, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET,
+		    0, 0, 0, 0, fontname);
 		for (i = 0; b[i].classname != NULL; i++) {
-		    WNDCLASS wndclass;
+		    WNDCLASSW wndclass;
 
-		    GetClassInfo(hinst, b[i].classname, &wndclass);
+		    GetClassInfoW(hinst, b[i].classname, &wndclass);
 		    wndclass.hInstance = hinst;
 		    wndclass.lpszClassName = b[i].newclassname;
 		    *b[i].orig_wndproc = wndclass.lpfnWndProc;
 		    wndclass.lpfnWndProc = b[i].new_wndproc;
-		    RegisterClass(&wndclass);
+		    RegisterClassW(&wndclass);
 		}
-		collect = GetPrivateProfileInt(lang, "_COLLECT_", 0, lngfile);
+		collect = GetPrivateProfileIntW(lng_section, L"_COLLECT_", 0, lng_path);
 	    }
-	}
+	} else
+	    lng_path = L"";
     }
     return enabled;
 }
@@ -405,9 +454,13 @@ static int getEnabled()
 int get_l10n_setting(const char *keyname, char *buf, int size)
 {
     if (getEnabled()) {
-	GetPrivateProfileString(lang, keyname, "\n:", buf, size, lngfile);
-	if (*buf != '\n')
+	WCHAR w_key[256], w_buf[256];
+	mbs_to_ws(keyname, w_key, lenof(w_key));
+	GetPrivateProfileStringW(lng_section, w_key, L"\n:", w_buf, size, lng_path);
+	if (*w_buf != L'\n') {
+	    ws_to_mbs(w_buf, buf, size);
 	    return 1;
+	}
     }
     *buf = '\0';
     return 0;
@@ -416,16 +469,14 @@ int get_l10n_setting(const char *keyname, char *buf, int size)
 static HWND override_wndproc(HWND r)
 {
     char classname[256];
-    char windowname[256];
     DWORD style;
     struct prop *qq;
-    char buf[256];
+    WCHAR buf[256];
     enum { TYPE_OFF, TYPE_MAIN, TYPE_OTHER } type;
 
     if (!r)
 	return r;
     GetClassName(r, classname, lenof(classname));
-    GetWindowText(r, windowname, lenof(windowname));
     style = GetWindowLong(r, GWL_STYLE);
     type = TYPE_OFF;
     if (!(style & WS_CHILD)) {
@@ -437,9 +488,9 @@ static HWND override_wndproc(HWND r)
     if (type == TYPE_OFF)
 	return r;
     if (type == TYPE_OTHER) {
-	if (GetWindowText(r, buf, lenof(buf)))
-	    if (getl10nstr(buf, buf, lenof(buf)))
-		SetWindowText(r, buf);
+	if (GetWindowTextW(r, buf, lenof(buf)))
+	    if (strtranslate(buf, buf, lenof(buf)))
+		SetWindowTextW(r, buf);
     }
     if (type == TYPE_MAIN)
 	do {
@@ -453,29 +504,29 @@ static HWND override_wndproc(HWND r)
 	    *qq = defaultprop;
 	    qq->is_unicode = IsWindowUnicode(r);
 	    qq->oldproc = qq->is_unicode
-			  ? (WNDPROC)SetWindowLongPtrW(r, GWLP_WNDPROC, (LONG_PTR)wndproc)
-			  : (WNDPROC)SetWindowLongPtrA(r, GWLP_WNDPROC, (LONG_PTR)wndproc);
+		? (WNDPROC)SetWindowLongPtrW(r, GWLP_WNDPROC, (LONG_PTR)wndproc)
+		: (WNDPROC)SetWindowLongPtrA(r, GWLP_WNDPROC, (LONG_PTR)wndproc);
 	} while (0);
-    return r;
+	return r;
 }
 
 static void translate_children(HWND hwnd)
 {
     HWND a;
-    LOGFONT l;
-    char buf[256];
+    LOGFONTW l;
+    WCHAR buf[256];
 
     a = GetWindow(hwnd, GW_CHILD);
     while (a) {
 	translate_children(a);
-	if (GetWindowText(a, buf, lenof(buf)))
-	    if (getl10nstr(buf, buf, lenof(buf)))
-		SetWindowText(a, buf);
-	if (GetObject((HGDIOBJ)SendMessage(a, WM_GETFONT, 0, 0),
-		      sizeof(l), &l)) {
-	    if (!stricmp(l.lfFaceName, ofontname))
+	if (GetWindowTextW(a, buf, lenof(buf)))
+	    if (strtranslate(buf, buf, lenof(buf)))
+		SetWindowTextW(a, buf);
+	if (GetObjectW((HGDIOBJ)SendMessage(a, WM_GETFONT, 0, 0),
+	    sizeof(l), &l)) {
+	    if (!_wcsicmp(l.lfFaceName, ofontname))
 		SendMessage(a, WM_SETFONT, (WPARAM)hfont,
-			    MAKELPARAM(TRUE, 0));
+		    MAKELPARAM(TRUE, 0));
 	}
 	a = GetWindow(a, GW_HWNDNEXT);
     }
@@ -505,33 +556,30 @@ static INT_PTR CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
 }
 
 #undef MessageBoxA
-int xMessageBoxA(HWND a1, LPCSTR a2, LPCSTR a3, UINT a4)
+int xMessageBoxA(HWND hWnd, LPCSTR text, LPCSTR caption, UINT type)
 {
-    const char *b2 = a2, *b3 = a3;
-    char c2[256], c3[256];
+    WCHAR textw[256], captionw[256];
 
     if (!getEnabled())
-	return MessageBoxA(a1, a2, a3, a4);
-    if (getl10nstr(b2, c2, lenof(c2)))
-	b2 = c2;
-    if (getl10nstr(b3, c3, lenof(c3)))
-	b3 = c3;
-    return MessageBoxA(a1, b2, b3, a4);
+	return MessageBoxA(hWnd, text, caption, type);
+    cwstrtranslatefb(text, textw, lenof(textw));
+    cwstrtranslatefb(caption, captionw, lenof(captionw));
+    return MessageBoxW(hWnd, textw, captionw, type);
 }
 
 #undef CreateWindowExA
 HWND xCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a6,
-		 int a7, int a8, HWND a9, HMENU a10, HINSTANCE a11, LPVOID a12)
+    int a7, int a8, HWND a9, HMENU a10, HINSTANCE a11, LPVOID a12)
 {
     HWND r;
 
     if (getEnabled() && IsBadStringPtr(a2, 100) == FALSE) {
-	if (stricmp(a2, WC_TREEVIEW) == 0) a2 = HOOK_TREEVIEW;
-	else if (stricmp(a2, "Button") == 0) a2 = "xButton";
-	else if (stricmp(a2, "Static") == 0) a2 = "xStatic";
-	else if (stricmp(a2, "Edit") == 0) a2 = "xEdit";
-	else if (stricmp(a2, "ListBox") == 0) a2 = "xListBox";
-	else if (stricmp(a2, "ComboBox") == 0) a2 = "xComboBox";
+	if (stricmp(a2, WC_TREEVIEW) == 0) a2 = WC_HOOK(TREEVIEW);
+	else if (stricmp(a2, WC_BUTTON) == 0) a2 = WC_HOOK(BUTTON);
+	else if (stricmp(a2, WC_STATIC) == 0) a2 = WC_HOOK(STATIC);
+	else if (stricmp(a2, WC_EDIT) == 0) a2 = WC_HOOK(EDIT);
+	else if (stricmp(a2, WC_LISTBOX) == 0) a2 = WC_HOOK(LISTBOX);
+	else if (stricmp(a2, WC_COMBOBOX) == 0) a2 = WC_HOOK(COMBOBOX);
     }
     r = CreateWindowExA(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
     if (!getEnabled())
@@ -541,21 +589,21 @@ HWND xCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a6,
 
 #undef CreateWindowExW
 HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle,
-		      int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance,
-		      LPVOID lpParam)
+    int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance,
+    LPVOID lpParam)
 {
     HWND window;
 
     if (getEnabled() && IsBadStringPtrW(lpClassName, 100) == FALSE) {
-	if (_wcsicmp(lpClassName, WC_TREEVIEWW) == 0) lpClassName = HOOK_TREEVIEW_W;
-	else if (_wcsicmp(lpClassName, L"Button") == 0) lpClassName = L"xButton";
-	else if (_wcsicmp(lpClassName, L"Static") == 0) lpClassName = L"xStatic";
-	else if (_wcsicmp(lpClassName, L"Edit") == 0) lpClassName = L"xEdit";
-	else if (_wcsicmp(lpClassName, L"ListBox") == 0) lpClassName = L"xListBox";
-	else if (_wcsicmp(lpClassName, L"ComboBox") == 0) lpClassName = L"xComboBox";
+	if (_wcsicmp(lpClassName, WC_TREEVIEWW) == 0) lpClassName = WC_HOOKW(TREEVIEW);
+	else if (_wcsicmp(lpClassName, WC_BUTTONW) == 0) lpClassName = WC_HOOKW(BUTTON);
+	else if (_wcsicmp(lpClassName, WC_STATICW) == 0) lpClassName = WC_HOOKW(STATIC);
+	else if (_wcsicmp(lpClassName, WC_EDITW) == 0) lpClassName = WC_HOOKW(EDIT);
+	else if (_wcsicmp(lpClassName, WC_LISTBOXW) == 0) lpClassName = WC_HOOKW(LISTBOX);
+	else if (_wcsicmp(lpClassName, WC_COMBOBOXW) == 0) lpClassName = WC_HOOKW(COMBOBOX);
     }
     window = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight,
-			     hWndParent, hMenu, hInstance, lpParam);
+	hWndParent, hMenu, hInstance, lpParam);
     if (!getEnabled())
 	return window;
     return override_wndproc(window);
@@ -587,7 +635,7 @@ char *l10n_dupstr(const char *s)
 {
     const char *a = s;
     char b[256];
-    if (getEnabled() && getl10nstr(s, b, lenof(b)))
+    if (getEnabled() && ccstrtranslate(s, b, lenof(b)))
 	a = b;
     return dupstr(a);
 }
@@ -600,10 +648,10 @@ void l10n_created_window(HWND hwnd)
 
 HFONT l10n_getfont(HFONT f)
 {
-    LOGFONT l;
+    LOGFONTW l;
 
-    if (getEnabled() && GetObject((HGDIOBJ)f, sizeof(l), &l)) {
-	if (!stricmp(l.lfFaceName, ofontname))
+    if (getEnabled() && GetObjectW((HGDIOBJ)f, sizeof(l), &l)) {
+	if (!_wcsicmp(l.lfFaceName, ofontname))
 	    return hfont;
     }
     return f;
@@ -616,7 +664,7 @@ int xsprintf(char *buffer, const char *format, ...)
     va_list args;
     va_start(args, format);
     if (getEnabled()) {
-	if (getl10nstr(format, format2, lenof(format2)))
+	if (ccstrtranslate(format, format2, lenof(format2)))
 	    format = format2;
     }
     r = vsprintf(buffer, format, args);
@@ -634,7 +682,7 @@ int xvsnprintf(char *buffer, int size, const char *format, va_list args)
 {
     char format2[1024];
     if (getEnabled()) {
-	if (getl10nstr(format, format2, lenof(format2)))
+	if (ccstrtranslate(format, format2, lenof(format2)))
 	    format = format2;
     }
     return vsnprintf(buffer, size, format, args);
@@ -646,11 +694,11 @@ static int getOpenSaveFilename(OPENFILENAME *ofn, int (WINAPI *f)(OPENFILENAME *
     char file_title[256];
     char filter[256];
     if (getEnabled()) {
-	if (ofn->lpstrTitle != NULL && getl10nstr(ofn->lpstrTitle, title, lenof(title)))
+	if (ofn->lpstrTitle != NULL && ccstrtranslate(ofn->lpstrTitle, title, lenof(title)))
 	    ofn->lpstrTitle = title;
-	if (ofn->lpstrFileTitle != NULL && getl10nstr(ofn->lpstrFileTitle, file_title, lenof(file_title)))
+	if (ofn->lpstrFileTitle != NULL && ccstrtranslate(ofn->lpstrFileTitle, file_title, lenof(file_title)))
 	    ofn->lpstrFileTitle = file_title;
-	if (ofn->lpstrFilter != NULL && getl10nstr(ofn->lpstrFilter, filter, lenof(filter)))
+	if (ofn->lpstrFilter != NULL && ccstrtranslate(ofn->lpstrFilter, filter, lenof(filter)))
 	    ofn->lpstrFilter = filter;
     }
     return f(ofn);
@@ -670,16 +718,16 @@ int xGetSaveFileNameA(OPENFILENAMEA *ofn)
 
 BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 {
-    char buf[256];
-    if (getl10nstr(text, buf, lenof(buf)))
-	text = buf;
+    WCHAR buf[256];
+    if (cwstrtranslate(text, buf, lenof(buf)))
+	return SetDlgItemTextW(dialog, id, buf);
     return SetDlgItemText(dialog, id, text);
 }
 
 BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text)
 {
-    char buf[256];
-    if (getl10nstr(text, buf, lenof(buf)))
-	text = buf;
+    WCHAR buf[256];
+    if (cwstrtranslate(text, buf, lenof(buf)))
+	return AppendMenuW(menu, flags, id, buf);
     return AppendMenu(menu, flags, id, text);
 }
