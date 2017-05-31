@@ -21,6 +21,7 @@
 
 #include "putty.h"
 #include "storage.h"
+#include "winl10n.h"
 
 #define MAX_JUMPLIST_ITEMS 30 /* PuTTY will never show more items in
                                * the jumplist than this, regardless of
@@ -441,8 +442,7 @@ static IShellLink *make_shell_link(const char *appname,
     sfree(param_string);
 
     if (sessionname) {
-        desc_string = dupcat("Connect to PuTTY session '",
-                             sessionname, "'", NULL);
+        desc_string = dupprintf("Connect to PuTTY session '%s'", sessionname);
     } else {
         assert(appname);
         desc_string = dupprintf("Run %.*s",
@@ -483,6 +483,8 @@ static void update_jumplist_from_registry(void)
     UINT num_items;
     int jumplist_counter;
     UINT nremoved;
+    WCHAR trtext[256];
+    const WCHAR *trtextfb;
 
     /* Variables used by the cleanup code must be initialised to NULL,
      * so that we don't try to free or release them if they were never
@@ -580,8 +582,8 @@ static void update_jumplist_from_registry(void)
     if (!SUCCEEDED(collection->lpVtbl->QueryInterface
                    (collection, COMPTR(IObjectArray, &array))))
         goto cleanup;
-
-    pCDL->lpVtbl->AppendCategory(pCDL, L"Recent Sessions", array);
+    trtextfb = strtranslatefb(L"Recent Sessions", trtext, lenof(trtext));
+    pCDL->lpVtbl->AppendCategory(pCDL, trtextfb, array);
 
     /*
      * Create an object collection to form the 'Tasks' category on the

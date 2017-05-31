@@ -75,7 +75,7 @@ static int ws_to_mbs(const WCHAR *wstr, char *str, int str_size)
     return result;
 }
 
-static int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
+int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
 {
     int r;
     WCHAR *out;
@@ -113,6 +113,12 @@ static int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
 	}
     }
     return r;
+}
+
+WCHAR *strtranslatefb(const WCHAR *str, WCHAR *out_buf, int out_size)
+{
+    int result = strtranslate(str, out_buf, out_size);
+    return result ? out_buf : str;
 }
 
 static int cwstrtranslate(const char *str, WCHAR *out_buf, int out_size)
