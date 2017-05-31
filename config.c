@@ -662,8 +662,12 @@ static void sessionsaver_handler(union control *ctrl, void *dlg,
 	    int i;
 	    dlg_update_start(ctrl, dlg);
 	    dlg_listbox_clear(ctrl, dlg);
-	    for (i = 0; i < ssd->sesslist.nsessions; i++)
-		dlg_listbox_add(ctrl, dlg, ssd->sesslist.sessions[i]);
+	    for (i = 0; i < ssd->sesslist.nsessions; i++) {
+		/* hack: append dummy string so that session names won't be translated */
+		char *item_text = i ? dupcat(ssd->sesslist.sessions[i], " ", NULL) : dupstr(ssd->sesslist.sessions[i]);
+		dlg_listbox_add(ctrl, dlg, item_text);
+		sfree(item_text);
+	    }
 	    dlg_update_done(ctrl, dlg);
 	}
     } else if (event == EVENT_VALCHANGE) {
