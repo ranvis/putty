@@ -6,9 +6,9 @@ LanguageCodePage=0
 [CustomMessages]
 
 MyAppName=PuTTY GottaNi Edition
-MyAppVerName=PuTTY version 0.60 GottaNi Edition
+MyAppVerName=PuTTY version 0.7x GottaNi Edition
 MyVersionDescription=PuTTY GottaNi Edition Setup
-MyVersionInfo=version 0.60 GottaNi Edition
+MyVersionInfo=version 0.7x GottaNi Edition
 PuTTYShortcutName=PuTTY
 PuTTYComment=SSH, Telnet and Rlogin client
 PuTTYManualShortcutName=PuTTY Manual

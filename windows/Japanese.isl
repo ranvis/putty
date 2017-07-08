@@ -6,9 +6,9 @@ LanguageCodePage=0
 [CustomMessages]
 
 MyAppName=PuTTYごった煮版
-MyAppVerName=PuTTY 0.60 ごった煮版
+MyAppVerName=PuTTY 0.7x ごった煮版
 MyVersionDescription=PuTTYごった煮版セットアップ
-MyVersionInfo=0.60 ごった煮版
+MyVersionInfo=0.7x ごった煮版
 PuTTYShortcutName=PuTTY
 PuTTYComment=SSH, Telnet, Rlogin クライアント
 PuTTYManualShortcutName=PuTTY マニュアル

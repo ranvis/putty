@@ -5,13 +5,13 @@
  
  [Setup]
 -AppName=PuTTY
--AppVerName=PuTTY version 0.62
--VersionInfoTextVersion=Release 0.62
+-AppVerName=PuTTY version 0.70
+-VersionInfoTextVersion=Release 0.70
 +AppName={cm:MyAppName}
 +AppVerName={cm:MyAppVerName}
 +VersionInfoTextVersion={cm:MyVersionInfo}
- AppVersion=0.62
- VersionInfoVersion=0.62.0.0
+ AppVersion=0.70
+ VersionInfoVersion=0.70.0.0
 -AppPublisher=Simon Tatham
 -AppPublisherURL=http://www.chiark.greenend.org.uk/~sgtatham/putty/
 -AppReadmeFile={app}\README.txt
@@ -30,7 +30,7 @@
  AllowNoIcons=yes
 +AppId=PuTTY
 +PrivilegesRequired=none
-+OutputBaseFilename=putty-0.62-JP_Y-setup
++OutputBaseFilename=putty-0.70-JP_Y-setup
 +
 +[Languages]
 +Name: "eng"; MessagesFile: "compiler:Default.isl,Default.isl"
@@ -60,8 +60,8 @@
 +Source: "putty.lng"; DestDir: "{app}"; Components: jpnlng
 +Source: "puttygen.lng"; DestDir: "{app}"; Components: jpnlng
 +Source: "puttytel.lng"; DestDir: "{app}"; Components: jpnlng
-+Source: "..\..\putty-doc\readme-putty-0.62-JP_Y.html"; DestDir: "{app}"; Flags: isreadme
-+Source: "..\..\putty-doc\putty-0.62-JP_Y.patch"; DestDir: "{app}"; Components: source
++Source: "..\..\putty-doc\readme-putty-0.70-JP_Y.html"; DestDir: "{app}"; Flags: isreadme
++Source: "..\..\putty-doc\putty-0.70-JP_Y.patch"; DestDir: "{app}"; Components: source
 +Source: "puttyd.ico"; DestDir: "{app}"; Components: source
  
  [Icons]
