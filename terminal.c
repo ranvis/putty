@@ -2970,7 +2970,7 @@ static void term_out(Terminal *term)
 
 	/* Or the GL control. */
 	if (c == '\177' && term->termstate < DO_CTRLS && has_compat(OTHER)) {
-	    if (term->curs.x && !term->wrapnext)
+	    if (term->no_dbackspace < 2 && term->curs.x && !term->wrapnext)
 		term->curs.x--;
 	    term->wrapnext = FALSE;
 	    /* destructive backspace might be disabled */

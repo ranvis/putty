@@ -1706,9 +1706,12 @@ void setup_config_box(struct controlbox *b, int midsession,
 		      "None", I(TITLE_NONE),
 		      "Empty string", I(TITLE_EMPTY),
 		      "Window title", I(TITLE_REAL), NULL);
-    ctrl_checkbox(s, "Disable destructive backspace on server sending ^?",'b',
+    ctrl_radiobuttons(s, "Behaviour on server sending ^?:",'b', 3,
 		  HELPCTX(features_dbackspace),
-		  conf_checkbox_handler, I(CONF_no_dbackspace));
+		  conf_radiobutton_handler, I(CONF_no_dbackspace),
+		  "Backspace", I(0),
+		  "Back only", I(1),
+		  "Ignore ctrl char", I(2), NULL);
     ctrl_checkbox(s, "Disable remote-controlled character set configuration",
 		  'r', HELPCTX(features_charset), conf_checkbox_handler,
 		  I(CONF_no_remote_charset));
