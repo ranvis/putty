@@ -718,6 +718,8 @@ HWND xCreateDialogParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
 #define CreateDialogParamA xCreateDialogParamA
 int xsprintf(char*,const char*, ...);
 int xvsnprintf(char*,int,const char*, va_list args);
+char *xdupprintf(const char *format, ...);
+//char *xdupvprintf(const char *format, va_list ap);
 int xGetOpenFileNameA(OPENFILENAMEA* ofn);
 int xGetSaveFileNameA(OPENFILENAMEA* ofn);
 #define sprintf xsprintf
@@ -728,6 +730,8 @@ typedef WCHAR *PZZWSTR;
 #define HAS_VSNPRINTF
 #define vsnprintf xvsnprintf
 #endif//_WINDOWS
+#define dupprintf xdupprintf
+//#define dupvprintf xdupvprintf
 #define GetOpenFileNameA xGetOpenFileNameA
 #define GetSaveFileNameA xGetSaveFileNameA
 HFONT l10n_getfont (HFONT);

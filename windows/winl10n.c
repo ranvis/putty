@@ -500,7 +500,7 @@ static HWND override_wndproc(HWND r)
 	    if (strtranslate(buf, buf, lenof(buf)))
 		SetWindowTextW(r, buf);
     }
-    if (type == TYPE_MAIN)
+    if (type == TYPE_MAIN) {
 	do {
 	    qq = (struct prop *)LocalAlloc(0, sizeof *qq);
 	    if (!qq)
@@ -515,7 +515,8 @@ static HWND override_wndproc(HWND r)
 		? (WNDPROC)SetWindowLongPtrW(r, GWLP_WNDPROC, (LONG_PTR)wndproc)
 		: (WNDPROC)SetWindowLongPtrA(r, GWLP_WNDPROC, (LONG_PTR)wndproc);
 	} while (0);
-	return r;
+    }
+    return r;
 }
 
 static void translate_children(HWND hwnd)
@@ -694,6 +695,22 @@ int xvsnprintf(char *buffer, int size, const char *format, va_list args)
 	    format = format2;
     }
     return vsnprintf(buffer, size, format, args);
+}
+
+#undef dupvprintf
+char *xdupprintf(const char *format, ...)
+{
+    char *r;
+    char format2[1024];
+    va_list args;
+    va_start(args, format);
+    if (getEnabled()) {
+	if (ccstrtranslate(format, format2, lenof(format2)))
+	    format = format2;
+    }
+    r = dupvprintf(format, args);
+    va_end(args);
+    return r;
 }
 
 static int getOpenSaveFilename(OPENFILENAME *ofn, int (WINAPI *f)(OPENFILENAME *))
