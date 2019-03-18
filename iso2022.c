@@ -12,11 +12,8 @@ int iso2022_win95flag;
 static int
 get_win95flag (void)
 {
-  OSVERSIONINFO ovi;
-
-  ovi.dwOSVersionInfoSize = sizeof ovi;
-  GetVersionEx (&ovi);
-  return ovi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS;
+    // assume init_winver() is already called
+    return osPlatformId == VER_PLATFORM_WIN32_WINDOWS;
 }
 
 static int

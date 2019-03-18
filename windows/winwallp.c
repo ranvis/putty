@@ -162,7 +162,7 @@ static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect)
 
 HBITMAP create_large_bitmap(HDC hdc, int width, int height)
 {
-    HBITMAP bmp = conf_get_int(conf, CONF_use_ddb) ? CreateCompatibleBitmap(hdc, width, height) : NULL;
+    HBITMAP bmp = conf_get_bool(conf, CONF_use_ddb) ? CreateCompatibleBitmap(hdc, width, height) : NULL;
     if (bmp == NULL) {
 	BITMAPINFOHEADER bmp_info = {sizeof(BITMAPINFOHEADER)};
 	void *pixels;
