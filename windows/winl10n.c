@@ -66,9 +66,9 @@ static int mbs_to_ws(const char *str, WCHAR *wstr, int wstr_size)
     return result;
 }
 
-static int ws_to_mbs(const WCHAR *wstr, char *str, int str_size)
+static int ws_to_mbs(const WCHAR *wstr, int in_size, char *str, int str_size)
 {
-    int result = WideCharToMultiByte(CP_ACP, 0, wstr, -1, str, str_size, NULL, NULL);
+    int result = WideCharToMultiByte(CP_ACP, 0, wstr, in_size, str, str_size, NULL, NULL);
     if (!result) {
 	str[str_size - 1] = '\0';
     }
@@ -155,8 +155,10 @@ static int ccstrtranslate(const char *str, char *out_buf, int out_size)
     WCHAR *w_buf = snewn(out_size, WCHAR);
     int r = cwstrtranslate(str, w_buf, out_size);
     if (r) {
-	ws_to_mbs(w_buf, out_buf, out_size);
-	r = (int)strlen(out_buf);
+	r = ws_to_mbs(w_buf, r + 1, out_buf, out_size);
+	if (r) {
+	    r--;
+	}
     }
     sfree(w_buf);
     return r;
@@ -371,7 +373,7 @@ static char *get_lng_file_path()
 	    if (p_GetUserPreferredUILanguages(MUI_LANGUAGE_ID, &num_langs, langs, &lang_size)) {
 		while (num_langs--) {
 		    char lang[8];
-		    int lang_len = ws_to_mbs(lang_w, lang, sizeof lang);
+		    int lang_len = ws_to_mbs(lang_w, -1, lang, sizeof lang);
 		    if ((path = try_lng_path("%s\\lang\\%s\\%s.lng", exe_path, lang, exe_name)) != NULL) {
 			sfree(langs);
 			return path;
@@ -464,7 +466,7 @@ int get_l10n_setting(const char *keyname, char *buf, int size)
 	mbs_to_ws(keyname, w_key, lenof(w_key));
 	GetPrivateProfileStringW(lng_section, w_key, L"\n:", w_buf, size, lng_path);
 	if (*w_buf != L'\n') {
-	    ws_to_mbs(w_buf, buf, size);
+	    ws_to_mbs(w_buf, -1, buf, size);
 	    return 1;
 	}
     }
