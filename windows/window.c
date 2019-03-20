@@ -4404,10 +4404,6 @@ static void do_text_internal(
     SelectObject(wintw_hdc, fonts[nfont]);
     SetTextColor(wintw_hdc, fg);
     SetBkColor(wintw_hdc, bg);
-//    if (attr & TATTR_COMBINING)
-//	SetBkMode(wintw_hdc, TRANSPARENT);
-//    else
-//	SetBkMode(wintw_hdc, OPAQUE);
     line_box.left = x;
     line_box.top = y;
     line_box.right = x + char_width * len;
