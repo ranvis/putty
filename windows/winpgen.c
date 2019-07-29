@@ -904,7 +904,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND mainwnd, UINT msg,
 	    l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2RSA, "SSH-2 &RSA key");
 	    l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2DSA, "SSH-2 &DSA key");
             l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2ECDSA, "SSH-2 &ECDSA key");
-            l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2ED25519, "SSH-2 ED&25519 key");
+            l10nAppendMenu(menu1, MF_ENABLED, IDC_KEYSSH2ED25519, "SSH-2 Ed&25519 key");
 	    l10nAppendMenu(menu, MF_POPUP | MF_ENABLED, (UINT_PTR) menu1, "&Key");
 	    state->keymenu = menu1;
 
@@ -957,7 +957,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND mainwnd, UINT msg,
 		      "&RSA", IDC_KEYSSH2RSA,
                       "&DSA", IDC_KEYSSH2DSA,
                       "&ECDSA", IDC_KEYSSH2ECDSA,
-                      "ED&25519", IDC_KEYSSH2ED25519,
+                      "Ed&25519", IDC_KEYSSH2ED25519,
 		      "SSH-&1 (RSA)", IDC_KEYSSH1,
                       NULL);
             cp2 = cp;
