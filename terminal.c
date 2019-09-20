@@ -3094,8 +3094,15 @@ static inline void term_keyinput_internal(
         term_added_data(term);
     }
     term_bracketed_paste_stop(term);
-    if (term->ldisc)
+    if (term->ldisc) {
+        if (in_utf(term) && term->ucsdata->iso2022) {
+            iso2022_settranschar(&term->ucsdata->iso2022_data, 1);
+        }
         ldisc_send(term->ldisc, buf, len, interactive);
+        if (in_utf(term) && term->ucsdata->iso2022) {
+            iso2022_settranschar(&term->ucsdata->iso2022_data, 0);
+        }
+    }
     term_seen_key_event(term);
 }
 
