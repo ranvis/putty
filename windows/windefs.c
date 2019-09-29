@@ -9,11 +9,11 @@
 FontSpec *platform_default_fontspec(const char *name)
 {
     if (!strcmp(name, "Font")) {
-	char fontname[128];
-	FontSpec *ret;
-	if (!get_l10n_setting("_DEFAULTFONTNAME_", fontname, sizeof fontname))
+        char fontname[128];
+        FontSpec *ret;
+        if (!get_l10n_setting("_DEFAULTFONTNAME_", fontname, sizeof fontname))
             strcpy(fontname, "Courier New");
-	ret = fontspec_new(fontname, 0, 0, 0);
+        ret = fontspec_new(fontname, 0, 0, 0);
 #ifdef ANSI_CHARSET
         {
             int charset;
@@ -100,13 +100,13 @@ FontSpec *platform_default_fontspec(const char *name)
 #endif // BALTIC_CHARSET
             else
                 charset = ANSI_CHARSET;
-	    ret->charset = charset;
+            ret->charset = charset;
         }
 #else // ANSI_CHARSET
-	ret->charset = 0;
+        ret->charset = 0;
 #endif// ANSI_CHARSET
-	ret->height = 10;
-	return ret;
+        ret->height = 10;
+        return ret;
     } else {
         return fontspec_new("", false, 0, 0);
     }
@@ -115,15 +115,15 @@ FontSpec *platform_default_fontspec(const char *name)
 Filename *platform_default_filename(const char *name)
 {
     if (!strcmp(name, "LogFileName"))
-	return filename_from_str("putty.log");
+        return filename_from_str("putty.log");
     else
-	return filename_from_str("");
+        return filename_from_str("");
 }
 
 char *platform_default_s(const char *name)
 {
     if (!strcmp(name, "SerialLine"))
-	return dupstr("COM1");
+        return dupstr("COM1");
     return NULL;
 }
 

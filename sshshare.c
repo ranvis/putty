@@ -345,12 +345,12 @@ static unsigned share_find_unused_id
     low = low_orig;
     high = high_orig = count234(sharestate->connections);
     while (high - low > 1) {
-	mid = (high + low) / 2;
-	cs = index234(sharestate->connections, mid);
-	if (cs->id == first + (mid - low_orig))
-	    low = mid;		       /* this one is still in the sequence */
-	else
-	    high = mid;		       /* this one is past the end */
+        mid = (high + low) / 2;
+        cs = index234(sharestate->connections, mid);
+        if (cs->id == first + (mid - low_orig))
+            low = mid;                 /* this one is still in the sequence */
+        else
+            high = mid;                /* this one is past the end */
     }
 
     /*
@@ -369,7 +369,7 @@ static unsigned share_find_unused_id
     {
         struct ssh_sharing_connstate dummy;
         dummy.id = ret;
-	assert(NULL == find234(sharestate->connections, &dummy, NULL));
+        assert(NULL == find234(sharestate->connections, &dummy, NULL));
     }
     return ret;
 }
@@ -582,7 +582,7 @@ static struct share_channel *share_add_channel
     if (chan->state != UNACKNOWLEDGED) {
         if (add234(cs->channels_by_server, chan) != chan) {
             del234(cs->channels_by_us, chan);
-            sfree(chan);            
+            sfree(chan);
             return NULL;
         }
     }
@@ -939,7 +939,7 @@ static void share_disconnect(struct ssh_sharing_connstate *cs,
 }
 
 static void share_closing(Plug *plug, const char *error_msg, int error_code,
-			  bool calling_back)
+                          bool calling_back)
 {
     struct ssh_sharing_connstate *cs = container_of(
         plug, struct ssh_sharing_connstate, plug);
@@ -1524,7 +1524,7 @@ static void share_got_pkt_from_downstream(struct ssh_sharing_connstate *cs,
             err = dupprintf("CHANNEL_OPEN_CONFIRMATION packet cited unknown channel %u", (unsigned)server_id);
             goto confused;
         }
-            
+
         PUT_32BIT_MSB_FIRST(pkt + id_pos, new_id);
 
         chan = share_add_channel(cs, old_id, new_id, server_id, OPEN, maxpkt);
@@ -1847,7 +1847,7 @@ static void share_sent(Plug *plug, size_t bufsize)
 }
 
 static void share_listen_closing(Plug *plug, const char *error_msg,
-				 int error_code, bool calling_back)
+                                 int error_code, bool calling_back)
 {
     ssh_sharing_state *sharestate =
         container_of(plug, ssh_sharing_state, plug);
@@ -1920,8 +1920,8 @@ static int share_listen_accepting(Plug *plug,
     SocketPeerInfo *peerinfo;
 
     if (conf_get_bool(sharestate->conf, CONF_ssh_connection_sharing_ask) &&
-	!platform_ssh_share_ask(sharestate->sockname)) {
-	return 1;
+        !platform_ssh_share_ask(sharestate->sockname)) {
+        return 1;
     }
 
     /*
@@ -1943,7 +1943,7 @@ static int share_listen_accepting(Plug *plug,
     cs->sock = constructor(ctx, &cs->plug);
     if ((err = sk_socket_error(cs->sock)) != NULL) {
         sfree(cs);
-	return err != NULL;
+        return err != NULL;
     }
 
     sk_set_frozen(cs->sock, 0);

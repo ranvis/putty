@@ -52,6 +52,6 @@ void gdip_terminate(void);
 HBITMAP gdip_load_image(const char *path);
 
 #define FILTER_IMAGE_FILES_GDIP ("Image Files\0*.bmp;*.jpg;*.jpeg;*.png;*.tiff;*.wmf;*.gif\0" \
-				 "All Files (*.*)\0*\0")
+                                 "All Files (*.*)\0*\0")
 
 #endif

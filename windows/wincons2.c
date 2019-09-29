@@ -25,9 +25,9 @@ void cleanup_exit(int code)
      */
     sk_cleanup();
 
-	random_save_seed();
+        random_save_seed();
 #ifdef MSCRYPTOAPI
-	crypto_wrapup();
+        crypto_wrapup();
 #endif
 
     ExitProcess(code);
@@ -51,37 +51,37 @@ int verify_ssh_host_key(void *frontend, char *host, int port, char *keytype,
 {
     int ret;
     static const char absentmsg_batch[] =
-	"The server's host key is not cached in the registry. You\n"
-	"have no guarantee that the server is the computer you\n"
-	"think it is.\n"
-	"The server's %s key fingerprint is:\n"
-	"%s\n"
-	"Connection abandoned.\n";
+        "The server's host key is not cached in the registry. You\n"
+        "have no guarantee that the server is the computer you\n"
+        "think it is.\n"
+        "The server's %s key fingerprint is:\n"
+        "%s\n"
+        "Connection abandoned.\n";
 
     static const char wrongmsg_batch[] =
-	"WARNING - POTENTIAL SECURITY BREACH!\n"
-	"The server's host key does not match the one PuTTY has\n"
-	"cached in the registry. This means that either the\n"
-	"server administrator has changed the host key, or you\n"
-	"have actually connected to another computer pretending\n"
-	"to be the server.\n"
-	"The new %s key fingerprint is:\n"
-	"%s\n"
-	"Connection abandoned.\n";
+        "WARNING - POTENTIAL SECURITY BREACH!\n"
+        "The server's host key does not match the one PuTTY has\n"
+        "cached in the registry. This means that either the\n"
+        "server administrator has changed the host key, or you\n"
+        "have actually connected to another computer pretending\n"
+        "to be the server.\n"
+        "The new %s key fingerprint is:\n"
+        "%s\n"
+        "Connection abandoned.\n";
 
     /*
      * Verify the key against the registry.
      */
     ret = verify_host_key(host, port, keytype, keystr);
 
-    if (ret == 0)		       /* success - key matched OK */
-	return 1;
+    if (ret == 0)                      /* success - key matched OK */
+        return 1;
 
-    if (ret == 2) {		       /* key was different */
+    if (ret == 2) {                    /* key was different */
         appendLogF(wrongmsg_batch, keytype, fingerprint);
         return 0;
     }
-    if (ret == 1) {		       /* key was absent */
+    if (ret == 1) {                    /* key was absent */
         appendLogF(absentmsg_batch, keytype, fingerprint);
         cleanup_exit(1);
     }
@@ -101,8 +101,8 @@ int askalg(void *frontend, const char *algtype, const char *algname,
 {
     static const char msg_batch[] =
         "The first %s supported by the server is\n"
-	"%s, which is below the configured warning threshold.\n"
-	"Connection abandoned.\n";
+        "%s, which is below the configured warning threshold.\n"
+        "Connection abandoned.\n";
     appendLogF(msg_batch, algtype, algname);
     return 0;
 }
@@ -119,7 +119,7 @@ int askappend(void *frontend, Filename filename,
 
 /*
  * Warn about the obsolescent key file format.
- * 
+ *
  * Uniquely among these functions, this one does _not_ expect a
  * frontend handle. This means that if PuTTY is ported to a
  * platform which requires frontend handles, this function will be
@@ -130,15 +130,15 @@ int askappend(void *frontend, Filename filename,
 void old_keyfile_warning(void)
 {
     static const char message[] =
-	"You are loading an SSH-2 private key which has an\n"
-	"old version of the file format. This means your key\n"
-	"file is not fully tamperproof. Future versions of\n"
-	"PuTTY may stop supporting this private key format,\n"
-	"so we recommend you convert your key to the new\n"
-	"format.\n"
-	"\n"
-	"Once the key is loaded into PuTTYgen, you can perform\n"
-	"this conversion simply by saving it again.\n";
+        "You are loading an SSH-2 private key which has an\n"
+        "old version of the file format. This means your key\n"
+        "file is not fully tamperproof. Future versions of\n"
+        "PuTTY may stop supporting this private key format,\n"
+        "so we recommend you convert your key to the new\n"
+        "format.\n"
+        "\n"
+        "Once the key is loaded into PuTTYgen, you can perform\n"
+        "this conversion simply by saving it again.\n";
 
     appendLogF(message);
 }
@@ -167,7 +167,7 @@ void console_provide_logctx(void *logctx)
 void logevent(void *frontend, const char *string)
 {
     if (console_logctx)
-	log_eventlog(console_logctx, string);
+        log_eventlog(console_logctx, string);
 }
 
 void frontend_keypress(void *handle)

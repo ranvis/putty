@@ -14,9 +14,9 @@ BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, 
 {
     static HMODULE module;
     if (!module)
-	module = load_system32_dll("msimg32.dll");
+        module = load_system32_dll("msimg32.dll");
     if (!module || !p_AlphaBlend && !GET_WINDOWS_FUNCTION(module, AlphaBlend))
-	return FALSE;
+        return FALSE;
     return p_AlphaBlend(hdcDest, xoriginDest, yoriginDest, wDest, hDest, hdcSrc, xoriginSrc, yoriginSrc, wSrc, hSrc, ftn);
 }
 
@@ -32,9 +32,9 @@ void wallpaper_paint(HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_pa
     int bg_w, bg_h;
     get_bitmap_size(hbmp, &bg_w, &bg_h);
     if (mode->place & WALLPAPER_PLACE_SHRINK)
-	wallpaper_paint_zoom(hdc, rect, bg_hdc, bg_w, bg_h, mode);
+        wallpaper_paint_zoom(hdc, rect, bg_hdc, bg_w, bg_h, mode);
     else
-	wallpaper_paint_tile(hdc, rect, bg_hdc, bg_w, bg_h, mode);
+        wallpaper_paint_tile(hdc, rect, bg_hdc, bg_w, bg_h, mode);
     SelectObject(bg_hdc, prev_bmp);
     DeleteDC(bg_hdc);
 }
@@ -51,43 +51,43 @@ void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
     GetClientRect(hwnd, &term_rect);
     is_win_ratio_larger = bg_w < bg_h * term_rect.right / term_rect.bottom;
     if (is_win_ratio_larger == is_mode_fit) {
-	blit_width = term_rect.right;
-	blit_height = term_rect.right * bg_h / bg_w;
+        blit_width = term_rect.right;
+        blit_height = term_rect.right * bg_h / bg_w;
     } else {
-	blit_height = term_rect.bottom;
-	blit_width = term_rect.bottom * bg_w / bg_h;
+        blit_height = term_rect.bottom;
+        blit_width = term_rect.bottom * bg_w / bg_h;
     }
     if (!(placement & WALLPAPER_PLACE_EXPAND) && blit_width > bg_w) {
-	blit_width = bg_w;
-	blit_height = bg_h;
+        blit_width = bg_w;
+        blit_height = bg_h;
     }
     wallpaper_get_offset(&term_rect, blit_width, blit_height, mode, &blit_x, &blit_y);
     old_clip = CreateRectRgn(0, 0, 0, 0);
     has_clip = GetClipRgn(hdc, old_clip);
     if (has_clip != -1) {
-	if (has_clip == 1)
-	    IntersectClipRect(hdc, rect->left, rect->top, rect->right, rect->bottom);
-	else {
-	    HRGN clip_rgn = CreateRectRgn(rect->left, rect->top, rect->right, rect->bottom);
-	    SelectClipRgn(hdc, clip_rgn);
-	    DeleteObject(clip_rgn);
-	}
-	if (mode->opaque) {
-	    SetStretchBltMode(hdc, HALFTONE);
-	    StretchBlt(hdc, blit_x, blit_y, blit_width, blit_height,
-		       bg_hdc, 0, 0, bg_w, bg_h, SRCCOPY);
-	    if (!is_mode_fit) {
-		RECT update_rect;
-		SetRect(&update_rect, blit_x, blit_y, blit_x + blit_width, blit_y + blit_height);
-		paint_bg_remaining(hdc, rect, &update_rect);
-	    }
-	} else {
-	    msimg_alphablend(hdc, blit_x, blit_y, blit_width, blit_height,
-		       bg_hdc, 0, 0, bg_w, bg_h, mode->bf);
-	}
-	SelectClipRgn(hdc, has_clip ? old_clip : NULL);
+        if (has_clip == 1)
+            IntersectClipRect(hdc, rect->left, rect->top, rect->right, rect->bottom);
+        else {
+            HRGN clip_rgn = CreateRectRgn(rect->left, rect->top, rect->right, rect->bottom);
+            SelectClipRgn(hdc, clip_rgn);
+            DeleteObject(clip_rgn);
+        }
+        if (mode->opaque) {
+            SetStretchBltMode(hdc, HALFTONE);
+            StretchBlt(hdc, blit_x, blit_y, blit_width, blit_height,
+                       bg_hdc, 0, 0, bg_w, bg_h, SRCCOPY);
+            if (!is_mode_fit) {
+                RECT update_rect;
+                SetRect(&update_rect, blit_x, blit_y, blit_x + blit_width, blit_y + blit_height);
+                paint_bg_remaining(hdc, rect, &update_rect);
+            }
+        } else {
+            msimg_alphablend(hdc, blit_x, blit_y, blit_width, blit_height,
+                       bg_hdc, 0, 0, bg_w, bg_h, mode->bf);
+        }
+        SelectClipRgn(hdc, has_clip ? old_clip : NULL);
     } else if (mode->opaque)
-	wallpaper_fill_bgcolor(hdc, rect);
+        wallpaper_fill_bgcolor(hdc, rect);
     DeleteObject(old_clip);
 }
 
@@ -102,39 +102,39 @@ void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
     wallpaper_get_offset(&term_rect, bg_w, bg_h, mode, &shift_x, &shift_y);
     SetRect(&wp_rect, shift_x, shift_y, shift_x + bg_w, shift_y + bg_h);
     if (placement & WALLPAPER_PLACE_TILE_X)
-	wp_rect.left = 0, wp_rect.right = term_rect.right;
+        wp_rect.left = 0, wp_rect.right = term_rect.right;
     if (placement & WALLPAPER_PLACE_TILE_Y)
-	wp_rect.top = 0, wp_rect.bottom = term_rect.bottom;
+        wp_rect.top = 0, wp_rect.bottom = term_rect.bottom;
     shift_x = bg_w - shift_x % bg_w;
     shift_y = bg_h - shift_y % bg_h;
     rem_h = rect->bottom - rect->top;
     for (dest_pos.y = rect->top; dest_pos.y < rect->bottom; ) {
-	int src_y = (shift_y + dest_pos.y) % bg_h;
-	int src_h = bg_h - src_y;
-	rem_w = rect->right - rect->left;
-	for (dest_pos.x = rect->left; dest_pos.x < rect->right; ) {
-	    int src_x = (shift_x + dest_pos.x) % bg_w;
-	    int src_w = bg_w - src_x;
-	    int width = min(rem_w, src_w);
-	    int height = min(rem_h, src_h);
-	    if (PtInRect(&wp_rect, dest_pos)) {
-		if (mode->opaque) {
-		    BitBlt(hdc, dest_pos.x, dest_pos.y, width, height,
-			   bg_hdc, src_x, src_y, SRCCOPY);
-		} else {
-		    msimg_alphablend(hdc, dest_pos.x, dest_pos.y, width, height,
-			   bg_hdc, src_x, src_y, width, height, mode->bf);
-		}
-	    } else if (mode->opaque) {
-	        RECT tile_rect;
-	        SetRect(&tile_rect, dest_pos.x, dest_pos.y, dest_pos.x + min(rem_w, src_w), dest_pos.y + min(rem_h, src_h));
-		wallpaper_fill_bgcolor(hdc, &tile_rect);
-	    }
-	    dest_pos.x += src_w;
-	    rem_w -= src_w;
-	}
-	dest_pos.y += src_h;
-	rem_h -= src_h;
+        int src_y = (shift_y + dest_pos.y) % bg_h;
+        int src_h = bg_h - src_y;
+        rem_w = rect->right - rect->left;
+        for (dest_pos.x = rect->left; dest_pos.x < rect->right; ) {
+            int src_x = (shift_x + dest_pos.x) % bg_w;
+            int src_w = bg_w - src_x;
+            int width = min(rem_w, src_w);
+            int height = min(rem_h, src_h);
+            if (PtInRect(&wp_rect, dest_pos)) {
+                if (mode->opaque) {
+                    BitBlt(hdc, dest_pos.x, dest_pos.y, width, height,
+                           bg_hdc, src_x, src_y, SRCCOPY);
+                } else {
+                    msimg_alphablend(hdc, dest_pos.x, dest_pos.y, width, height,
+                           bg_hdc, src_x, src_y, width, height, mode->bf);
+                }
+            } else if (mode->opaque) {
+                RECT tile_rect;
+                SetRect(&tile_rect, dest_pos.x, dest_pos.y, dest_pos.x + min(rem_w, src_w), dest_pos.y + min(rem_h, src_h));
+                wallpaper_fill_bgcolor(hdc, &tile_rect);
+            }
+            dest_pos.x += src_w;
+            rem_w -= src_w;
+        }
+        dest_pos.y += src_h;
+        rem_h -= src_h;
     }
 }
 
@@ -147,13 +147,13 @@ static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect)
     saved_pen = SelectObject(hdc, pen);
     saved_brush = SelectObject(hdc, brush);
     if (rect->top < excl_rect->top)
-	Rectangle(hdc, rect->left, rect->top, rect->right, excl_rect->top);
+        Rectangle(hdc, rect->left, rect->top, rect->right, excl_rect->top);
     if (rect->bottom > excl_rect->bottom)
-	Rectangle(hdc, rect->left, excl_rect->bottom, rect->right, rect->bottom);
+        Rectangle(hdc, rect->left, excl_rect->bottom, rect->right, rect->bottom);
     if (rect->left < excl_rect->left)
-	Rectangle(hdc, rect->left, excl_rect->top, excl_rect->left, excl_rect->bottom);
+        Rectangle(hdc, rect->left, excl_rect->top, excl_rect->left, excl_rect->bottom);
     if (rect->right > excl_rect->right)
-	Rectangle(hdc, excl_rect->right, excl_rect->top, rect->right, excl_rect->bottom);
+        Rectangle(hdc, excl_rect->right, excl_rect->top, rect->right, excl_rect->bottom);
     SelectObject(hdc, saved_pen);
     SelectObject(hdc, saved_brush);
     DeleteObject(pen);
@@ -164,14 +164,14 @@ HBITMAP create_large_bitmap(HDC hdc, int width, int height)
 {
     HBITMAP bmp = conf_get_bool(conf, CONF_use_ddb) ? CreateCompatibleBitmap(hdc, width, height) : NULL;
     if (bmp == NULL) {
-	BITMAPINFOHEADER bmp_info = {sizeof(BITMAPINFOHEADER)};
-	void *pixels;
-	bmp_info.biWidth = width;
-	bmp_info.biHeight = height;
-	bmp_info.biPlanes = 1;
-	bmp_info.biBitCount = max(16, GetDeviceCaps(hdc, BITSPIXEL)); /* no multimonitor thing */
-	bmp_info.biCompression= BI_RGB;
-	bmp = CreateDIBSection(hdc, (BITMAPINFO *)&bmp_info, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
+        BITMAPINFOHEADER bmp_info = {sizeof(BITMAPINFOHEADER)};
+        void *pixels;
+        bmp_info.biWidth = width;
+        bmp_info.biHeight = height;
+        bmp_info.biPlanes = 1;
+        bmp_info.biBitCount = max(16, GetDeviceCaps(hdc, BITSPIXEL)); /* no multimonitor thing */
+        bmp_info.biCompression= BI_RGB;
+        bmp = CreateDIBSection(hdc, (BITMAPINFO *)&bmp_info, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
     }
     return bmp;
 }
@@ -188,17 +188,17 @@ static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, 
 {
     int alignment = mode->align;
     if (alignment & WALLPAPER_ALIGN_CENTER)
-	*x = (rect->right - wp_width) / 2;
+        *x = (rect->right - wp_width) / 2;
     else if (alignment & WALLPAPER_ALIGN_RIGHT)
-	*x = rect->right - wp_width;
+        *x = rect->right - wp_width;
     else
-	*x = 0;
+        *x = 0;
     if (alignment & WALLPAPER_ALIGN_MIDDLE)
-	*y = (rect->bottom - wp_height) / 2;
+        *y = (rect->bottom - wp_height) / 2;
     else if (alignment & WALLPAPER_ALIGN_BOTTOM)
-	*y = rect->bottom - wp_height;
+        *y = rect->bottom - wp_height;
     else
-	*y = 0;
+        *y = 0;
 }
 
 
@@ -235,22 +235,22 @@ int gdip_init(void)
     HMODULE module;
     GdiplusStartupInput input = {1, NULL, FALSE, FALSE};
     if (gdip_token)
-	return 1;
+        return 1;
     module = load_system32_dll("gdiplus.dll");
     if (!module)
-	return 0;
+        return 0;
     /* omit fancy type checking so that we don't have to include C++ headers */
     if (!GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdiplusStartup)
-	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdiplusShutdown)
-	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateBitmapFromFile)
-	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateHBITMAPFromBitmap)
-	|| !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipDisposeImage)) {
-	FreeLibrary(module);
-	return 0;
+        || !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdiplusShutdown)
+        || !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateBitmapFromFile)
+        || !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateHBITMAPFromBitmap)
+        || !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipDisposeImage)) {
+        FreeLibrary(module);
+        return 0;
     }
     if (p_GdiplusStartup(&gdip_token, &input, 0) != GDIP_STATUS_OK) {
-	gdip_token = 0;
-	return 0;
+        gdip_token = 0;
+        return 0;
     }
     return 1;
 }
@@ -258,8 +258,8 @@ int gdip_init(void)
 void gdip_terminate(void)
 {
     if (gdip_token) {
-	p_GdiplusShutdown(gdip_token);
-	gdip_token = 0;
+        p_GdiplusShutdown(gdip_token);
+        gdip_token = 0;
     }
 }
 
@@ -269,13 +269,13 @@ HBITMAP gdip_load_image(const char *path)
     GpBitmap *image;
     HBITMAP bitmap;
     if (!gdip_init())
-	return NULL;
+        return NULL;
     if (!MultiByteToWideChar(CP_ACP, 0, path, -1, u_path, lenof(u_path)))
-	return NULL;
+        return NULL;
     if (p_GdipCreateBitmapFromFile(u_path, &image) != GDIP_STATUS_OK)
-	return NULL;
+        return NULL;
     if (p_GdipCreateHBITMAPFromBitmap(image, &bitmap, 0) != GDIP_STATUS_OK)
-	bitmap = NULL;
+        bitmap = NULL;
     p_GdipDisposeImage(image);
     return bitmap;
 }

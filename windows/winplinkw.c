@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <malloc.h>
 
-#define PUTTY_DO_GLOBALS	       /* actually _define_ globals */
+#define PUTTY_DO_GLOBALS               /* actually _define_ globals */
 #include "putty.h"
 #include "storage.h"
 #include "tree234.h"
@@ -102,25 +102,25 @@ void ldisc_update(void *frontend, int echo, int edit)
 
     mode = ENABLE_PROCESSED_INPUT;
     if (echo)
-	mode = mode | ENABLE_ECHO_INPUT;
+        mode = mode | ENABLE_ECHO_INPUT;
     else
-	mode = mode & ~ENABLE_ECHO_INPUT;
+        mode = mode & ~ENABLE_ECHO_INPUT;
     if (edit)
-	mode = mode | ENABLE_LINE_INPUT;
+        mode = mode | ENABLE_LINE_INPUT;
     else
-	mode = mode & ~ENABLE_LINE_INPUT;
+        mode = mode & ~ENABLE_LINE_INPUT;
     SetConsoleMode(inhandle, mode);
 }
 
 char *get_ttymode(void *frontend, const char *mode) { return NULL; }
 
 int from_backend(void *frontend_handle, int is_stderr,
-		 const char *data, int len)
+                 const char *data, int len)
 {
     if (is_stderr) {
-	handle_write(stderr_handle, data, len);
+        handle_write(stderr_handle, data, len);
     } else {
-	handle_write(stdout_handle, data, len);
+        handle_write(stdout_handle, data, len);
     }
 
     return handle_backlog(stdout_handle) + handle_backlog(stderr_handle);
@@ -141,14 +141,14 @@ int get_userpass_input(prompts_t *p, unsigned char *in, int inlen)
     int ret;
     ret = cmdline_get_passwd_input(p, in, inlen);
     if (ret == -1)
-	ret = console_get_userpass_input(p, in, inlen);
+        ret = console_get_userpass_input(p, in, inlen);
     return ret;
 }
 
 static DWORD main_thread_id;
 
 void agent_schedule_callback(void (*callback)(void *, void *, int),
-			     void *callback_ctx, void *data, int len)
+                             void *callback_ctx, void *data, int len)
 {
     struct agent_callback *c = snew(struct agent_callback);
     c->callback = callback;
@@ -210,18 +210,18 @@ char *do_select(SOCKET skt, int startup)
 {
     int events;
     if (startup) {
-	events = (FD_CONNECT | FD_READ | FD_WRITE |
-		  FD_OOB | FD_CLOSE | FD_ACCEPT);
+        events = (FD_CONNECT | FD_READ | FD_WRITE |
+                  FD_OOB | FD_CLOSE | FD_ACCEPT);
     } else {
-	events = 0;
+        events = 0;
     }
     if (p_WSAEventSelect(skt, netevent, events) == SOCKET_ERROR) {
-	switch (p_WSAGetLastError()) {
-	  case WSAENETDOWN:
-	    return "Network is down";
-	  default:
-	    return "WSAEventSelect(): unknown error";
-	}
+        switch (p_WSAGetLastError()) {
+          case WSAENETDOWN:
+            return "Network is down";
+          default:
+            return "WSAEventSelect(): unknown error";
+        }
     }
     return NULL;
 }
@@ -229,49 +229,49 @@ char *do_select(SOCKET skt, int startup)
 int stdin_gotdata(struct handle *h, void *data, int len)
 {
     if (len < 0) {
-	/*
-	 * Special case: report read error.
-	 */
-	char buf[4096];
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, -len, 0,
-		      buf, lenof(buf), NULL);
-	buf[lenof(buf)-1] = '\0';
-	if (buf[strlen(buf)-1] == '\n')
-	    buf[strlen(buf)-1] = '\0';
-	fprintf(stderr, "Unable to read from standard input: %s\n", buf);
-	cleanup_exit(0);
+        /*
+         * Special case: report read error.
+         */
+        char buf[4096];
+        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, -len, 0,
+                      buf, lenof(buf), NULL);
+        buf[lenof(buf)-1] = '\0';
+        if (buf[strlen(buf)-1] == '\n')
+            buf[strlen(buf)-1] = '\0';
+        fprintf(stderr, "Unable to read from standard input: %s\n", buf);
+        cleanup_exit(0);
     }
     noise_ultralight(len);
     if (connopen && back->connected(backhandle)) {
-	if (len > 0) {
-	    return back->send(backhandle, data, len);
-	} else {
-	    back->special(backhandle, TS_EOF);
-	    return 0;
-	}
+        if (len > 0) {
+            return back->send(backhandle, data, len);
+        } else {
+            back->special(backhandle, TS_EOF);
+            return 0;
+        }
     } else
-	return 0;
+        return 0;
 }
 
 void stdouterr_sent(struct handle *h, int new_backlog)
 {
     if (new_backlog < 0) {
-	/*
-	 * Special case: report write error.
-	 */
-	char buf[4096];
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, -new_backlog, 0,
-		      buf, lenof(buf), NULL);
-	buf[lenof(buf)-1] = '\0';
-	if (buf[strlen(buf)-1] == '\n')
-	    buf[strlen(buf)-1] = '\0';
-	fprintf(stderr, "Unable to write to standard %s: %s\n",
-		(h == stdout_handle ? "output" : "error"), buf);
-	cleanup_exit(0);
+        /*
+         * Special case: report write error.
+         */
+        char buf[4096];
+        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, -new_backlog, 0,
+                      buf, lenof(buf), NULL);
+        buf[lenof(buf)-1] = '\0';
+        if (buf[strlen(buf)-1] == '\n')
+            buf[strlen(buf)-1] = '\0';
+        fprintf(stderr, "Unable to write to standard %s: %s\n",
+                (h == stdout_handle ? "output" : "error"), buf);
+        cleanup_exit(0);
     }
     if (connopen && back->connected(backhandle)) {
-	back->unthrottle(backhandle, (handle_backlog(stdout_handle) +
-				      handle_backlog(stderr_handle)));
+        back->unthrottle(backhandle, (handle_backlog(stdout_handle) +
+                                      handle_backlog(stderr_handle)));
     }
 }
 
@@ -313,21 +313,21 @@ int initialize_main(int argc, char **argv)
     default_port = cfg.port;
     errors = 0;
     {
-	/*
-	 * Override the default protocol if PLINK_PROTOCOL is set.
-	 */
-	char *p = getenv("PLINK_PROTOCOL");
-	int i;
-	if (p) {
-	    for (i = 0; backends[i].backend != NULL; i++) {
-		if (!strcmp(backends[i].name, p)) {
-		    default_protocol = cfg.protocol = backends[i].protocol;
-		    default_port = cfg.port =
-			backends[i].backend->default_port;
-		    break;
-		}
-	    }
-	}
+        /*
+         * Override the default protocol if PLINK_PROTOCOL is set.
+         */
+        char *p = getenv("PLINK_PROTOCOL");
+        int i;
+        if (p) {
+            for (i = 0; backends[i].backend != NULL; i++) {
+                if (!strcmp(backends[i].name, p)) {
+                    default_protocol = cfg.protocol = backends[i].protocol;
+                    default_port = cfg.port =
+                        backends[i].backend->default_port;
+                    break;
+                }
+            }
+        }
     }
     while (argc > 1) {
         if (!use_inifile && argc > 2 && !strcmp(argv[1], "-ini") && *(argv[2]) != '\0') {
@@ -353,165 +353,165 @@ int initialize_main(int argc, char **argv)
         }
     }
     while (--argc) {
-	char *p = *++argv;
-	if (*p == '-') {
-	    int ret = cmdline_process_param(p, (argc > 1 ? argv[1] : NULL),
-					    1, &cfg);
+        char *p = *++argv;
+        if (*p == '-') {
+            int ret = cmdline_process_param(p, (argc > 1 ? argv[1] : NULL),
+                                            1, &cfg);
             if (cmdline_error_occured)
                 return FALSE;
-	    if (ret == -2) {
-		fprintf(stderr,
-			APPNAME ": option \"%s\" requires an argument\n", p);
-		errors = 1;
-	    } else if (ret == 2) {
-		--argc, ++argv;
-	    } else if (ret == 1) {
-		continue;
-	    } else if (!strcmp(p, "-batch")) {
-		console_batch_mode = 1;
-	    } else if (!strcmp(p, "-s")) {
-		/* Save status to write to cfg later. */
-		use_subsystem = 1;
-	    } else if (!strcmp(p, "-V")) {
+            if (ret == -2) {
+                fprintf(stderr,
+                        APPNAME ": option \"%s\" requires an argument\n", p);
+                errors = 1;
+            } else if (ret == 2) {
+                --argc, ++argv;
+            } else if (ret == 1) {
+                continue;
+            } else if (!strcmp(p, "-batch")) {
+                console_batch_mode = 1;
+            } else if (!strcmp(p, "-s")) {
+                /* Save status to write to cfg later. */
+                use_subsystem = 1;
+            } else if (!strcmp(p, "-V")) {
                 version();
                 return FALSE;
             } else if (!strcmp(p, "-pgpfp")) {
                 pgp_fingerprints();
                 return FALSE;
-	    } else {
-		fprintf(stderr, APPNAME ": unknown option \"%s\"\n", p);
-		errors = 1;
-	    }
-	} else if (*p) {
-	    if (!cfg_launchable(&cfg)) {
-		char *q = p;
-		/*
-		 * If the hostname starts with "telnet:", set the
-		 * protocol to Telnet and process the string as a
-		 * Telnet URL.
-		 */
-		if (!strncmp(q, "telnet:", 7)) {
-		    char c;
+            } else {
+                fprintf(stderr, APPNAME ": unknown option \"%s\"\n", p);
+                errors = 1;
+            }
+        } else if (*p) {
+            if (!cfg_launchable(&cfg)) {
+                char *q = p;
+                /*
+                 * If the hostname starts with "telnet:", set the
+                 * protocol to Telnet and process the string as a
+                 * Telnet URL.
+                 */
+                if (!strncmp(q, "telnet:", 7)) {
+                    char c;
 
-		    q += 7;
-		    if (q[0] == '/' && q[1] == '/')
-			q += 2;
-		    cfg.protocol = PROT_TELNET;
-		    p = q;
-		    while (*p && *p != ':' && *p != '/')
-			p++;
-		    c = *p;
-		    if (*p)
-			*p++ = '\0';
-		    if (c == ':')
-			cfg.port = atoi(p);
-		    else
-			cfg.port = -1;
-		    strncpy(cfg.host, q, sizeof(cfg.host) - 1);
-		    cfg.host[sizeof(cfg.host) - 1] = '\0';
-		} else {
-		    char *r, *user, *host;
-		    /*
-		     * Before we process the [user@]host string, we
-		     * first check for the presence of a protocol
-		     * prefix (a protocol name followed by ",").
-		     */
-		    r = strchr(p, ',');
-		    if (r) {
-			int i, j;
-			for (i = 0; backends[i].backend != NULL; i++) {
-			    j = strlen(backends[i].name);
-			    if (j == r - p &&
-				!memcmp(backends[i].name, p, j)) {
-				default_protocol = cfg.protocol =
-				    backends[i].protocol;
-				portnumber =
-				    backends[i].backend->default_port;
-				p = r + 1;
-				break;
-			    }
-			}
-		    }
+                    q += 7;
+                    if (q[0] == '/' && q[1] == '/')
+                        q += 2;
+                    cfg.protocol = PROT_TELNET;
+                    p = q;
+                    while (*p && *p != ':' && *p != '/')
+                        p++;
+                    c = *p;
+                    if (*p)
+                        *p++ = '\0';
+                    if (c == ':')
+                        cfg.port = atoi(p);
+                    else
+                        cfg.port = -1;
+                    strncpy(cfg.host, q, sizeof(cfg.host) - 1);
+                    cfg.host[sizeof(cfg.host) - 1] = '\0';
+                } else {
+                    char *r, *user, *host;
+                    /*
+                     * Before we process the [user@]host string, we
+                     * first check for the presence of a protocol
+                     * prefix (a protocol name followed by ",").
+                     */
+                    r = strchr(p, ',');
+                    if (r) {
+                        int i, j;
+                        for (i = 0; backends[i].backend != NULL; i++) {
+                            j = strlen(backends[i].name);
+                            if (j == r - p &&
+                                !memcmp(backends[i].name, p, j)) {
+                                default_protocol = cfg.protocol =
+                                    backends[i].protocol;
+                                portnumber =
+                                    backends[i].backend->default_port;
+                                p = r + 1;
+                                break;
+                            }
+                        }
+                    }
 
-		    /*
-		     * A nonzero length string followed by an @ is treated
-		     * as a username. (We discount an _initial_ @.) The
-		     * rest of the string (or the whole string if no @)
-		     * is treated as a session name and/or hostname.
-		     */
-		    r = strrchr(p, '@');
-		    if (r == p)
-			p++, r = NULL; /* discount initial @ */
-		    if (r) {
-			*r++ = '\0';
-			user = p, host = r;
-		    } else {
-			user = NULL, host = p;
-		    }
+                    /*
+                     * A nonzero length string followed by an @ is treated
+                     * as a username. (We discount an _initial_ @.) The
+                     * rest of the string (or the whole string if no @)
+                     * is treated as a session name and/or hostname.
+                     */
+                    r = strrchr(p, '@');
+                    if (r == p)
+                        p++, r = NULL; /* discount initial @ */
+                    if (r) {
+                        *r++ = '\0';
+                        user = p, host = r;
+                    } else {
+                        user = NULL, host = p;
+                    }
 
-		    /*
-		     * Now attempt to load a saved session with the
-		     * same name as the hostname.
-		     */
-		    {
-			Config cfg2;
-			do_defaults(host, &cfg2);
-			if (loaded_session || !cfg_launchable(&cfg2)) {
-			    /* No settings for this host; use defaults */
-			    /* (or session was already loaded with -load) */
-			    strncpy(cfg.host, host, sizeof(cfg.host) - 1);
-			    cfg.host[sizeof(cfg.host) - 1] = '\0';
-			    cfg.port = default_port;
-			} else {
-			    cfg = cfg2;
-			}
-		    }
+                    /*
+                     * Now attempt to load a saved session with the
+                     * same name as the hostname.
+                     */
+                    {
+                        Config cfg2;
+                        do_defaults(host, &cfg2);
+                        if (loaded_session || !cfg_launchable(&cfg2)) {
+                            /* No settings for this host; use defaults */
+                            /* (or session was already loaded with -load) */
+                            strncpy(cfg.host, host, sizeof(cfg.host) - 1);
+                            cfg.host[sizeof(cfg.host) - 1] = '\0';
+                            cfg.port = default_port;
+                        } else {
+                            cfg = cfg2;
+                        }
+                    }
 
-		    if (user) {
-			/* Patch in specified username. */
-			strncpy(cfg.username, user,
-				sizeof(cfg.username) - 1);
-			cfg.username[sizeof(cfg.username) - 1] = '\0';
-		    }
+                    if (user) {
+                        /* Patch in specified username. */
+                        strncpy(cfg.username, user,
+                                sizeof(cfg.username) - 1);
+                        cfg.username[sizeof(cfg.username) - 1] = '\0';
+                    }
 
-		}
-	    } else {
-		char *command;
-		int cmdlen, cmdsize;
-		cmdlen = cmdsize = 0;
-		command = NULL;
+                }
+            } else {
+                char *command;
+                int cmdlen, cmdsize;
+                cmdlen = cmdsize = 0;
+                command = NULL;
 
-		while (argc) {
-		    while (*p) {
-			if (cmdlen >= cmdsize) {
-			    cmdsize = cmdlen + 512;
-			    command = sresize(command, cmdsize, char);
-			}
-			command[cmdlen++]=*p++;
-		    }
-		    if (cmdlen >= cmdsize) {
-			cmdsize = cmdlen + 512;
-			command = sresize(command, cmdsize, char);
-		    }
-		    command[cmdlen++]=' '; /* always add trailing space */
-		    if (--argc) p = *++argv;
-		}
-		if (cmdlen) command[--cmdlen]='\0';
-				       /* change trailing blank to NUL */
-		cfg.remote_cmd_ptr = command;
-		cfg.remote_cmd_ptr2 = NULL;
-		cfg.nopty = TRUE;      /* command => no terminal */
+                while (argc) {
+                    while (*p) {
+                        if (cmdlen >= cmdsize) {
+                            cmdsize = cmdlen + 512;
+                            command = sresize(command, cmdsize, char);
+                        }
+                        command[cmdlen++]=*p++;
+                    }
+                    if (cmdlen >= cmdsize) {
+                        cmdsize = cmdlen + 512;
+                        command = sresize(command, cmdsize, char);
+                    }
+                    command[cmdlen++]=' '; /* always add trailing space */
+                    if (--argc) p = *++argv;
+                }
+                if (cmdlen) command[--cmdlen]='\0';
+                                       /* change trailing blank to NUL */
+                cfg.remote_cmd_ptr = command;
+                cfg.remote_cmd_ptr2 = NULL;
+                cfg.nopty = TRUE;      /* command => no terminal */
 
-		break;		       /* done with cmdline */
-	    }
-	}
+                break;                 /* done with cmdline */
+            }
+        }
     }
 
     if (errors)
-	return FALSE;
+        return FALSE;
 
     if (!cfg_launchable(&cfg)) {
-	usage();
+        usage();
         return FALSE;
     }
 
@@ -519,21 +519,21 @@ int initialize_main(int argc, char **argv)
      * Trim leading whitespace off the hostname if it's there.
      */
     {
-	int space = strspn(cfg.host, " \t");
-	memmove(cfg.host, cfg.host+space, 1+strlen(cfg.host)-space);
+        int space = strspn(cfg.host, " \t");
+        memmove(cfg.host, cfg.host+space, 1+strlen(cfg.host)-space);
     }
 
     /* See if host is of the form user@host */
     if (cfg_launchable(&cfg)) {
-	char *atsign = strrchr(cfg.host, '@');
-	/* Make sure we're not overflowing the user field */
-	if (atsign) {
-	    if (atsign - cfg.host < sizeof cfg.username) {
-		strncpy(cfg.username, cfg.host, atsign - cfg.host);
-		cfg.username[atsign - cfg.host] = '\0';
-	    }
-	    memmove(cfg.host, atsign + 1, 1 + strlen(atsign + 1));
-	}
+        char *atsign = strrchr(cfg.host, '@');
+        /* Make sure we're not overflowing the user field */
+        if (atsign) {
+            if (atsign - cfg.host < sizeof cfg.username) {
+                strncpy(cfg.username, cfg.host, atsign - cfg.host);
+                cfg.username[atsign - cfg.host] = '\0';
+            }
+            memmove(cfg.host, atsign + 1, 1 + strlen(atsign + 1));
+        }
     }
 
     /*
@@ -545,7 +545,7 @@ int initialize_main(int argc, char **argv)
      * Apply subsystem status.
      */
     if (use_subsystem)
-	cfg.ssh_subsys = TRUE;
+        cfg.ssh_subsys = TRUE;
 
     /*
      * Trim a colon suffix off the hostname if it's there.
@@ -556,44 +556,44 @@ int initialize_main(int argc, char **argv)
      * Remove any remaining whitespace from the hostname.
      */
     {
-	int p1 = 0, p2 = 0;
-	while (cfg.host[p2] != '\0') {
-	    if (cfg.host[p2] != ' ' && cfg.host[p2] != '\t') {
-		cfg.host[p1] = cfg.host[p2];
-		p1++;
-	    }
-	    p2++;
-	}
-	cfg.host[p1] = '\0';
+        int p1 = 0, p2 = 0;
+        while (cfg.host[p2] != '\0') {
+            if (cfg.host[p2] != ' ' && cfg.host[p2] != '\t') {
+                cfg.host[p1] = cfg.host[p2];
+                p1++;
+            }
+            p2++;
+        }
+        cfg.host[p1] = '\0';
     }
 
     if (!cfg.remote_cmd_ptr && !*cfg.remote_cmd && !*cfg.ssh_nc_host)
-	flags |= FLAG_INTERACTIVE;
+        flags |= FLAG_INTERACTIVE;
 
     /*
      * Select protocol. This is farmed out into a table in a
      * separate file to enable an ssh-free variant.
      */
     {
-	int i;
-	back = NULL;
-	for (i = 0; backends[i].backend != NULL; i++)
-	    if (backends[i].protocol == cfg.protocol) {
-		back = backends[i].backend;
-		break;
-	    }
-	if (back == NULL) {
-	    fprintf(stderr,
-		    "Internal fault: Unsupported protocol found\n");
-	    return FALSE;
-	}
+        int i;
+        back = NULL;
+        for (i = 0; backends[i].backend != NULL; i++)
+            if (backends[i].protocol == cfg.protocol) {
+                back = backends[i].backend;
+                break;
+            }
+        if (back == NULL) {
+            fprintf(stderr,
+                    "Internal fault: Unsupported protocol found\n");
+            return FALSE;
+        }
     }
 
     /*
      * Select port.
      */
     if (portnumber != -1)
-	cfg.port = portnumber;
+        cfg.port = portnumber;
 
     if (cfg.protocol == PROT_SSH) {
         if ((flags & FLAG_INTERACTIVE) != 0) {
@@ -619,8 +619,8 @@ static DWORD WINAPI do_main(LPVOID arg) {
     skcount = sksize = 0;
     sk_init();
     if (p_WSAEventSelect == NULL) {
-	fprintf(stderr, APPNAME " requires WinSock 2\n");
-	return 1;
+        fprintf(stderr, APPNAME " requires WinSock 2\n");
+        return 1;
     }
 
     logctx = log_init(NULL, &cfg);
@@ -632,20 +632,20 @@ static DWORD WINAPI do_main(LPVOID arg) {
     netevent = CreateEvent(NULL, FALSE, FALSE, NULL);
     {
         void notify_basetitle(char* basetitle);
-	const char *error;
-	char *realhost;
-	/* nodelay is only useful if stdin is a character device (console) */
-	int nodelay = cfg.tcp_nodelay &&
-	    (GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_CHAR);
+        const char *error;
+        char *realhost;
+        /* nodelay is only useful if stdin is a character device (console) */
+        int nodelay = cfg.tcp_nodelay &&
+            (GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_CHAR);
 
-	error = back->init(NULL, &backhandle, &cfg, cfg.host, cfg.port,
-			   &realhost, nodelay, cfg.tcp_keepalives);
-	if (error) {
-	    fprintf(stderr, "Unable to open connection:\n%s", error);
-	    return 1;
-	}
-	back->provide_logctx(backhandle, logctx);
-	notify_basetitle(dupprintf("%s - " APPNAME, realhost));
+        error = back->init(NULL, &backhandle, &cfg, cfg.host, cfg.port,
+                           &realhost, nodelay, cfg.tcp_keepalives);
+        if (error) {
+            fprintf(stderr, "Unable to open connection:\n%s", error);
+            return 1;
+        }
+        back->provide_logctx(backhandle, logctx);
+        notify_basetitle(dupprintf("%s - " APPNAME, realhost));
         sfree(realhost);
     }
     connopen = 1;
@@ -677,71 +677,71 @@ static DWORD WINAPI do_main(LPVOID arg) {
     now = GETTICKCOUNT();
 
     while (1) {
-	int nhandles;
-	HANDLE *handles;	
-	int n;
-	DWORD ticks;
+        int nhandles;
+        HANDLE *handles;
+        int n;
+        DWORD ticks;
 
-	if (!sending && back->sendok(backhandle)) {
-	    stdin_handle = handle_input_new(inhandle, stdin_gotdata, NULL,
-					    0);
-	    sending = TRUE;
-	}
+        if (!sending && back->sendok(backhandle)) {
+            stdin_handle = handle_input_new(inhandle, stdin_gotdata, NULL,
+                                            0);
+            sending = TRUE;
+        }
 
-	if (run_timers(now, &next)) {
-	    ticks = next - GETTICKCOUNT();
-	    if (ticks < 0) ticks = 0;  /* just in case */
-	} else {
-	    ticks = INFINITE;
-	}
+        if (run_timers(now, &next)) {
+            ticks = next - GETTICKCOUNT();
+            if (ticks < 0) ticks = 0;  /* just in case */
+        } else {
+            ticks = INFINITE;
+        }
 
-	handles = handle_get_events(&nhandles);
-	handles = sresize(handles, nhandles+2, HANDLE);
-	handles[nhandles] = netevent;
+        handles = handle_get_events(&nhandles);
+        handles = sresize(handles, nhandles+2, HANDLE);
+        handles[nhandles] = netevent;
         handles[nhandles+1] = abort_event;
-	n = MsgWaitForMultipleObjects(nhandles+2, handles, FALSE, ticks,
-				      QS_POSTMESSAGE);
-	if ((unsigned)(n - WAIT_OBJECT_0) < (unsigned)nhandles) {
-	    handle_got_event(handles[n - WAIT_OBJECT_0]);
-	} else if (n == WAIT_OBJECT_0 + nhandles) {
-	    WSANETWORKEVENTS things;
-	    SOCKET socket;
-	    extern SOCKET first_socket(int *), next_socket(int *);
-	    extern int select_result(WPARAM, LPARAM);
-	    int i, socketstate;
+        n = MsgWaitForMultipleObjects(nhandles+2, handles, FALSE, ticks,
+                                      QS_POSTMESSAGE);
+        if ((unsigned)(n - WAIT_OBJECT_0) < (unsigned)nhandles) {
+            handle_got_event(handles[n - WAIT_OBJECT_0]);
+        } else if (n == WAIT_OBJECT_0 + nhandles) {
+            WSANETWORKEVENTS things;
+            SOCKET socket;
+            extern SOCKET first_socket(int *), next_socket(int *);
+            extern int select_result(WPARAM, LPARAM);
+            int i, socketstate;
 
-	    /*
-	     * We must not call select_result() for any socket
-	     * until we have finished enumerating within the tree.
-	     * This is because select_result() may close the socket
-	     * and modify the tree.
-	     */
-	    /* Count the active sockets. */
-	    i = 0;
-	    for (socket = first_socket(&socketstate);
-		 socket != INVALID_SOCKET;
-		 socket = next_socket(&socketstate)) i++;
+            /*
+             * We must not call select_result() for any socket
+             * until we have finished enumerating within the tree.
+             * This is because select_result() may close the socket
+             * and modify the tree.
+             */
+            /* Count the active sockets. */
+            i = 0;
+            for (socket = first_socket(&socketstate);
+                 socket != INVALID_SOCKET;
+                 socket = next_socket(&socketstate)) i++;
 
-	    /* Expand the buffer if necessary. */
-	    if (i > sksize) {
-		sksize = i + 16;
-		sklist = sresize(sklist, sksize, SOCKET);
-	    }
+            /* Expand the buffer if necessary. */
+            if (i > sksize) {
+                sksize = i + 16;
+                sklist = sresize(sklist, sksize, SOCKET);
+            }
 
-	    /* Retrieve the sockets into sklist. */
-	    skcount = 0;
-	    for (socket = first_socket(&socketstate);
-		 socket != INVALID_SOCKET;
-		 socket = next_socket(&socketstate)) {
-		sklist[skcount++] = socket;
-	    }
+            /* Retrieve the sockets into sklist. */
+            skcount = 0;
+            for (socket = first_socket(&socketstate);
+                 socket != INVALID_SOCKET;
+                 socket = next_socket(&socketstate)) {
+                sklist[skcount++] = socket;
+            }
 
-	    /* Now we're done enumerating; go through the list. */
-	    for (i = 0; i < skcount; i++) {
-		WPARAM wp;
-		socket = sklist[i];
-		wp = (WPARAM) socket;
-		if (!p_WSAEnumNetworkEvents(socket, NULL, &things)) {
+            /* Now we're done enumerating; go through the list. */
+            for (i = 0; i < skcount; i++) {
+                WPARAM wp;
+                socket = sklist[i];
+                wp = (WPARAM) socket;
+                if (!p_WSAEnumNetworkEvents(socket, NULL, &things)) {
                     static const struct { int bit, mask; } eventtypes[] = {
                         {FD_CONNECT_BIT, FD_CONNECT},
                         {FD_READ_BIT, FD_READ},
@@ -752,8 +752,8 @@ static DWORD WINAPI do_main(LPVOID arg) {
                     };
                     int e;
 
-		    noise_ultralight(socket);
-		    noise_ultralight(things.lNetworkEvents);
+                    noise_ultralight(socket);
+                    noise_ultralight(things.lNetworkEvents);
 
                     for (e = 0; e < lenof(eventtypes); e++)
                         if (things.lNetworkEvents & eventtypes[e].mask) {
@@ -762,49 +762,49 @@ static DWORD WINAPI do_main(LPVOID arg) {
                             lp = WSAMAKESELECTREPLY(eventtypes[e].mask, err);
                             connopen &= select_result(wp, lp);
                         }
-		}
-	    }
-	    if (!connected && back->ldisc(backhandle, LD_ECHO)) {
+                }
+            }
+            if (!connected && back->ldisc(backhandle, LD_ECHO)) {
                 void notify_completed();
-		connected = 1;
-		notify_completed();
-	    }
-	} else if (n == WAIT_OBJECT_0 + nhandles + 1) {
-	    abort = 1;
+                connected = 1;
+                notify_completed();
+            }
+        } else if (n == WAIT_OBJECT_0 + nhandles + 1) {
+            abort = 1;
             break;
-	} else if (n == WAIT_OBJECT_0 + nhandles + 2) {
-	    MSG msg;
-	    while (PeekMessage(&msg, INVALID_HANDLE_VALUE,
-			       WM_AGENT_CALLBACK, WM_AGENT_CALLBACK,
-			       PM_REMOVE)) {
-		struct agent_callback *c = (struct agent_callback *)msg.lParam;
-		c->callback(c->callback_ctx, c->data, c->len);
-		sfree(c);
-	    }
-	}
+        } else if (n == WAIT_OBJECT_0 + nhandles + 2) {
+            MSG msg;
+            while (PeekMessage(&msg, INVALID_HANDLE_VALUE,
+                               WM_AGENT_CALLBACK, WM_AGENT_CALLBACK,
+                               PM_REMOVE)) {
+                struct agent_callback *c = (struct agent_callback *)msg.lParam;
+                c->callback(c->callback_ctx, c->data, c->len);
+                sfree(c);
+            }
+        }
 
-	if (n == WAIT_TIMEOUT) {
-	    now = next;
-	} else {
-	    now = GETTICKCOUNT();
-	}
+        if (n == WAIT_TIMEOUT) {
+            now = next;
+        } else {
+            now = GETTICKCOUNT();
+        }
 
-	sfree(handles);
+        sfree(handles);
 
-	if (sending)
-	    handle_unthrottle(stdin_handle, back->sendbuffer(backhandle));
+        if (sending)
+            handle_unthrottle(stdin_handle, back->sendbuffer(backhandle));
 
-	if ((!connopen || !back->connected(backhandle)) &&
-	    handle_backlog(stdout_handle) + handle_backlog(stderr_handle) == 0)
-	    break;		       /* we closed the connection */
+        if ((!connopen || !back->connected(backhandle)) &&
+            handle_backlog(stdout_handle) + handle_backlog(stderr_handle) == 0)
+            break;                     /* we closed the connection */
     }
     exitcode = back->exitcode(backhandle);
     if (!abort && exitcode < 0) {
-	fprintf(stderr, "Remote process exit code unavailable\n");
-	exitcode = 1;		       /* this is an error condition */
+        fprintf(stderr, "Remote process exit code unavailable\n");
+        exitcode = 1;                  /* this is an error condition */
     }
     cleanup_exit(exitcode);
-    return 0;			       /* placate compiler warning */
+    return 0;                          /* placate compiler warning */
 }
 
 #define IDD_LOGFDIALOG     102
@@ -918,7 +918,7 @@ static void update_systray(struct log_dialog_struct* dialog_data) {
     if (modified
             && !Shell_NotifyIcon(NIM_MODIFY, &dialog_data->nid)
             && !Shell_NotifyIcon(NIM_ADD, &dialog_data->nid)) {
-    	SetTimer(dialog_data->dialog, TID_ICON, 1000, NULL);
+        SetTimer(dialog_data->dialog, TID_ICON, 1000, NULL);
     }
 }
 
@@ -975,18 +975,18 @@ static void log_dialog_close(struct log_dialog_struct* dialog_data) {
     if (!dialog_data->completed && !auto_restart) {
         DestroyWindow(dialog_data->dialog);
     }else{
-    	ShowWindow(dialog_data->dialog, SW_HIDE);
+        ShowWindow(dialog_data->dialog, SW_HIDE);
     }
 }
 
 static void log_dialog_destroy(struct log_dialog_struct* dialog_data) {
     if (dialog_data->menu != NULL) {
-	DestroyMenu(dialog_data->menu);
-	dialog_data->menu = NULL;
+        DestroyMenu(dialog_data->menu);
+        dialog_data->menu = NULL;
     }
     if (dialog_data->traymenu != NULL) {
-	DestroyMenu(dialog_data->traymenu);
-	dialog_data->traymenu = NULL;
+        DestroyMenu(dialog_data->traymenu);
+        dialog_data->traymenu = NULL;
     }
     SetEvent(abort_event);
     if (dialog_data->nid.cbSize != 0) {
@@ -1031,7 +1031,7 @@ static void log_dialog_print_log(struct log_dialog_struct* dialog_data, int stri
     dialog_data->line_buffer = NULL;
     dialog_data->line_buffer_length = 0;
     for (i = 0, p = data; i < count; i++) {
-   	memcpy(p, (void*) strings[i], string_lengths[i]);
+        memcpy(p, (void*) strings[i], string_lengths[i]);
         p += string_lengths[i];
         sfree(strings[i]);
     }
@@ -1039,18 +1039,18 @@ static void log_dialog_print_log(struct log_dialog_struct* dialog_data, int stri
     start = buffer;
     p = data;
     while ( *p != '\0') {
-	if (*p != '\n') {
-	    p++;
-	}else{
-	    int index;
-	    *p = '\0';
+        if (*p != '\n') {
+            p++;
+        }else{
+            int index;
+            *p = '\0';
             index = SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_INSERTSTRING, dialog_data->last_index, (LPARAM) start);
             if (index != LB_ERR) {
                 while (SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETCOUNT, 0, 0) > 1000) {
                     SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_DELETESTRING, 0, 0);
                     index--;
                 }
-	        dialog_data->last_index = index + 1;
+                dialog_data->last_index = index + 1;
             }
             start = ++p;
             appended = 1;
@@ -1065,11 +1065,11 @@ static void log_dialog_print_log(struct log_dialog_struct* dialog_data, int stri
     }
     if (appended) {
         SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_SETCARETINDEX, dialog_data->last_index - 1, 0);
-	SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, WM_SETREDRAW, TRUE, 0);
-	if (!IsWindowVisible(dialog_data->dialog)) {
-	    ShowWindow(dialog_data->dialog, SW_SHOW);
-	    SetForegroundWindow(dialog_data->dialog);
-	}
+        SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, WM_SETREDRAW, TRUE, 0);
+        if (!IsWindowVisible(dialog_data->dialog)) {
+            ShowWindow(dialog_data->dialog, SW_SHOW);
+            SetForegroundWindow(dialog_data->dialog);
+        }
         KillTimer(dialog_data->dialog, TID_HIDE);
         SetTimer(dialog_data->dialog, TID_HIDE, 10000, NULL);
     }
@@ -1110,7 +1110,7 @@ static void log_dialog_exited(struct log_dialog_struct* dialog_data) {
             return;
         dialog_data->timer_id = auto_restart ? TID_RESTART : TID_CLOSE;
         dialog_data->timer_elapse = auto_restart ? 10000 : 30000;
-	dialog_data->timer_limit = GetTickCount() + dialog_data->timer_elapse;
+        dialog_data->timer_limit = GetTickCount() + dialog_data->timer_elapse;
         update_window_title(dialog_data);
         SetTimer(dialog_data->dialog, dialog_data->timer_id, 100, NULL);
     }
@@ -1118,20 +1118,20 @@ static void log_dialog_exited(struct log_dialog_struct* dialog_data) {
 
 static void log_dialog_systray(struct log_dialog_struct* dialog_data, int id, int message) {
     if(message == WM_RBUTTONUP) {
-	POINT cursorpos;
-	GetCursorPos(&cursorpos);
+        POINT cursorpos;
+        GetCursorPos(&cursorpos);
         if (dialog_data->traymenu == NULL) {
-	    dialog_data->traymenu = CreatePopupMenu();
-	    l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_SHOWLOG, "Show &Log Window");
+            dialog_data->traymenu = CreatePopupMenu();
+            l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_SHOWLOG, "Show &Log Window");
             AppendMenu(dialog_data->traymenu, MF_SEPARATOR, 0, 0);
-	    l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_RESTART, "&Reconnect");
-	    l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_CANCEL_RESTART, "Ca&ncel Reconnect");
+            l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_RESTART, "&Reconnect");
+            l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_CANCEL_RESTART, "Ca&ncel Reconnect");
             AppendMenu(dialog_data->traymenu, MF_SEPARATOR, 0, 0);
-	    l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_TERMINATE, "&Terminate");
+            l10nAppendMenu(dialog_data->traymenu, MF_ENABLED, ID_TERMINATE, "&Terminate");
         }
         SetForegroundWindow(dialog_data->dialog);
-        PostMessage(NULL, WM_NULL, 0, 0); 
-	TrackPopupMenu(dialog_data->traymenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, cursorpos.x, cursorpos.y, 0, dialog_data->dialog, NULL);
+        PostMessage(NULL, WM_NULL, 0, 0);
+        TrackPopupMenu(dialog_data->traymenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, cursorpos.x, cursorpos.y, 0, dialog_data->dialog, NULL);
     }
 }
 
@@ -1182,10 +1182,10 @@ static void log_dialog_timer_flush(struct log_dialog_struct* dialog_data) {
         SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_DELETESTRING, dialog_data->last_index, 0);
         SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_INSERTSTRING, dialog_data->last_index, (LPARAM) dialog_data->line_buffer);
         dialog_data->line_buffer_visible = 1;
-	if (!IsWindowVisible(dialog_data->dialog)) {
-	    ShowWindow(dialog_data->dialog, SW_SHOW);
-	    SetForegroundWindow(dialog_data->dialog);
-	}
+        if (!IsWindowVisible(dialog_data->dialog)) {
+            ShowWindow(dialog_data->dialog, SW_SHOW);
+            SetForegroundWindow(dialog_data->dialog);
+        }
         KillTimer(dialog_data->dialog, TID_HIDE);
         SetTimer(dialog_data->dialog, TID_HIDE, 10000, NULL);
     }
@@ -1197,31 +1197,31 @@ static void log_dialog_timer_hide(struct log_dialog_struct* dialog_data) {
 
 static void log_dialog_context_menu(struct log_dialog_struct* dialog_data, HWND ctrl, int xPos, int yPos) {
     if (GetDlgCtrlID(ctrl) == IDC_LOGLIST) {
-	int result;
-	POINT pt = {xPos, yPos};
-	ScreenToClient(ctrl, &pt);
-	result = SendMessage(ctrl, LB_ITEMFROMPOINT, 0, MAKELPARAM(pt.x, pt.y));
-	if (HIWORD(result) == 0) {
-	    if (SendMessage(ctrl, LB_GETSEL, LOWORD(result), 0) <= 0) {
-		SendMessage(ctrl, LB_SELITEMRANGE, FALSE, MAKELPARAM(0, 0xffff));
-		SendMessage(ctrl, LB_SETSEL, TRUE, LOWORD(result));
-	    }
-	}else{
-	    SendMessage(ctrl, LB_SELITEMRANGE, FALSE, MAKELPARAM(0, 0xffff));
-	}
-	if (dialog_data->menu == NULL) {
-	    dialog_data->menu = CreatePopupMenu();
-	    l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_COPY, "&Copy");
-	    l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_CLEAR, "C&lear");
+        int result;
+        POINT pt = {xPos, yPos};
+        ScreenToClient(ctrl, &pt);
+        result = SendMessage(ctrl, LB_ITEMFROMPOINT, 0, MAKELPARAM(pt.x, pt.y));
+        if (HIWORD(result) == 0) {
+            if (SendMessage(ctrl, LB_GETSEL, LOWORD(result), 0) <= 0) {
+                SendMessage(ctrl, LB_SELITEMRANGE, FALSE, MAKELPARAM(0, 0xffff));
+                SendMessage(ctrl, LB_SETSEL, TRUE, LOWORD(result));
+            }
+        }else{
+            SendMessage(ctrl, LB_SELITEMRANGE, FALSE, MAKELPARAM(0, 0xffff));
+        }
+        if (dialog_data->menu == NULL) {
+            dialog_data->menu = CreatePopupMenu();
+            l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_COPY, "&Copy");
+            l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_CLEAR, "C&lear");
             AppendMenu(dialog_data->menu, MF_SEPARATOR, 0, 0);
             if (auto_restart) {
-	        l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_RESTART, "&Reconnect");
-	        l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_CANCEL_RESTART, "Ca&ncel Reconnect");
+                l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_RESTART, "&Reconnect");
+                l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_CANCEL_RESTART, "Ca&ncel Reconnect");
                 AppendMenu(dialog_data->menu, MF_SEPARATOR, 0, 0);
-	    }
-	    l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_TERMINATE, "&Terminate");
-	}
-	TrackPopupMenu(dialog_data->menu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, xPos, yPos, 0, dialog_data->dialog, NULL);
+            }
+            l10nAppendMenu(dialog_data->menu, MF_ENABLED, ID_TERMINATE, "&Terminate");
+        }
+        TrackPopupMenu(dialog_data->menu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON, xPos, yPos, 0, dialog_data->dialog, NULL);
     }
 }
 
@@ -1239,34 +1239,34 @@ static void log_dialog_initmenu_popup(struct log_dialog_struct* dialog_data, HME
 static void log_dialog_command_copy(struct log_dialog_struct* dialog_data) {
     int count = SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETSELCOUNT, 0, 0);
     if (count > 0) {
-	int i;
-	int length = 0;
-	int* items = (int*) alloca(sizeof (int) * count);
-	SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETSELITEMS, count, (LPARAM) items);
-	for (i = 0; i < count; i++) {
-	    length += SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETTEXTLEN, items[i], 0) + 2;
-	}
-	if (OpenClipboard(dialog_data->dialog)) {
-	    if (EmptyClipboard()) {
-		HGLOBAL data = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE | GMEM_ZEROINIT, length + 1);
-		if (data != NULL){
-		    char* buffer = (char*) GlobalLock(data);
-		    char* dst = buffer;
-		    for (i = 0; i < count; i++) {
-			int len = SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETTEXTLEN, items[i], 0);
-			SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETTEXT, items[i], (LPARAM) dst);
-			dst[len] = '\r';
-			dst[len + 1] = '\n';
-			dst += len + 2;
-		    }
-		    *dst = '\0';
-		    GlobalUnlock(data);
-		    if (SetClipboardData(CF_TEXT, data) == NULL)
-			GlobalFree(data);
-		}
-	    }
-	    CloseClipboard();
-	}
+        int i;
+        int length = 0;
+        int* items = (int*) alloca(sizeof (int) * count);
+        SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETSELITEMS, count, (LPARAM) items);
+        for (i = 0; i < count; i++) {
+            length += SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETTEXTLEN, items[i], 0) + 2;
+        }
+        if (OpenClipboard(dialog_data->dialog)) {
+            if (EmptyClipboard()) {
+                HGLOBAL data = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE | GMEM_ZEROINIT, length + 1);
+                if (data != NULL){
+                    char* buffer = (char*) GlobalLock(data);
+                    char* dst = buffer;
+                    for (i = 0; i < count; i++) {
+                        int len = SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETTEXTLEN, items[i], 0);
+                        SendDlgItemMessage(dialog_data->dialog, IDC_LOGLIST, LB_GETTEXT, items[i], (LPARAM) dst);
+                        dst[len] = '\r';
+                        dst[len + 1] = '\n';
+                        dst += len + 2;
+                    }
+                    *dst = '\0';
+                    GlobalUnlock(data);
+                    if (SetClipboardData(CF_TEXT, data) == NULL)
+                        GlobalFree(data);
+                }
+            }
+            CloseClipboard();
+        }
     }
 }
 
@@ -1332,7 +1332,7 @@ static BOOL CALLBACK log_dialog_proc(HWND dialog, UINT message, WPARAM wParam, L
     static UINT WM_TASKBARCREATED = 0;
 
     if (WM_TASKBARCREATED == 0)
-	WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated");
+        WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated");
 
     switch (message) {
     case WM_INITDIALOG:
@@ -1347,18 +1347,18 @@ static BOOL CALLBACK log_dialog_proc(HWND dialog, UINT message, WPARAM wParam, L
 
     case WM_DESTROY:
         log_dialog_destroy(dialog_data);
-	break;
+        break;
 
     case WM_SIZE:
         log_dialog_size(dialog_data, LOWORD(lParam), HIWORD(lParam));
-	break;
+        break;
 
     case WM_SYSTRAY:
         log_dialog_systray(dialog_data, wParam, lParam);
         return TRUE;
 
     case WM_TIMER:
-	KillTimer(dialog, wParam);
+        KillTimer(dialog, wParam);
         switch (wParam) {
         case TID_CLOSE:
         case TID_RESTART:
@@ -1366,7 +1366,7 @@ static BOOL CALLBACK log_dialog_proc(HWND dialog, UINT message, WPARAM wParam, L
             return TRUE;
         case TID_ICON:
             log_dialog_timer_icon(dialog_data);
-	    return TRUE;
+            return TRUE;
         case TID_FLUSH:
             log_dialog_timer_flush(dialog_data);
             return TRUE;
@@ -1374,31 +1374,31 @@ static BOOL CALLBACK log_dialog_proc(HWND dialog, UINT message, WPARAM wParam, L
             log_dialog_timer_hide(dialog_data);
             return TRUE;
         }
-	break;
+        break;
 
     case WM_CONTEXTMENU:
         log_dialog_context_menu(dialog_data, (HWND) wParam, LOWORD(lParam), HIWORD(lParam));
-	return TRUE;
+        return TRUE;
 
     case WM_INITMENUPOPUP:
         log_dialog_initmenu_popup(dialog_data, (HMENU) wParam, LOWORD(lParam), HIWORD(lParam));
         return TRUE;
 
     case WM_COMMAND:
-	switch (wParam) {
-	case MAKEWPARAM(IDOK, BN_CLICKED): // for return key
-	case MAKEWPARAM(IDCANCEL, BN_CLICKED): // for escape key and close button
+        switch (wParam) {
+        case MAKEWPARAM(IDOK, BN_CLICKED): // for return key
+        case MAKEWPARAM(IDCANCEL, BN_CLICKED): // for escape key and close button
             log_dialog_timer_hide(dialog_data);
             return TRUE;
-	case ID_COPY:
+        case ID_COPY:
             log_dialog_command_copy(dialog_data);
-	    return TRUE;
-	case ID_CLEAR:
+            return TRUE;
+        case ID_CLEAR:
             log_dialog_command_clear(dialog_data);
-	    return TRUE;
-	case ID_TERMINATE:
+            return TRUE;
+        case ID_TERMINATE:
             log_dialog_command_terminate(dialog_data);
-	    return TRUE;
+            return TRUE;
         case ID_SHOWLOG:
             log_dialog_command_showlog(dialog_data);
             return TRUE;
@@ -1408,15 +1408,15 @@ static BOOL CALLBACK log_dialog_proc(HWND dialog, UINT message, WPARAM wParam, L
         case ID_CANCEL_RESTART:
             log_dialog_command_cancel_restart(dialog_data);
             return TRUE;
-	}
-	break;
+        }
+        break;
 
     default:
         if (message == WM_TASKBARCREATED) {
             log_dialog_taskbar_created(dialog_data);
             return TRUE;
         }
-	break;
+        break;
     }
     return FALSE;
 }
@@ -1513,9 +1513,9 @@ static DWORD WINAPI read_output_thread_proc(LPVOID arg) {
     buffer = (char*) alloca(buffer_size);
     WaitForInputIdle(GetCurrentProcess(), INFINITE);
     while (ReadFile(in, buffer, sizeof buffer, &read, NULL) && read > 0) {
-	char* data = snewn(read, char);
+        char* data = snewn(read, char);
         memcpy(data, buffer, read);
-	PostThreadMessage(initial_thread_id, WM_PRINT_LOG, read, (LPARAM) data);
+        PostThreadMessage(initial_thread_id, WM_PRINT_LOG, read, (LPARAM) data);
     }
     CloseHandle(in);
     return 0;

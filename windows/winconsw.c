@@ -72,54 +72,54 @@ int verify_ssh_host_key(void *frontend, char *host, int port, char *keytype,
     int ret;
 
     static const char absentmsg_batch[] =
-	"The server's host key is not cached in the registry. You\n"
-	"have no guarantee that the server is the computer you\n"
-	"think it is.\n"
-	"The server's %s key fingerprint is:\n"
-	"%s\n"
-	"Connection abandoned.\n";
+        "The server's host key is not cached in the registry. You\n"
+        "have no guarantee that the server is the computer you\n"
+        "think it is.\n"
+        "The server's %s key fingerprint is:\n"
+        "%s\n"
+        "Connection abandoned.\n";
     static const char absentmsg[] =
-	"The server's host key is not cached in the registry. You\n"
-	"have no guarantee that the server is the computer you\n"
-	"think it is.\n"
-	"The server's %s key fingerprint is:\n"
-	"%s\n"
-	"If you trust this host, hit Yes to add the key to\n"
-	"PuTTY's cache and carry on connecting.\n"
-	"If you want to carry on connecting just once, without\n"
-	"adding the key to the cache, hit No.\n"
-	"If you do not trust this host, hit Cancel to abandon the\n"
-	"connection.\n"
-	"Store key in cache?";
+        "The server's host key is not cached in the registry. You\n"
+        "have no guarantee that the server is the computer you\n"
+        "think it is.\n"
+        "The server's %s key fingerprint is:\n"
+        "%s\n"
+        "If you trust this host, hit Yes to add the key to\n"
+        "PuTTY's cache and carry on connecting.\n"
+        "If you want to carry on connecting just once, without\n"
+        "adding the key to the cache, hit No.\n"
+        "If you do not trust this host, hit Cancel to abandon the\n"
+        "connection.\n"
+        "Store key in cache?";
 
     static const char wrongmsg_batch[] =
-	"WARNING - POTENTIAL SECURITY BREACH!\n"
-	"The server's host key does not match the one PuTTY has\n"
-	"cached in the registry. This means that either the\n"
-	"server administrator has changed the host key, or you\n"
-	"have actually connected to another computer pretending\n"
-	"to be the server.\n"
-	"The new %s key fingerprint is:\n"
-	"%s\n"
-	"Connection abandoned.\n";
+        "WARNING - POTENTIAL SECURITY BREACH!\n"
+        "The server's host key does not match the one PuTTY has\n"
+        "cached in the registry. This means that either the\n"
+        "server administrator has changed the host key, or you\n"
+        "have actually connected to another computer pretending\n"
+        "to be the server.\n"
+        "The new %s key fingerprint is:\n"
+        "%s\n"
+        "Connection abandoned.\n";
     static const char wrongmsg[] =
-	"WARNING - POTENTIAL SECURITY BREACH!\n"
-	"\n"
-	"The server's host key does not match the one PuTTY has\n"
-	"cached in the registry. This means that either the\n"
-	"server administrator has changed the host key, or you\n"
-	"have actually connected to another computer pretending\n"
-	"to be the server.\n"
-	"The new %s key fingerprint is:\n"
-	"%s\n"
-	"If you were expecting this change and trust the new key,\n"
-	"hit Yes to update PuTTY's cache and continue connecting.\n"
-	"If you want to carry on connecting but without updating\n"
-	"the cache, hit No.\n"
-	"If you want to abandon the connection completely, hit\n"
-	"Cancel. Hitting Cancel is the ONLY guaranteed safe\n"
-	"choice.\n"
-	"Update cached key?";
+        "WARNING - POTENTIAL SECURITY BREACH!\n"
+        "\n"
+        "The server's host key does not match the one PuTTY has\n"
+        "cached in the registry. This means that either the\n"
+        "server administrator has changed the host key, or you\n"
+        "have actually connected to another computer pretending\n"
+        "to be the server.\n"
+        "The new %s key fingerprint is:\n"
+        "%s\n"
+        "If you were expecting this change and trust the new key,\n"
+        "hit Yes to update PuTTY's cache and continue connecting.\n"
+        "If you want to carry on connecting but without updating\n"
+        "the cache, hit No.\n"
+        "If you want to abandon the connection completely, hit\n"
+        "Cancel. Hitting Cancel is the ONLY guaranteed safe\n"
+        "choice.\n"
+        "Update cached key?";
 
     static const char abandoned[] = "Connection abandoned.\n";
 
@@ -131,30 +131,30 @@ int verify_ssh_host_key(void *frontend, char *host, int port, char *keytype,
      */
     ret = verify_host_key(host, port, keytype, keystr);
 
-    if (ret == 0)		       /* success - key matched OK */
-	return 1;
+    if (ret == 0)                      /* success - key matched OK */
+        return 1;
 
-    if (ret == 2) {		       /* key was different */
-	if (console_batch_mode) {
-	    mboxprintf(MB_ICONERROR | MB_OK, mbtitle, wrongmsg_batch, keytype, fingerprint);
+    if (ret == 2) {                    /* key was different */
+        if (console_batch_mode) {
+            mboxprintf(MB_ICONERROR | MB_OK, mbtitle, wrongmsg_batch, keytype, fingerprint);
             return 0;
-	}
-	mbret = mboxprintf(MB_ICONWARNING | MB_YESNOCANCEL | MB_DEFBUTTON3, mbtitle, wrongmsg, keytype, fingerprint);
+        }
+        mbret = mboxprintf(MB_ICONWARNING | MB_YESNOCANCEL | MB_DEFBUTTON3, mbtitle, wrongmsg, keytype, fingerprint);
     }
-    if (ret == 1) {		       /* key was absent */
-	if (console_batch_mode) {
-	    mboxprintf(MB_ICONERROR | MB_OK, mbtitle, absentmsg_batch, keytype, fingerprint);
+    if (ret == 1) {                    /* key was absent */
+        if (console_batch_mode) {
+            mboxprintf(MB_ICONERROR | MB_OK, mbtitle, absentmsg_batch, keytype, fingerprint);
             return 0;
-	}
-	mbret = mboxprintf(MB_ICONWARNING | MB_YESNOCANCEL | MB_DEFBUTTON3, mbtitle, absentmsg, keytype, fingerprint);
+        }
+        mbret = mboxprintf(MB_ICONWARNING | MB_YESNOCANCEL | MB_DEFBUTTON3, mbtitle, absentmsg, keytype, fingerprint);
     }
 
     if (mbret != IDCANCEL) {
-	if (mbret == IDYES)
-	    store_host_key(host, port, keytype, keystr);
+        if (mbret == IDYES)
+            store_host_key(host, port, keytype, keystr);
         return 1;
     } else {
-	mboxprintf(MB_ICONERROR | MB_OK, mbtitle, abandoned);
+        mboxprintf(MB_ICONERROR | MB_OK, mbtitle, abandoned);
         return 0;
     }
 }
@@ -168,32 +168,32 @@ void update_specials_menu(void *frontend)
  * below the configured 'warn' threshold).
  */
 int askalg(void *frontend, const char *algtype, const char *algname,
-	   void (*callback)(void *ctx, int result), void *ctx)
+           void (*callback)(void *ctx, int result), void *ctx)
 {
     static const char mbtitle[] = "PuTTY Security Alert";
     static const char msg[] =
-	"The first %s supported by the server is\n"
-	"%s, which is below the configured warning threshold.\n"
-	"Continue with connection?";
+        "The first %s supported by the server is\n"
+        "%s, which is below the configured warning threshold.\n"
+        "Continue with connection?";
     static const char msg_batch[] =
-	"The first %s supported by the server is\n"
-	"%s, which is below the configured warning threshold.\n"
-	"Connection abandoned.\n";
+        "The first %s supported by the server is\n"
+        "%s, which is below the configured warning threshold.\n"
+        "Connection abandoned.\n";
     static const char abandoned[] = "Connection abandoned.\n";
 
     int mbret;
 
     if (console_batch_mode) {
-	mboxprintf(MB_ICONERROR | MB_OK, mbtitle, msg_batch, algtype, algname);
-	return 0;
+        mboxprintf(MB_ICONERROR | MB_OK, mbtitle, msg_batch, algtype, algname);
+        return 0;
     }
 
     mbret = mboxprintf(MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2, mbtitle, msg, algtype, algname);
     if (mbret == IDYES) {
-	return 1;
+        return 1;
     } else {
-	mboxprintf(MB_ICONWARNING | MB_OK, mbtitle, abandoned);
-	return 0;
+        mboxprintf(MB_ICONWARNING | MB_OK, mbtitle, abandoned);
+        return 0;
     }
 }
 
@@ -202,41 +202,41 @@ int askalg(void *frontend, const char *algtype, const char *algname,
  * Returns 2 for wipe, 1 for append, 0 for cancel (don't log).
  */
 int askappend(void *frontend, Filename filename,
-	      void (*callback)(void *ctx, int result), void *ctx)
+              void (*callback)(void *ctx, int result), void *ctx)
 {
     static const char msgtemplate[] =
-	"The session log file \"%.*s\" already exists.\n"
-	"You can overwrite it with a new session log,\n"
-	"append your session log to the end of it,\n"
-	"or disable session logging for this session.\n"
-	"Hit Yes to wipe the file, No to append to it,\n"
-	"or Cancel to disable logging."
-	"Wipe the log file? ";
+        "The session log file \"%.*s\" already exists.\n"
+        "You can overwrite it with a new session log,\n"
+        "append your session log to the end of it,\n"
+        "or disable session logging for this session.\n"
+        "Hit Yes to wipe the file, No to append to it,\n"
+        "or Cancel to disable logging."
+        "Wipe the log file? ";
 
     static const char msgtemplate_batch[] =
-	"The session log file \"%.*s\" already exists.\n"
-	"Logging will not be enabled.\n";
+        "The session log file \"%.*s\" already exists.\n"
+        "Logging will not be enabled.\n";
 
     static const char mbtitle[] = "PuTTY Log to File";
     int mbret;
 
     if (console_batch_mode) {
-	mboxprintf(MB_ICONERROR | MB_OK, mbtitle, msgtemplate_batch, FILENAME_MAX, filename.path);
-	return 0;
+        mboxprintf(MB_ICONERROR | MB_OK, mbtitle, msgtemplate_batch, FILENAME_MAX, filename.path);
+        return 0;
     }
     mbret = mboxprintf(MB_ICONQUESTION | MB_YESNOCANCEL | MB_DEFBUTTON3, mbtitle, msgtemplate, FILENAME_MAX, filename.path);
 
     if (mbret == IDYES)
-	return 2;
+        return 2;
     else if (mbret == IDNO)
-	return 1;
+        return 1;
     else
-	return 0;
+        return 0;
 }
 
 /*
  * Warn about the obsolescent key file format.
- * 
+ *
  * Uniquely among these functions, this one does _not_ expect a
  * frontend handle. This means that if PuTTY is ported to a
  * platform which requires frontend handles, this function will be
@@ -247,15 +247,15 @@ int askappend(void *frontend, Filename filename,
 void old_keyfile_warning(void)
 {
     static const char message[] =
-	"You are loading an SSH-2 private key which has an\n"
-	"old version of the file format. This means your key\n"
-	"file is not fully tamperproof. Future versions of\n"
-	"PuTTY may stop supporting this private key format,\n"
-	"so we recommend you convert your key to the new\n"
-	"format.\n"
-	"\n"
-	"Once the key is loaded into PuTTYgen, you can perform\n"
-	"this conversion simply by saving it again.\n";
+        "You are loading an SSH-2 private key which has an\n"
+        "old version of the file format. This means your key\n"
+        "file is not fully tamperproof. Future versions of\n"
+        "PuTTY may stop supporting this private key format,\n"
+        "so we recommend you convert your key to the new\n"
+        "format.\n"
+        "\n"
+        "Once the key is loaded into PuTTYgen, you can perform\n"
+        "this conversion simply by saving it again.\n";
 
     mboxprintf(MB_OK, "PuTTY Key File Warning", message);
 }
@@ -266,14 +266,14 @@ void old_keyfile_warning(void)
 void pgp_fingerprints(void)
 {
     fputs("These are the fingerprints of the PuTTY PGP Master Keys. They can\n"
-	  "be used to establish a trust path from this executable to another\n"
-	  "one. See the manual for more information.\n"
-	  "(Note: these fingerprints have nothing to do with SSH!)\n"
-	  "\n"
-	  "PuTTY Master Key (RSA), 1024-bit:\n"
-	  "  " PGP_RSA_MASTER_KEY_FP "\n"
-	  "PuTTY Master Key (DSA), 1024-bit:\n"
-	  "  " PGP_DSA_MASTER_KEY_FP "\n", stdout);
+          "be used to establish a trust path from this executable to another\n"
+          "one. See the manual for more information.\n"
+          "(Note: these fingerprints have nothing to do with SSH!)\n"
+          "\n"
+          "PuTTY Master Key (RSA), 1024-bit:\n"
+          "  " PGP_RSA_MASTER_KEY_FP "\n"
+          "PuTTY Master Key (DSA), 1024-bit:\n"
+          "  " PGP_DSA_MASTER_KEY_FP "\n", stdout);
 }
 
 void console_provide_logctx(void *logctx)
@@ -373,7 +373,7 @@ BOOL CALLBACK getline_dialog_proc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM
                     r.bottom = r.top + STATIC_HEIGHT;
                     create_static(hwndDlg, p->prompts[i]->prompt, r);
                     r.top = r.bottom + PITCH;
-                    
+
                     r.bottom = r.top + EDIT_HEIGHT;
                     create_edit(hwndDlg, IDC_RESULT_0 + i, p->prompts[i], r);
                     r.top = r.bottom + PITCH;
@@ -384,7 +384,7 @@ BOOL CALLBACK getline_dialog_proc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM
                 r.left = DIALOG_WIDTH - DIALOG_MERGIN - BUTTON_WIDTH - PITCH - BUTTON_WIDTH;
                 r.right = r.left + BUTTON_WIDTH;
                 create_button(hwndDlg, IDOK, "OK", r);
-                
+
                 r.left = r.right + PITCH;
                 r.right = r.left + BUTTON_WIDTH;
                 create_button(hwndDlg, IDCANCEL, "Cancel", r);
@@ -418,17 +418,17 @@ int console_get_userpass_input(prompts_t *p, unsigned char *in, int inlen)
      * Zero all the results, in case we abort half-way through.
      */
     {
-	int i;
-	for (i = 0; i < (int)p->n_prompts; i++)
-	    memset(p->prompts[i]->result, 0, p->prompts[i]->result_len);
+        int i;
+        for (i = 0; i < (int)p->n_prompts; i++)
+            memset(p->prompts[i]->result, 0, p->prompts[i]->result_len);
     }
 
     if (console_batch_mode || p->n_prompts < 1 || p->n_prompts > 10)
-	return 0;
+        return 0;
 
    if (DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_GETLINE), NULL, getline_dialog_proc, (LPARAM) p) != IDOK)
-	return -1;
-    
+        return -1;
+
     return 1; /* success */
 
 }
