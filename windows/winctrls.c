@@ -1697,9 +1697,7 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
             sfree(escaped);
             break;
           default:
-            assert(!"Can't happen");
-            num_ids = 0;               /* placate gcc */
-            break;
+            unreachable("bad control type in winctrl_layout");
         }
 
         /*
@@ -2135,8 +2133,7 @@ int dlg_radiobutton_get(union control *ctrl, dlgparam *dp)
     for (i = 0; i < c->ctrl->radio.nbuttons; i++)
         if (IsDlgButtonChecked(dp->hwnd, c->base_id + 1 + i))
             return i;
-    assert(!"No radio button was checked?!");
-    return 0;
+    unreachable("no radio button was checked");
 }
 
 void dlg_checkbox_set(union control *ctrl, dlgparam *dp, bool checked)
@@ -2326,8 +2323,7 @@ void dlg_label_change(union control *ctrl, dlgparam *dp, char const *text2)
         id = c->base_id;
         break;
       default:
-        assert(!"Can't happen");
-        break;
+        unreachable("bad control type in label_change");
     }
     if (escaped) {
         SetDlgItemText(dp->hwnd, id, escaped);

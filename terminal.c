@@ -3117,7 +3117,8 @@ static inline void term_keyinput_internal(
         bufchain_add(&term->inbuf, buf, true_len);
         term_added_data(term);
     }
-    term_bracketed_paste_stop(term);
+    if (interactive)
+        term_bracketed_paste_stop(term);
     if (term->ldisc) {
         if (in_utf(term) && term->ucsdata->iso2022) {
             iso2022_settranschar(&term->ucsdata->iso2022_data, 1);
