@@ -101,6 +101,7 @@ if ($usage || length @hdr == 0) {
 }
 
 # Now write out the output icon file.
+binmode STDOUT;
 print pack "vvv", 0, 1, scalar @hdr; # file-level header
 $filepos = 6 + 16 * scalar @hdr;
 for ($i = 0; $i < scalar @hdr; $i++) {
@@ -120,14 +121,14 @@ sub readicon {
     my %pal;
 
     # Determine the icon's width and height.
-    my $w = `identify -format %w $filename`;
-    my $h = `identify -format %h $filename`;
+    my $w = `magick identify -format %w $filename`;
+    my $h = `magick identify -format %h $filename`;
 
     # Read the file in as RGBA data. We flip vertically at this
     # point, to avoid having to do it ourselves (.BMP and hence
     # .ICO are bottom-up).
     my $data = [];
-    open IDATA, "convert -flip -depth 8 $filename rgba:- |";
+    open IDATA, "magick convert -flip -depth 8 $filename rgba:- |";
     push @$data, $rgb while (read IDATA,$rgb,4,0) == 4;
     close IDATA;
     # Check we have the right amount of data.

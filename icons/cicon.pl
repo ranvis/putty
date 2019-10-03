@@ -11,7 +11,7 @@ foreach $f (@ARGV) {
   # enough. We just have to adjust the declaration line so that it
   # has the right name, linkage and storage class.
   @lines = ();
-  open XPM, "convert $f xpm:- |";
+  open XPM, "magick convert $f xpm:- |";
   push @lines, $_ while <XPM>;
   close XPM;
   die "XPM from $f in unexpected format\n" unless $lines[1] =~ /^static.*\{$/;
