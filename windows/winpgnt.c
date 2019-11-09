@@ -514,23 +514,25 @@ static void prompt_add_keyfile(HWND owner)
     sfree(filelist);
 }
 
-static int get_confirm_timeout() {
-    int timeout = -1;
-        if (get_use_inifile()) {
-            timeout = GetPrivateProfileInt(APPNAME, "ConfirmTimeout", -1, inifile);
-        } else {
-            HKEY hkey;
-            if (RegOpenKey(HKEY_CURRENT_USER, "Software\\SimonTatham\\PuTTY\\" APPNAME, &hkey) == ERROR_SUCCESS) {
-                DWORD type;
-                DWORD size = sizeof timeout;
-                if (RegQueryValueEx(hkey, "ConfirmTimeout", 0, &type, (LPBYTE) &timeout, &size) != ERROR_SUCCESS || type != REG_DWORD)
-                    timeout = -1;
-                RegCloseKey(hkey);
+static int getConfValueInt(const char *name, int def, int min, int max)
+{
+    int value = def;
+    if (get_use_inifile()) {
+        value = GetPrivateProfileInt(APPNAME, name, def, inifile);
+    } else {
+        HKEY hkey;
+        if (RegOpenKey(HKEY_CURRENT_USER, "Software\\SimonTatham\\PuTTY\\" APPNAME, &hkey) == ERROR_SUCCESS) {
+            DWORD type;
+            DWORD size = sizeof value;
+            if (RegQueryValueEx(hkey, name, 0, &type, (LPBYTE)&value, &size) != ERROR_SUCCESS || type != REG_DWORD)
+                value = def;
+            RegCloseKey(hkey);
         }
     }
-    if (timeout < 0 || 3600 < timeout)
-        timeout = 30;
-    return timeout;
+    if (value < min || max < value) {
+        value = def;
+    }
+    return value;
 }
 
 struct ConfirmAcceptAgentProcStruct {
@@ -538,8 +540,11 @@ struct ConfirmAcceptAgentProcStruct {
     const char* fingerprint;
     int dont_ask_again;
     DWORD tickCount;
-    int timeout;
+    int delay, timeout;
 };
+
+#define DELAY_TIMER_ID 1
+#define TIMEOUT_TIMER_ID 2
 
 INT_PTR CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
     BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text);
@@ -580,22 +585,30 @@ INT_PTR CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam
             SendDlgItemMessage(dialog, 102, BM_SETCHECK, info->dont_ask_again >= 0 ? BST_CHECKED : BST_UNCHECKED, 0);
             SendMessage(dialog, WM_NEXTDLGCTL, (WPARAM) GetDlgItem(dialog, info->dont_ask_again > 0 ? IDYES : IDNO), TRUE);
 
-            info->timeout = get_confirm_timeout();
-            if (info->timeout != 0) {
+            info->delay = getConfValueInt("ConfirmDelayMs", 400, 0, 10000);
+            if (info->delay) {
+                SetTimer(dialog, DELAY_TIMER_ID, info->delay, NULL);
+                EnableWindow(GetDlgItem(dialog, IDYES), FALSE);
+            }
+            info->timeout = getConfValueInt("ConfirmTimeout", 30, 0, 3600) * 1000;
+            if (info->timeout) {
                 info->tickCount = GetTickCount();
-                SetTimer(dialog, 1, 1000, NULL);
+                SetTimer(dialog, TIMEOUT_TIMER_ID, 1000, NULL);
             }
         }
         return FALSE;
 
     case WM_TIMER:
-        if (wParam == 1) {
+        if (wParam == TIMEOUT_TIMER_ID) {
             struct ConfirmAcceptAgentProcStruct* info = (struct ConfirmAcceptAgentProcStruct*) GetWindowLongPtr(dialog, DWLP_USER);
-            if ((int) (GetTickCount() - info->tickCount) > info->timeout * 1000) {
+            if ((GetTickCount() - info->tickCount) > info->timeout) {
                 SendDlgItemMessage(dialog, 102, BM_SETCHECK, BST_UNCHECKED, 0);
                 SendMessage(dialog, WM_COMMAND, MAKEWPARAM(info->dont_ask_again > 0 ? IDYES : IDNO, BN_CLICKED), 0);
             }
             return TRUE;
+        } else if (wParam == DELAY_TIMER_ID) {
+            EnableWindow(GetDlgItem(dialog, IDYES), TRUE);
+            KillTimer(dialog, wParam);
         }
         break;
 
