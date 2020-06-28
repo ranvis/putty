@@ -433,7 +433,7 @@ static IShellLink *make_shell_link(const char *appname,
          * behaviour change in which an argument string starting with
          * '@' causes the SetArguments method to silently do the wrong
          * thing. */
-        param_string = dupcat(" @", sessionname, NULL);
+        param_string = dupcat(" @", sessionname);
     } else {
         param_string = dupstr("");
     }

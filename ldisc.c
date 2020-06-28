@@ -165,7 +165,6 @@ void ldisc_send(Ldisc *ldisc, const void *vbuf, int len, bool interactive)
     }
 
     assert(ldisc->term);
-    assert(len);
 
     if (interactive) {
         /*
