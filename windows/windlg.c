@@ -287,9 +287,9 @@ static int SaneDialogBox(HINSTANCE hinst,
     SetWindowLongPtr(hwnd, BOXRESULT, 0); /* result from SaneEndDialog */
 
     while ((gm=GetMessage(&msg, NULL, 0, 0)) > 0) {
-        flags=GetWindowLongPtr(hwnd, BOXFLAGS);
-        if (!(flags & DF_END) && !IsDialogMessage(hwnd, &msg))
+        if (!IsWindow(hwnd) || !IsDialogMessage(hwnd, &msg))
             DispatchMessage(&msg);
+        flags=GetWindowLongPtr(hwnd, BOXFLAGS);
         if (flags & DF_END)
             break;
     }
