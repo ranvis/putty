@@ -1,5 +1,6 @@
 #include "putty.h"
 #include "winwallp.h"
+#include "winseat.h"
 
 extern Conf *conf;
 
@@ -7,6 +8,7 @@ HBITMAP background_bmp = NULL;
 HBITMAP img_bmp;
 BOOL bg_has_alpha;
 BOOL img_has_alpha;
+extern WinGuiSeat wgs;
 
 DECL_WINDOWS_FUNCTION(static, BOOL, AlphaBlend, (HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn));
 
@@ -41,6 +43,7 @@ void wallpaper_paint(HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_pa
 
 void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
 {
+    const HWND hwnd = wgs.term_hwnd;
     RECT term_rect;
     int is_win_ratio_larger;
     int blit_x, blit_y, blit_width, blit_height;
@@ -93,6 +96,7 @@ void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
 
 void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
 {
+    const HWND hwnd = wgs.term_hwnd;
     POINT dest_pos;
     int rem_w, rem_h;
     int shift_x, shift_y;

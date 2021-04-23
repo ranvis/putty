@@ -27,6 +27,16 @@ int xvsnprintf(char* buffer, int size, const char* format, va_list args)
   return vsnprintf(buffer, size, format, args);
 }
 
+char *xdupprintf(const char *format, ...)
+{
+    char *r;
+    va_list args;
+    va_start(args, format);
+    r = dupvprintf(format, args);
+    va_end(args);
+    return r;
+}
+
 char *l10n_dupstr (char *s) {
   return dupstr(s);
 }

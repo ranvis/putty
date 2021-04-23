@@ -752,7 +752,7 @@ BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text)
 {
     WCHAR buf[256];
-    if (cwstrtranslate(text, buf, lenof(buf)))
+    if (flags != MF_SEPARATOR && cwstrtranslate(text, buf, lenof(buf)))
         return AppendMenuW(menu, flags, id, buf);
     return AppendMenu(menu, flags, id, text);
 }
