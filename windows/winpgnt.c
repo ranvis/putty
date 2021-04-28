@@ -445,9 +445,13 @@ static void keylist_update_callback(
     }
 
     if (ext_flags & LIST_EXTENDED_FLAG_HAS_NO_CLEARTEXT_KEY) {
-        strbuf_catf(listentry, "\t(encrypted)");
+        char *text = l10n_dupstr("\t(encrypted)");
+        strbuf_catf(listentry, text);
+        sfree(text);
     } else if (ext_flags & LIST_EXTENDED_FLAG_HAS_ENCRYPTED_KEY_FILE) {
-        strbuf_catf(listentry, "\t(re-encryptable)");
+        char *text = l10n_dupstr("\t(re-encryptable)");
+        strbuf_catf(listentry, text);
+        sfree(text);
 
         /* At least one key can be re-encrypted */
         ctx->enable_reencrypt_controls = true;
