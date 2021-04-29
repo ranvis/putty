@@ -49,7 +49,8 @@ static void sk_namedpipeserver_close(Socket *s)
     if (ps->callback_handle)
         handle_free(ps->callback_handle);
     CloseHandle(ps->pipehandle);
-    CloseHandle(ps->connect_ovl.hEvent);
+    //CloseHandle(ps->connect_ovl.hEvent);
+    // ps->connect_ovl.hEvent is passed to handle_add_foreign_event() and closed on their side
     sfree(ps->error);
     sfree(ps->pipename);
     if (ps->acl)
