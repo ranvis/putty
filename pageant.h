@@ -240,6 +240,7 @@ int pageant_reencrypt_all_keys(char **retstr);
 int pageant_sign(struct pageant_pubkey *key, ptrlen message, strbuf *out,
                  uint32_t flags, char **retstr);
 
+void notify_agent_make_op(int type);
 int accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_userkey *ssh2UserKey);
 
 /*

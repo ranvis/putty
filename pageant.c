@@ -673,6 +673,7 @@ static PageantAsyncOp *pageant_make_op(
         goto responded;
     }
 
+    notify_agent_make_op(type);
     switch (type) {
       case SSH1_AGENTC_REQUEST_RSA_IDENTITIES: {
         /*

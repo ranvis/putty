@@ -34,6 +34,9 @@
 #define WM_SYSTRAY   (WM_APP + 6)
 #define WM_SYSTRAY2  (WM_APP + 7)
 #define TID_ADDSYSTRAY  1
+#define TID_DEFERRED_REENCRYPT  500
+#define TID_REENCRYPT_IDLE      501
+#define TID_REENCRYPT_TIMEOUT   502
 
 #define AGENT_COPYDATA_ID 0x804e50ba   /* random goop */
 
@@ -56,6 +59,12 @@ static bool already_running;
 static FingerprintType fptype = SSH_FPTYPE_DEFAULT;
 
 static int confirm_any_request = 0;
+static int defer_reencrypt_state = 0;
+static bool deferred_reencrypt;
+static struct {
+    bool on_suspend, on_display_off, on_away, on_lid_close;
+    int idle_ms, timeout_ms;
+} reencrypt_settings;
 static char *putty_path;
 static bool restrict_putty_acl = false;
 
@@ -89,6 +98,9 @@ static const char HEADER[] = "Session:";
 
 #undef AppendMenu
 #define AppendMenu(m, f, i, t) l10nAppendMenu(m, f, i, t)
+
+#define pageant_reencrypt_all() USE_gui_reencrypt_all_INSTEAD()
+static void gui_reencrypt_all(void);
 
 #define LOCAL_SCOPE
 
@@ -233,6 +245,9 @@ static void end_passphrase_dialog(HWND hwnd, INT_PTR result)
     struct PassphraseProcStruct *p = (struct PassphraseProcStruct *)
         GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
+    if (reencrypt_settings.timeout_ms) {
+        SetTimer(traywindow, TID_REENCRYPT_TIMEOUT, reencrypt_settings.timeout_ms, NULL);
+    }
     if (p->modal) {
         EndDialog(hwnd, result);
     } else {
@@ -271,6 +286,9 @@ static INT_PTR CALLBACK PassphraseProc(HWND hwnd, UINT msg,
     struct PassphraseProcStruct *p;
 
     if (msg == WM_INITDIALOG) {
+        if (reencrypt_settings.timeout_ms) {
+            KillTimer(traywindow, TID_REENCRYPT_TIMEOUT);
+        }
         p = (struct PassphraseProcStruct *) lParam;
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) p);
     } else {
@@ -714,7 +732,8 @@ INT_PTR CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam
     return FALSE;
 }
 
-int accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_userkey *ssh2UserKey) {
+static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_userkey *ssh2UserKey)
+{
     static const char VALUE_ACCEPT[] = "accept";
     static const char VALUE_REFUSE[] = "refuse";
 
@@ -839,6 +858,137 @@ int accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_userkey *ssh
             }
         }
         return accept;
+    }
+}
+
+void notify_agent_make_op(int type)
+{
+    if (reencrypt_settings.idle_ms) {
+        SetTimer(traywindow, TID_REENCRYPT_IDLE, reencrypt_settings.idle_ms, NULL);
+    }
+}
+
+static void defer_reencrypt(bool flag)
+{
+    if (flag) {
+        defer_reencrypt_state++;
+    } else {
+        assert(defer_reencrypt_state);
+        if (!--defer_reencrypt_state && deferred_reencrypt) {
+            deferred_reencrypt = false;
+            SetTimer(traywindow, TID_DEFERRED_REENCRYPT, 3000, NULL);
+        }
+    }
+}
+
+int accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_userkey *ssh2UserKey)
+{
+    int result;
+    defer_reencrypt(1);
+    result = do_accept_agent_request(type, rsaKey, ssh2UserKey);
+    defer_reencrypt(0);
+    return result;
+}
+
+#if _WIN32_WINNT < 0x0602 /* not exactly sure from which version it is defined */
+const GUID GUID_SESSION_DISPLAY_STATUS = { 0x2b84c20e, 0xad23, 0x4ddf,{ 0x93, 0xdb, 0x5, 0xff, 0xbd, 0x7e, 0xfc, 0xa5 } };
+#endif
+
+static char *parse_reencrypt_settings(const char *_cfg)
+{
+    char *error = NULL;
+    char *cfg = dupstr(_cfg);
+    char *p = cfg;
+    while (*p) {
+        char *pTail = strchr(p, ',');
+        bool negate = *p == '-';
+        char *pFlag = negate ? p + 1 : p;
+        if (pTail) {
+            *pTail = 0;
+        }
+        if (!*p) {
+            /* empty */
+        } else if (!strcmp(p, "any_event")) {
+            reencrypt_settings.on_suspend =
+                reencrypt_settings.on_display_off =
+                reencrypt_settings.on_away =
+                reencrypt_settings.on_lid_close = true;
+        } else if (!strcmp(pFlag, "suspend")) {
+            reencrypt_settings.on_suspend = !negate;
+        } else if (!strcmp(pFlag, "display_off")) {
+            reencrypt_settings.on_display_off = !negate;
+        } else if (!strcmp(pFlag, "away")) {
+            reencrypt_settings.on_away = !negate;
+        } else if (!strcmp(pFlag, "lid_close")) {
+            reencrypt_settings.on_lid_close = !negate;
+        } else {
+            int *dest = NULL;
+            char *pVal, *pError;
+            double value;
+            if (!strncmp(p, "idle:", 5)) {
+                dest = &reencrypt_settings.idle_ms;
+                pVal = p + 5;
+            } else if (!strncmp(p, "timeout:", 8)) {
+                dest = &reencrypt_settings.timeout_ms;
+                pVal = p + 8;
+            } else {
+                error = dupprintf("unrecognised re-encrypt option\n'%s'", p);
+                goto cleanup;
+            }
+            value = strtod(pVal, &pError);
+            if (pError != NULL) {
+                if (pVal == pError) {
+                    value = 0;
+                } else if (!strcmp(pError, "s")) {
+                    value /= 60;
+                } else if (!strcmp(pError, "m")) {
+                    /* nothing */
+                } else if (!strcmp(pError, "h")) {
+                    value *= 60;
+                } else if (!strcmp(pError, "d")) {
+                    value *= 60 * 24;
+                }
+            }
+            if (value >= 1 && value <= 14400) {
+                *dest = value * 60 * 1000;
+            } else {
+                error = dupprintf("re-encrypt time in minutes must be between %d and %d\n'%s'", 1, 14400, p);
+                goto cleanup;
+            }
+        }
+        if (!pTail) {
+            break;
+        }
+        p = pTail + 1;
+    }
+    cleanup:
+    sfree(cfg);
+    return error;
+}
+
+static void register_power_notifications(void)
+{
+    struct {
+        bool enabled;
+        const GUID *guid;
+    } subscribers[] = {
+        { reencrypt_settings.on_display_off, &GUID_CONSOLE_DISPLAY_STATE },
+        { reencrypt_settings.on_away, &GUID_SYSTEM_AWAYMODE },
+        { reencrypt_settings.on_lid_close, &GUID_LIDSWITCH_STATE_CHANGE },
+        { 0, NULL },
+    };
+    bool someFailed = false;
+    for (int i = 0; subscribers[i].guid != NULL; i++) {
+        if (subscribers[i].enabled) {
+            HPOWERNOTIFY h = RegisterPowerSettingNotification(traywindow, subscribers[i].guid, DEVICE_NOTIFY_WINDOW_HANDLE);
+            if (h == NULL) {
+                someFailed = true;
+            }
+        }
+    }
+    if (someFailed) {
+        MessageBox(NULL, "some of the reencrypt event will not be notified from Windows.",
+            "Pageant error", MB_ICONERROR | MB_OK);
     }
 }
 
@@ -1540,11 +1690,19 @@ static LRESULT CALLBACK TrayWndProc(HWND hwnd, UINT message,
         }
         break;
       case WM_TIMER:
-        if (wParam == TID_ADDSYSTRAY) {
-            KillTimer(hwnd, TID_ADDSYSTRAY);
-            AddTrayIcon(hwnd);
-        }
-        break;
+          switch (wParam) {
+          case TID_ADDSYSTRAY:
+              KillTimer(hwnd, TID_ADDSYSTRAY);
+              AddTrayIcon(hwnd);
+              break;
+          case TID_DEFERRED_REENCRYPT:
+          case TID_REENCRYPT_IDLE:
+          case TID_REENCRYPT_TIMEOUT:
+              KillTimer(hwnd, wParam);
+              gui_reencrypt_all();
+              break;
+          }
+          break;
       case WM_COMMAND:
       case WM_SYSCOMMAND: {
         unsigned command = wParam & ~0xF; /* low 4 bits reserved to Windows */
@@ -1594,8 +1752,7 @@ static LRESULT CALLBACK TrayWndProc(HWND hwnd, UINT message,
             keylist_update();
             break;
           case IDM_REENCRYPT_ALL:
-            pageant_reencrypt_all();
-            keylist_update();
+            gui_reencrypt_all();
             break;
           case IDM_ABOUT:
             if (!aboutbox) {
@@ -1653,6 +1810,41 @@ static LRESULT CALLBACK TrayWndProc(HWND hwnd, UINT message,
         quit_help(hwnd);
         PostQuitMessage(0);
         return 0;
+      case WM_POWERBROADCAST:
+          switch (wParam) {
+          case PBT_APMSUSPEND:
+              if (lParam == 0) { /* reserved must be 0 */
+                  if (reencrypt_settings.on_suspend) {
+                      gui_reencrypt_all();
+                  }
+                  return true;
+              }
+              break;
+          case PBT_POWERSETTINGCHANGE: {
+              const POWERBROADCAST_SETTING *pbcSetting = (const POWERBROADCAST_SETTING *)lParam;
+              if (IsEqualGUID(&pbcSetting->PowerSetting, &GUID_CONSOLE_DISPLAY_STATE)) {
+                  DWORD data = *(const DWORD *)pbcSetting->Data;
+                  if (data == 0 && reencrypt_settings.on_display_off) { /* display is off */
+                      gui_reencrypt_all();
+                  }
+                  return true;
+              } else if (IsEqualGUID(&pbcSetting->PowerSetting, &GUID_SYSTEM_AWAYMODE)) {
+                  DWORD data = *(const DWORD *)pbcSetting->Data;
+                  if (data == 1 && reencrypt_settings.on_away) { /* entering away mode */
+                      gui_reencrypt_all();
+                  }
+                  return true;
+              } else if (IsEqualGUID(&pbcSetting->PowerSetting, &GUID_LIDSWITCH_STATE_CHANGE)) {
+                  ULONG data = *(const ULONG *)pbcSetting->Data;
+                  if (data == 0 && reencrypt_settings.on_lid_close) { /* lid is closed */
+                      gui_reencrypt_all();
+                  }
+                  return true;
+              }
+              break;
+          }
+        }
+        break;
     }
 
     return DefWindowProc(hwnd, message, wParam, lParam);
@@ -1782,14 +1974,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
          * Attempt to get the security API we need.
          */
         if (!got_advapi()) {
-            MessageBox(traywindow,
+            MessageBox(NULL,
                        "Unable to access security APIs. Pageant will\n"
                        "not run, in case it causes a security breach.",
                        "Pageant Fatal Error", MB_ICONERROR | MB_OK);
             return 1;
         }
 #else
-        MessageBox(traywindow,
+        MessageBox(NULL,
                    "This program has been compiled for Win9X and will\n"
                    "not run on NT, in case it causes a security breach.",
                    "Pageant Fatal Error", MB_ICONERROR | MB_OK);
@@ -1882,8 +2074,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 add_keys_encrypted = true;
             } else if (!strcmp(p, "-keylist") || !strcmp(p, "--keylist")) {
                 show_keylist_on_startup = true;
-            } else if (!strcmp(argv[i], "-confirm")) {
+            } else if (!strcmp(p, "-confirm")) {
                 confirm_any_request = 1;
+            } else if (!strncmp(p, "-reencrypt_on=", 14)) {
+                char *error = parse_reencrypt_settings(p + 14);
+                if (error) {
+                    MessageBox(NULL, error, "Pageant command-line syntax error", MB_ICONERROR | MB_OK);
+                    exit(1);
+                }
             } else if (!strcmp(p, "-c")) {
                 /*
                  * If we see `-c', then the rest of the
@@ -1938,7 +2136,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
      */
     if (already_running) {
         if (!command && !added_keys) {
-            MessageBox(traywindow, "Pageant is already running", "Pageant Error",
+            MessageBox(NULL, "Pageant is already running", "Pageant Error",
                        MB_ICONERROR | MB_OK);
         }
         return 0;
@@ -2003,6 +2201,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                               CW_USEDEFAULT, CW_USEDEFAULT,
                               100, 100, NULL, NULL, inst, NULL);
     winselgui_set_hwnd(traywindow);
+    register_power_notifications();
 
     /* Set up a system tray icon */
     AddTrayIcon(traywindow);
@@ -2109,4 +2308,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     cleanup_exit(msg.wParam);
     return msg.wParam;                 /* just in case optimiser complains */
+}
+
+#undef pageant_reencrypt_all
+static void gui_reencrypt_all(void)
+{
+    if (defer_reencrypt_state) {
+        deferred_reencrypt = true;
+        return;
+    }
+    pageant_reencrypt_all();
+    keylist_update();
 }
