@@ -1230,8 +1230,6 @@ static void update_sessions(void)
         return;
 
     if (get_use_inifile()) {
-        tree234* sessions;
-        int i;
         char* buffer;
         int length = 256;
         char* p;
@@ -1250,33 +1248,26 @@ static void update_sessions(void)
             RemoveMenu(session_menu, 0, MF_BYPOSITION);
 
         index_menu = 0;
-
-        sessions = newtree234(strcmp);
-        while(*p != '\0') {
-            if (!strncmp(p, HEADER, sizeof (HEADER) - 1)) {
-                if(strcmp(buf, PUTTY_DEFAULT) != 0) {
-                    strbuf *sb;
-                    sb = strbuf_new();
-                    unescape_registry_key(p + sizeof (HEADER) - 1, sb);
-                    add234(sessions, strbuf_to_str(sb));
+        sb = strbuf_new();
+        while (*p != '\0') {
+            if (!strncmp(p, HEADER, sizeof(HEADER) - 1)) {
+                if (strcmp(buf, PUTTY_DEFAULT) != 0) {
+                    strbuf_clear(sb);
+                    unescape_registry_key(p + sizeof(HEADER) - 1, sb);
+                    memset(&mii, 0, sizeof(mii));
+                    mii.cbSize = sizeof(mii);
+                    mii.fMask = MIIM_TYPE | MIIM_STATE | MIIM_ID;
+                    mii.fType = MFT_STRING;
+                    mii.fState = MFS_ENABLED;
+                    mii.wID = (index_menu * 16) + IDM_SESSIONS_BASE;
+                    mii.dwTypeData = sb->s;
+                    InsertMenuItem(session_menu, index_menu, TRUE, &mii);
+                    index_menu++;
                 }
             }
             p += strlen(p) + 1;
         }
-        for (i = 0; (p = index234(sessions, i)) != NULL; i++) {
-            memset(&mii, 0, sizeof(mii));
-            mii.cbSize = sizeof(mii);
-            mii.fMask = MIIM_TYPE | MIIM_STATE | MIIM_ID;
-            mii.fType = MFT_STRING;
-            mii.fState = MFS_ENABLED;
-            mii.wID = (index_menu * 16) + IDM_SESSIONS_BASE;
-            mii.dwTypeData = p;
-            InsertMenuItem(session_menu, index_menu, TRUE, &mii);
-            index_menu++;
-            free(p);
-        }
-        freetree234(sessions);
-
+        strbuf_free(sb);
         sfree(buffer);
 
         if(index_menu == 0) {
