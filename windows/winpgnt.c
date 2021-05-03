@@ -85,7 +85,7 @@ static filereq *keypath = NULL;
 #define IDM_HELP               0x0070
 #define IDM_ABOUT              0x0080
 #define IDM_PUTTY              0x0090
-#define IDM_CONFIRM_REQUEST    0x00A0
+#define IDM_CONFIRM_REQUEST    0x0210
 #define IDM_SESSIONS_BASE      0x1000
 #define IDM_SESSIONS_MAX       0x2000
 #define PUTTY_REGKEY      "Software\\SimonTatham\\PuTTY\\Sessions"
@@ -2218,7 +2218,6 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     AppendMenu(systray_menu, MF_ENABLED, IDM_VIEWKEYS,
            "&View Keys");
     AppendMenu(systray_menu, MF_ENABLED, IDM_ADDKEY, "Add &Key");
-    AppendMenu(systray_menu, confirm_any_request ? MF_CHECKED : MF_UNCHECKED, IDM_CONFIRM_REQUEST, "&Confirm Any Request");
     AppendMenu(systray_menu, MF_ENABLED, IDM_ADDKEY_ENCRYPTED,
                "Add key (encrypted)");
     AppendMenu(systray_menu, MF_SEPARATOR, 0, 0);
@@ -2226,6 +2225,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                "Remove All Keys");
     AppendMenu(systray_menu, MF_ENABLED, IDM_REENCRYPT_ALL,
                "Re-encrypt All Keys");
+    AppendMenu(systray_menu, MF_SEPARATOR, 0, 0);
+    AppendMenu(systray_menu, confirm_any_request ? MF_CHECKED : MF_UNCHECKED, IDM_CONFIRM_REQUEST, "&Confirm Any Request");
     AppendMenu(systray_menu, MF_SEPARATOR, 0, 0);
     if (has_help())
         AppendMenu(systray_menu, MF_ENABLED, IDM_HELP, "&Help");
