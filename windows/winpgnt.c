@@ -947,6 +947,8 @@ static char *parse_reencrypt_settings(const char *_cfg)
                     value *= 60;
                 } else if (!strcmp(pError, "d")) {
                     value *= 60 * 24;
+                } else {
+                    value = 0;
                 }
             }
             if (value >= 1 && value <= 14400) {
@@ -975,10 +977,9 @@ static void register_power_notifications(void)
         { reencrypt_settings.on_display_off, &GUID_CONSOLE_DISPLAY_STATE },
         { reencrypt_settings.on_away, &GUID_SYSTEM_AWAYMODE },
         { reencrypt_settings.on_lid_close, &GUID_LIDSWITCH_STATE_CHANGE },
-        { 0, NULL },
     };
     bool someFailed = false;
-    for (int i = 0; subscribers[i].guid != NULL; i++) {
+    for (size_t i = 0; i < lenof(subscribers); i++) {
         if (subscribers[i].enabled) {
             HPOWERNOTIFY h = RegisterPowerSettingNotification(traywindow, subscribers[i].guid, DEVICE_NOTIFY_WINDOW_HANDLE);
             if (h == NULL) {
