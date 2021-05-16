@@ -369,6 +369,7 @@ void del_settings(const char *sessionname)
         escape_ini_key(sessionname, sb);
         WritePrivateProfileSection(sb->s, NULL, inifile);
         strbuf_free(sb);
+        remove_session_from_jumplist(sessionname);
         return;
     }
     if (RegOpenKey(HKEY_CURRENT_USER, puttystr, &subkey1) != ERROR_SUCCESS)
