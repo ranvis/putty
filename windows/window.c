@@ -188,7 +188,7 @@ static void wallpaper_prepare_dtimg();
 static void wallpaper_prepare_image();
 static void xtrans_bitmap_changed(void);
 static void xtrans_load_bitmap();
-static void xtrans_init(int reinit);
+static void xtrans_init();
 static void xtrans_refresh();
 static void xtrans_move();
 static void xtrans_size();
@@ -577,6 +577,8 @@ static void wallpaper_prepare_desktop()
     prev_bmp = SelectObject(bg_dc, background_bmp);
     if (shading != 255)
         wallpaper_fill_bgcolor(bg_dc, &rect);
+    /* PaintDesktop() call causes screen update, resulting flicker
+    (or worse, wallpaper itself is kept drawn until the event loop resumes) */
     if (shading != 0)
         PaintDesktop(hdc);
     bf.SourceConstantAlpha = (BYTE)shading;
@@ -759,11 +761,10 @@ static void xtrans_load_bitmap()
 }
 
 
-static void xtrans_init(int reinit)
+static void xtrans_init()
 {
     int wp_mode;
-    if (reinit)
-        xtrans_load_bitmap();
+    xtrans_load_bitmap();
 
     if (conf_get_int(conf, CONF_shading) < 0 || 255 < conf_get_int(conf, CONF_shading)) {
         conf_set_int(conf, CONF_shading, 0);
@@ -1299,11 +1300,6 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
      */
     ShowWindow(wgs.term_hwnd, show);
     SetForegroundWindow(wgs.term_hwnd);
-
-    /* > transparent background patch */
-    xtrans_load_bitmap();
-    xtrans_init(0);
-    /* < */
 
     term_set_focus(term, GetForegroundWindow() == wgs.term_hwnd);
     UpdateWindow(wgs.term_hwnd);
@@ -2968,7 +2964,6 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                 term_notify_palette_changed(term);
 
         	/* > transparent background patch */
-            xtrans_init(1);
         	/* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
 	        if (conf_get_int(conf, CONF_vtmode) == VT_UNICODE && conf_get_int(conf, CONF_transparent_mode))
@@ -5690,6 +5685,7 @@ static void wintw_palette_set(TermWin *win, unsigned start,
     if (start <= OSC4_COLOUR_bg && OSC4_COLOUR_bg < start + ncolours) {
         /* If Default Background changes, we need to ensure any space between
          * the text area and the window border is redrawn. */
+        xtrans_init();
         InvalidateRect(wgs.term_hwnd, NULL, true);
     }
 }
