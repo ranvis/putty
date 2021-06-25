@@ -947,7 +947,7 @@ static char *parse_reencrypt_settings(const char *_cfg)
                     value *= 60;
                 } else if (!strcmp(pError, "d")) {
                     value *= 60 * 24;
-                } else {
+                } else if (*pError) {
                     value = 0;
                 }
             }
