@@ -38,7 +38,7 @@ $(PAMS): %.pam: mkicon.py
 	./mkicon.py $(MODE) $(join $(subst -, ,$(basename $@)),_icon) $@
 
 $(PNGS) $(MONOPNGS) $(TRUEPNGS): %.png: %.pam
-	convert $< $@
+	magick convert $< $@
 
 $(MONOPAMS): %.pam: mkicon.py
 	./mkicon.py -2 $(MODE) $(join $(subst -, ,$(subst -mono,,$(basename $@))),_icon) $@
