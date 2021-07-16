@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+<?if $(var.RealPlatform) = x64 ?>
+  <?define rvFile0411_puttygen_GUID = "70DF5B3B-F432-4374-909F-67D491D048B8" ?>
+  <?define rvFile0411_plink_GUID = "DB3AC720-8D5B-453D-82D7-E8653BAA3A3C" ?>
+  <?define rvFile0411_putty_GUID = "A75DBF6E-F6E9-4010-B921-5AB53680E861" ?>
+  <?define rvFile0411_pageant_GUID = "7E60C963-C1D1-49B0-ADEB-52682A22E531" ?>
+<?elseif $(var.RealPlatform) = x86 ?>
+  <?define rvFile0411_puttygen_GUID = "14A28132-391E-4C65-ABF8-6220CA03A5D1" ?>
+  <?define rvFile0411_plink_GUID = "EA373598-11D0-4AC6-82CD-928606E85589" ?>
+  <?define rvFile0411_putty_GUID = "A83E1D5F-47BD-4E16-B90E-A9382E2DC2A0" ?>
+  <?define rvFile0411_pageant_GUID = "28B3A2D8-98D1-476C-978F-8A6CDCCD9FEB" ?>
+<?elseif $(var.RealPlatform) = Arm ?>
+  <?define rvFile0411_puttygen_GUID = "6FBAAA65-49AE-481D-A2CE-AAA86648064F" ?>
+  <?define rvFile0411_plink_GUID = "B8B3A14B-1E9E-4F96-BC7F-619E6DCFD328" ?>
+  <?define rvFile0411_putty_GUID = "600CB417-D9D2-4DF4-A598-10665E3B3166" ?>
+  <?define rvFile0411_pageant_GUID = "072F9A92-3A52-4921-A18A-8730F8B51FFC" ?>
+<?elseif $(var.RealPlatform) = Arm64 ?>
+  <?define rvFile0411_puttygen_GUID = "1F9A1BDE-0001-4916-BDD8-0F354E84338D" ?>
+  <?define rvFile0411_plink_GUID = "9D5F0463-67DF-403A-8B50-F99D9B6DC21B" ?>
+  <?define rvFile0411_putty_GUID = "83232269-153B-43CD-9BE1-DD37F8886868" ?>
+  <?define rvFile0411_pageant_GUID = "B6FD989F-8D1A-4D3A-B915-00F01F3A5A3D" ?>
+<?endif ?>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+      <Directory Id="rvDir_lang" Name="lang" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="rvDir_lang">
+      <Directory Id="rvDir_0411" Name="0411" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="rvCmp0411">
+      <Component Directory="rvDir_0411" Guid="$(var.rvFile0411_puttygen_GUID)">
+        <File KeyPath="yes" Source="$(var.Srcdir)/windows/lang/0411/puttygen.lng" />
+      </Component>
+      <Component Directory="rvDir_0411" Guid="$(var.rvFile0411_plink_GUID)">
+        <File KeyPath="yes" Source="$(var.Srcdir)/windows/lang/0411/plink.lng" />
+      </Component>
+      <Component Directory="rvDir_0411" Guid="$(var.rvFile0411_putty_GUID)">
+        <File KeyPath="yes" Source="$(var.Srcdir)/windows/lang/0411/putty.lng" />
+      </Component>
+      <Component Directory="rvDir_0411" Guid="$(var.rvFile0411_pageant_GUID)">
+        <File KeyPath="yes" Source="$(var.Srcdir)/windows/lang/0411/pageant.lng" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

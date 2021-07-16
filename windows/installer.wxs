@@ -240,7 +240,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569(v=vs.85).aspx
             <File Id="HelpFile_File"
                   Source="../doc/putty.chm" KeyPath="yes">
               <Shortcut Id="startmenuManual" Directory="ProgramMenuDir"
-                        Name="PuTTY Manual"
+                        Name="!(loc.filename_manual)"
                         Advertise="no" />
             </File>
             <RegistryValue Root="HKLM"
@@ -253,7 +253,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569(v=vs.85).aspx
             <File Id="Website_File"
                   Source="website.url" KeyPath="yes">
               <Shortcut Id="startmenuWebsite" Directory="ProgramMenuDir"
-                        Name="PuTTY Web Site"
+                        Name="!(loc.filename_website)"
                         Advertise="no" />
             </File>
           </Component>
@@ -286,12 +286,12 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569(v=vs.85).aspx
           <Component Id="PPK_Assoc_Component"
                      Guid="$(var.PPK_Assoc_Component_GUID)">
             <ProgId Id="PPK_Assoc_ProgId"
-                    Description="PuTTY Private Key File">
+                    Description="!(loc.extdesc_ppk)">
               <Extension Id="ppk"
                          ContentType="application/x-putty-private-key">
-                <Verb Id="open" Command="Load into Pageant"
+                <Verb Id="open" Command="!(loc.extcmd_load)"
                       TargetFile="Pageant_File" Argument='"%1"'/>
-                <Verb Id="edit" Command="Edit with PuTTYgen"
+                <Verb Id="edit" Command="!(loc.extcmd_edit)"
                       TargetFile="PuTTYgen_File" Argument='"%1"' />
               </Extension>
             </ProgId>
@@ -395,7 +395,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569(v=vs.85).aspx
           Key="SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PuTTY_is1"
           Name="QuietUninstallString" Type="raw" />
     </Property>
-    <Condition Message="A version of PuTTY is already installed on this system using the old Inno Setup installer. Please uninstall that before running the new installer.">
+    <Condition Message="!(loc.msg_inno_found)">
       <![CDATA[Installed OR
                (LEGACYINNOSETUPINSTALLERNATIVE32PROPERTY = "" AND
                 LEGACYINNOSETUPINSTALLER32ON64PROPERTY = "")]]>
@@ -426,7 +426,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569(v=vs.85).aspx
         bother with an installer at all.)
     -->
     <Feature Id="FilesFeature" Level="1" Absent="disallow" AllowAdvertise="no"
-             Title="Install PuTTY files">
+             Title="!(loc.feature_putty)">
       <ComponentRef Id="PuTTY_Component" />
       <ComponentRef Id="Pageant_Component" />
       <ComponentRef Id="PSFTP_Component" />
@@ -440,17 +440,23 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569(v=vs.85).aspx
       <ComponentRef Id="ProgramMenuDir" />
     </Feature>
     <Feature Id="DesktopFeature" Level="2" Absent="allow" AllowAdvertise="no"
-             Title="Add shortcut to PuTTY on the Desktop">
+             Title="!(loc.feature_shortcut)">
       <ComponentRef Id="Desktop_Shortcut_Component" />
     </Feature>
     <Feature Id="PathFeature" Level="1" Absent="allow" AllowAdvertise="no"
-             Title="Put install directory on the PATH for command prompts">
+             Title="!(loc.feature_path)">
       <ComponentRef Id="Path_Component" />
     </Feature>
     <Feature Id="PPKFeature" Level="1" Absent="allow" AllowAdvertise="no"
-             Title="Associate .PPK files with PuTTYgen and Pageant">
+             Title="!(loc.feature_assoc)">
       <ComponentRef Id="PPK_Assoc_Component" />
     </Feature>
+
+<!--<lang>
+    <Feature Id="rvLang0411Feature" Title="!(loc.rv_lang_0411)" Level="1" Absent="allow" AllowAdvertise="no">
+      <ComponentGroupRef Id="rvCmp0411" />
+    </Feature>
+<lang>-->
 
     <!--
         Installer user interface.
@@ -573,7 +579,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569(v=vs.85).aspx
         Offer to display README after installation.
     -->
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT"
-              Value="View README file" />
+              Value="!(loc.exit_readme)" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
     <Property Id="WixShellExecTarget" Value="[#README_File]" />
     <CustomAction Id="LaunchApplication" BinaryKey="WixCA"

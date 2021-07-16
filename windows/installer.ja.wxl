@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="ja-JP" Codepage="932"
+  xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="feature_putty"
+    Overridable="yes">PuTTY ツールのインストール</String>
+  <String Id="feature_shortcut"
+    Overridable="yes">PuTTY のショートカットをデスクトップに追加</String>
+  <String Id="feature_path"
+    Overridable="yes">インストールディレクトリを PATH 環境変数に追加</String>
+  <String Id="feature_assoc"
+    Overridable="yes">.PPK ファイルを PuTTYgen と Pageant に関連付ける</String>
+  <String Id="filename_manual"
+    Overridable="yes">PuTTY マニュアル</String>
+  <String Id="filename_website"
+    Overridable="yes">PuTTY ウェブサイト</String>
+  <String Id="extdesc_ppk"
+    Overridable="yes">PuTTY 秘密鍵</String>
+  <String Id="extcmd_load"
+    Overridable="yes">Pageant に読み込む</String>
+  <String Id="extcmd_edit"
+    Overridable="yes">PuTTYgen で編集する</String>
+  <String Id="msg_inno_found"
+    Overridable="yes">古い Inno セットアップインストーラーですでに別に PuTTY がインストールされています。それをアンインストールしてからこのインストーラーを実行してください。</String>
+  <String Id="exit_readme"
+    Overridable="yes">README ファイルを読む</String>
+
+  <String Id="rv_lang_0411"
+    Overridable="yes">日本語 言語ファイル</String>
+</WixLocalization>

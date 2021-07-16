@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-US" Codepage="1252"
+  xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="feature_putty"
+    Overridable="yes">Install PuTTY files</String>
+  <String Id="feature_shortcut"
+    Overridable="yes">Add shortcut to PuTTY on the Desktop</String>
+  <String Id="feature_path"
+    Overridable="yes">Put install directory on the PATH for command prompts</String>
+  <String Id="feature_assoc"
+    Overridable="yes">Associate .PPK files with PuTTYgen and Pageant</String>
+  <String Id="filename_manual"
+    Overridable="yes">PuTTY Manual</String>
+  <String Id="filename_website"
+    Overridable="yes">PuTTY Web Site</String>
+  <String Id="extdesc_ppk"
+    Overridable="yes">PuTTY Private Key File</String>
+  <String Id="extcmd_load"
+    Overridable="yes">Load into Pageant</String>
+  <String Id="extcmd_edit"
+    Overridable="yes">Edit with PuTTYgen</String>
+  <String Id="msg_inno_found"
+    Overridable="yes">A version of PuTTY is already installed on this system using the old Inno Setup installer. Please uninstall that before running the new installer.</String>
+  <String Id="exit_readme"
+    Overridable="yes">View README file</String>
+
+  <String Id="rv_lang_0411"
+    Overridable="yes">Japanese language file</String>
+</WixLocalization>
