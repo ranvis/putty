@@ -844,12 +844,12 @@ static PageantAsyncOp *pageant_make_op(
         else
             pageant_client_log(pc, reqid, "no signature flags");
 
-        strbuf_free(sb); /* no immediate response */
-
         if (isRemoteCall && !accept_agent_request_pk(type, pk)) {
             fail("user declined");
             goto responded;
         }
+
+        strbuf_free(sb); /* no immediate response */
 
         PageantSignOp *so = snew(PageantSignOp);
         so->pao.vt = &signop_vtable;
