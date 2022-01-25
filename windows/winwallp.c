@@ -1,6 +1,6 @@
 #include "putty.h"
 #include "winwallp.h"
-#include "winseat.h"
+#include "win-gui-seat.h"
 
 extern Conf *conf;
 
