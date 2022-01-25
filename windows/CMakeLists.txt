@@ -49,7 +49,7 @@ add_sources_from_current_dir(sshcommon
 add_sources_from_current_dir(sshclient
   winl10n.c
   agent-client.c gss.c sharing.c)
-# winl10n must be used for CLI too. l10ndummy cannot query connection sharing with text translation.
+# winl10n must be used for CLI too. nol10n.c cannot query connection sharing with text translation.
 add_sources_from_current_dir(sftpclient
   sftp.c)
 add_sources_from_current_dir(otherbackends
@@ -75,6 +75,7 @@ add_library(guimisc STATIC
 add_executable(pageant
   pageant.c
   help.c
+  winl10n.c
   pageant.rc)
 add_dependencies(pageant generated_licence_h)
 target_link_libraries(pageant
@@ -117,6 +118,7 @@ add_executable(puttytel
   window.c
   putty.c
   help.c
+  winl10n.c
   ${CMAKE_SOURCE_DIR}/stubs/nogss.c
   ${CMAKE_SOURCE_DIR}/stubs/norand.c
   ${CMAKE_SOURCE_DIR}/proxy/nocproxy.c
@@ -177,6 +179,8 @@ else()
 endif()
 
 add_executable(test_split_into_argv
+  ${CMAKE_SOURCE_DIR}/stubs/nol10n.c
+  ${CMAKE_SOURCE_DIR}/utils/dupprintf.c
   utils/split_into_argv.c)
 target_compile_definitions(test_split_into_argv PRIVATE TEST)
 target_link_libraries(test_split_into_argv utils ${platform_libraries})

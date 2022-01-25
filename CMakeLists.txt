@@ -70,6 +70,8 @@ add_library(otherbackends STATIC
 add_subdirectory(otherbackends)
 
 add_executable(testcrypt
+  stubs/nol10n.c
+  utils/dupprintf.c
   test/testcrypt.c sshpubk.c ssh/crc-attack-detector.c)
 target_link_libraries(testcrypt
   keygen crypto utils ${platform_libraries})
@@ -130,6 +132,7 @@ installed_program(psftp)
 add_executable(psocks
   ${platform}/psocks.c
   psocks.c
+  stubs/nol10n.c
   stubs/norand.c
   proxy/nocproxy.c
   proxy/nosshproxy.c
