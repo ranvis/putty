@@ -719,35 +719,34 @@ int xWideCharToMultiByte(UINT, DWORD, LPCWSTR, int, LPSTR, int,
 /*
  * Exports from l10n.c
  */
-int xMessageBoxA(HWND, LPCSTR, LPCSTR, UINT);
-HWND xCreateWindowExA(DWORD, LPCSTR, LPCSTR, DWORD, int, int,
-                      int, int, HWND, HMENU, HINSTANCE, LPVOID);
-HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
-INT_PTR xDialogBoxParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
-HWND xCreateDialogParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
-#define MessageBoxA xMessageBoxA
-#define CreateWindowExA xCreateWindowExA
-#define CreateWindowExW xCreateWindowExW
-#define DialogBoxParamA xDialogBoxParamA
-#define CreateDialogParamA xCreateDialogParamA
-int xsprintf(char*,const char*, ...);
-int xvsnprintf(char*,int,const char*, va_list args);
-char *xdupprintf(const char *format, ...);
-//char *xdupvprintf(const char *format, va_list ap);
-int xGetOpenFileNameA(OPENFILENAMEA* ofn);
-int xGetSaveFileNameA(OPENFILENAMEA* ofn);
-#define sprintf xsprintf
+int l10nMessageBoxA(HWND, LPCSTR, LPCSTR, UINT);
+HWND l10nCreateWindowExA(DWORD, LPCSTR, LPCSTR, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID);
+HWND l10nCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
+INT_PTR l10nDialogBoxParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
+HWND l10nCreateDialogParamA(HINSTANCE, LPCSTR, HWND, DLGPROC, LPARAM);
+int l10nGetOpenFileNameA(OPENFILENAMEA* ofn);
+int l10nGetSaveFileNameA(OPENFILENAMEA* ofn);
+#define MessageBoxA l10nMessageBoxA
+#define CreateWindowExA l10nCreateWindowExA
+#define CreateWindowExW l10nCreateWindowExW
+#define DialogBoxParamA l10nDialogBoxParamA
+#define CreateDialogParamA l10nCreateDialogParamA
+#define GetOpenFileNameA l10nGetOpenFileNameA
+#define GetSaveFileNameA l10nGetSaveFileNameA
+int l10n_sprintf(char*,const char*, ...);
+int l10n_vsnprintf(char*,int,const char*, va_list args);
+char *l10n_dupprintf(const char *format, ...);
+//char *l10n_dupvprintf(const char *format, va_list ap);
+#define sprintf l10n_sprintf
 #if defined _WINDOWS && !defined __WINE__ && _MSC_VER < 1900
-#define _vsnprintf xvsnprintf
+#define _vsnprintf l10n_vsnprintf
 typedef WCHAR *PZZWSTR;
 #else//_WINDOWS
 #define HAS_VSNPRINTF
-#define vsnprintf xvsnprintf
+#define vsnprintf l10n_vsnprintf
 #endif//_WINDOWS
-#define dupprintf xdupprintf
-//#define dupvprintf xdupvprintf
-#define GetOpenFileNameA xGetOpenFileNameA
-#define GetSaveFileNameA xGetSaveFileNameA
+#define dupprintf l10n_dupprintf
+//#define dupvprintf l10n_dupvprintf
 HFONT l10n_getfont (HFONT);
 void l10n_created_window(HWND);
 BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text);

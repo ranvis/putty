@@ -565,7 +565,7 @@ static INT_PTR CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
 }
 
 #undef MessageBoxA
-int xMessageBoxA(HWND hWnd, LPCSTR text, LPCSTR caption, UINT type)
+int l10nMessageBoxA(HWND hWnd, LPCSTR text, LPCSTR caption, UINT type)
 {
     WCHAR textw[256], captionw[256];
 
@@ -577,7 +577,7 @@ int xMessageBoxA(HWND hWnd, LPCSTR text, LPCSTR caption, UINT type)
 }
 
 #undef CreateWindowExA
-HWND xCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a6,
+HWND l10nCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a6,
     int a7, int a8, HWND a9, HMENU a10, HINSTANCE a11, LPVOID a12)
 {
     HWND r;
@@ -597,7 +597,7 @@ HWND xCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a6,
 }
 
 #undef CreateWindowExW
-HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle,
+HWND l10nCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle,
     int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance,
     LPVOID lpParam)
 {
@@ -619,7 +619,7 @@ HWND xCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName
 }
 
 #undef DialogBoxParamA
-INT_PTR xDialogBoxParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5)
+INT_PTR l10nDialogBoxParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5)
 {
     if (!getEnabled())
         return DialogBoxParamA(a1, a2, a3, a4, a5);
@@ -628,7 +628,7 @@ INT_PTR xDialogBoxParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5
 }
 
 #undef CreateDialogParamA
-HWND xCreateDialogParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5)
+HWND l10nCreateDialogParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM a5)
 {
     HWND r;
 
@@ -666,7 +666,7 @@ HFONT l10n_getfont(HFONT f)
     return f;
 }
 
-int xsprintf(char *buffer, const char *format, ...)
+int l10n_sprintf(char *buffer, const char *format, ...)
 {
     int r;
     char format2[1024];
@@ -687,7 +687,7 @@ int xsprintf(char *buffer, const char *format, ...)
 #else
 #undef vsnprintf
 #endif
-int xvsnprintf(char *buffer, int size, const char *format, va_list args)
+int l10n_vsnprintf(char *buffer, int size, const char *format, va_list args)
 {
     char format2[1024];
     if (getEnabled()) {
@@ -698,7 +698,7 @@ int xvsnprintf(char *buffer, int size, const char *format, va_list args)
 }
 
 #undef dupvprintf
-char *xdupprintf(const char *format, ...)
+char *l10n_dupprintf(const char *format, ...)
 {
     char *r;
     char format2[1024];
@@ -730,13 +730,13 @@ static int getOpenSaveFilename(OPENFILENAME *ofn, int (WINAPI *f)(OPENFILENAME *
 }
 
 #undef GetOpenFileNameA
-int xGetOpenFileNameA(OPENFILENAMEA *ofn)
+int l10nGetOpenFileNameA(OPENFILENAMEA *ofn)
 {
     return getOpenSaveFilename(ofn, GetOpenFileNameA);
 }
 
 #undef GetSaveFileNameA
-int xGetSaveFileNameA(OPENFILENAMEA *ofn)
+int l10nGetSaveFileNameA(OPENFILENAMEA *ofn)
 {
     return getOpenSaveFilename(ofn, GetSaveFileNameA);
 }

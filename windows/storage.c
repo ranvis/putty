@@ -74,7 +74,7 @@ static const char HEADER[] = "Session:";
 
 static void escape_ini_key(const char *in, strbuf *out)
 {
-    strbuf_catf(out, HEADER);
+    put_dataz(out, HEADER);
     escape_registry_key(in, out);
 }
 

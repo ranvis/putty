@@ -6,7 +6,7 @@ int get_l10n_setting(const char* keyname, char* buf, int size)
     return 0;
 }
 
-int xsprintf(char* buffer, const char* format, ...)
+int l10n_sprintf(char* buffer, const char* format, ...)
 {
     int r;
     va_list args;
@@ -22,12 +22,12 @@ int xsprintf(char* buffer, const char* format, ...)
 #else
 #undef vsnprintf
 #endif
-int xvsnprintf(char* buffer, int size, const char* format, va_list args)
+int l10n_vsnprintf(char* buffer, int size, const char* format, va_list args)
 {
   return vsnprintf(buffer, size, format, args);
 }
 
-char *xdupprintf(const char *format, ...)
+char *l10n_dupprintf(const char *format, ...)
 {
     char *r;
     va_list args;
