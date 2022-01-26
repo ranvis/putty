@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include "misc.h"
 
 int get_l10n_setting(const char* keyname, char* buf, int size)
 {
