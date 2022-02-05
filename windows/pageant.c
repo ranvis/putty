@@ -2064,7 +2064,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             openssh_config_file = val;
         } else if (match_opt("-confirm")) {
             confirm_any_request = 1;
-        } else if (match_optval("-reencrypt_on")) {
+        } else if (match_optval("-reencrypt-on", "-reencrypt_on")) {
             char *error = parse_reencrypt_settings(val);
             if (error) {
                 opt_error(error);
