@@ -111,6 +111,7 @@ be_list(plink Plink SSH SERIAL OTHERBACKENDS)
 target_link_libraries(plink
   eventloop noterminal console sshclient otherbackends settings network crypto
   utils
+  iso2022
   ${platform_libraries})
 installed_program(plink)
 
@@ -119,6 +120,7 @@ add_executable(pscp
 be_list(pscp PSCP SSH)
 target_link_libraries(pscp
   sftpclient eventloop console sshclient settings network crypto utils
+  iso2022
   ${platform_libraries})
 installed_program(pscp)
 
@@ -127,6 +129,7 @@ add_executable(psftp
 be_list(psftp PSFTP SSH)
 target_link_libraries(psftp
   sftpclient eventloop console sshclient settings network crypto utils
+  iso2022
   ${platform_libraries})
 installed_program(psftp)
 
@@ -140,6 +143,7 @@ add_executable(psocks
   ssh/portfwd.c)
 target_link_libraries(psocks
   eventloop console network utils
+  iso2022
   ${platform_libraries})
 
 foreach(subdir ${platform} ${extra_dirs})

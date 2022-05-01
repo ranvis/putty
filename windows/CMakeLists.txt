@@ -108,6 +108,7 @@ add_dependencies(putty generated_licence_h)
 target_link_libraries(putty
   guiterminal guimisc eventloop sshclient otherbackends settings network crypto
   utils
+  iso2022
   ${platform_libraries})
 set_target_properties(putty PROPERTIES
   WIN32_EXECUTABLE ON
@@ -128,6 +129,7 @@ be_list(puttytel PuTTYtel SERIAL OTHERBACKENDS)
 add_dependencies(puttytel generated_licence_h)
 target_link_libraries(puttytel
   guiterminal guimisc eventloop otherbackends settings network utils
+  iso2022
   ${platform_libraries})
 set_target_properties(puttytel PROPERTIES
   WIN32_EXECUTABLE ON
