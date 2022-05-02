@@ -20,25 +20,24 @@ xMultiByteToWideChar (UINT a1, DWORD a2, LPCSTR a3, int a4, LPWSTR a5, int a6)
   a6--;
   for (i = 0 ; i < a4 ; i++)
     {
+      unsigned long min_w;
       c = a3[i];
       if ((c & 0x80) == 0)
-        j = 1, w = c;
+        j = 1, min_w = 0x0000, w = c;
       else if ((c & 0xe0) == 0xc0)
-        j = 2, w = c & 0x1f;
+        j = 2, min_w = 0x0080, w = c & 0x1f;
       else if ((c & 0xf0) == 0xe0)
-        j = 3, w = c & 0x0f;
+        j = 3, min_w = 0x0800, w = c & 0x0f;
       else if ((c & 0xf8) == 0xf0)
-        j = 4, w = c & 0x07;
-      else if ((c & 0xfc) == 0xf8)
-        j = 5, w = c & 0x03;
-      else if ((c & 0xfe) == 0xfc)
-        j = 6, w = c & 0x01;
-      else
+        j = 4, min_w = 0x10000, w = c & 0x07;
+      else  /* invalid */
         continue;
       if (i + j <= a4)
         {
           while (--j)
             w = (w << 6) | (a3[++i] & 0x3f);
+          if (w < min_w || (w >= 0xd800 && w <= 0xdfff))  /* ill-fromed */
+            continue;
           if (w >= 0x10000) {
             if (k + 1 >= a6)
               break;
