@@ -579,6 +579,7 @@ void dll_hijacking_protection(void);
 const char *get_system_dir(void);
 HMODULE load_system32_dll(const char *libname);
 const char *win_strerror(int error);
+bool should_have_security(void);
 void restrict_process_acl(void);
 bool restricted_acl(void);
 void escape_registry_key(const char *in, strbuf *out);
@@ -611,7 +612,6 @@ void EnableSizeTip(bool bEnable);
 /*
  * Exports from unicode.c.
  */
-struct unicode_data;
 void init_ucs(Conf *, struct unicode_data *);
 
 /*
@@ -805,5 +805,8 @@ AuxMatchOpt aux_match_opt_init(int argc, char **argv, int start_index,
 bool aux_match_arg(AuxMatchOpt *amo, char **val);
 bool aux_match_opt(AuxMatchOpt *amo, char **val, const char *optname, ...);
 bool aux_match_done(AuxMatchOpt *amo);
+
+char *save_screenshot(HWND hwnd, const char *outfile);
+void gui_terminal_ready(HWND hwnd, Seat *seat, Backend *backend);
 
 #endif /* PUTTY_WINDOWS_PLATFORM_H */

@@ -160,6 +160,7 @@ struct GtkFrontend {
     Ldisc *ldisc;
     Backend *backend;
     Terminal *term;
+    cmdline_get_passwd_input_state cmdline_get_passwd_state;
     LogContext *logctx;
     bool exited;
     struct unicode_data ucsdata;
@@ -343,7 +344,7 @@ static SeatPromptResult gtk_seat_get_userpass_input(Seat *seat, prompts_t *p)
 {
     GtkFrontend *inst = container_of(seat, GtkFrontend, seat);
     SeatPromptResult spr;
-    spr = cmdline_get_passwd_input(p);
+    spr = cmdline_get_passwd_input(p, &inst->cmdline_get_passwd_state, true);
     if (spr.kind == SPRK_INCOMPLETE)
         spr = term_get_userpass_input(inst->term, p);
     return spr;
@@ -736,10 +737,8 @@ static void drawing_area_setup(GtkFrontend *inst, int width, int height)
     new_scale = 1;
 #endif
 
-    int new_backing_w = w * inst->font_width + 2*inst->window_border;
-    int new_backing_h = h * inst->font_height + 2*inst->window_border;
-    new_backing_w *= new_scale;
-    new_backing_h *= new_scale;
+    int new_backing_w = width * new_scale;
+    int new_backing_h = height * new_scale;
 
     if (inst->backing_w != new_backing_w || inst->backing_h != new_backing_h)
         inst->drawing_area_setup_needed = true;
@@ -2164,6 +2163,8 @@ static gboolean button_internal(GtkFrontend *inst, GdkEventButton *event)
     }
 
     if (event->button == 3 && ctrl) {
+        /* Just in case this happened in mid-select */
+        term_cancel_selection_drag(inst->term);
 #if GTK_CHECK_VERSION(3,22,0)
         gtk_menu_popup_at_pointer(GTK_MENU(inst->menu), (GdkEvent *)event);
 #else
@@ -2477,9 +2478,7 @@ static void compute_whole_window_size(GtkFrontend *inst,
 static void gtkwin_deny_term_resize(void *vctx)
 {
     GtkFrontend *inst = (GtkFrontend *)vctx;
-    if (inst->term)
-        term_size(inst->term, inst->term->rows, inst->term->cols,
-                  inst->term->savelines);
+    drawing_area_setup_simple(inst);
 }
 
 static void gtkwin_request_resize(TermWin *tw, int w, int h)
@@ -3756,16 +3755,12 @@ static void draw_stretch_after(GtkFrontend *inst, int x, int y,
 
 static void draw_backing_rect(GtkFrontend *inst)
 {
-    int w, h;
-
     if (!win_setup_draw_ctx(&inst->termwin))
         return;
 
-    w = inst->width * inst->font_width + 2*inst->window_border;
-    h = inst->height * inst->font_height + 2*inst->window_border;
     draw_set_colour(inst, 258, false);
-    draw_rectangle(inst, true, 0, 0, w, h);
-    draw_update(inst, 0, 0, w, h);
+    draw_rectangle(inst, true, 0, 0, inst->backing_w, inst->backing_h);
+    draw_update(inst, 0, 0, inst->backing_w, inst->backing_h);
     win_free_draw_ctx(&inst->termwin);
 }
 
@@ -4512,7 +4507,7 @@ void set_geom_hints(GtkFrontend *inst)
      * So instead, I simply avoid setting geometry hints at all on any
      * GDK backend other than X11, and hopefully that's a workaround.
      */
-#if GTK_CHECK_VERSION(3,0,0)
+#if GTK_CHECK_VERSION(3,0,0) && !defined NOT_X_WINDOWS
     if (!GDK_IS_X11_DISPLAY(gdk_display_get_default()))
         return;
 #endif
@@ -5110,6 +5105,8 @@ static void start_backend(GtkFrontend *inst)
 {
     const struct BackendVtable *vt;
     char *error, *realhost;
+
+    inst->cmdline_get_passwd_state = cmdline_get_passwd_input_state_new;
 
     vt = select_backend(inst->conf);
 

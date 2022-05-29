@@ -99,6 +99,7 @@ static void sk_proxy_close (Socket *s)
     ProxySocket *ps = container_of(s, ProxySocket, sock);
 
     sk_close(ps->sub_socket);
+    sk_addr_free(ps->proxy_addr);
     sk_addr_free(ps->remote_addr);
     proxy_negotiator_cleanup(ps);
     bufchain_clear(&ps->output_from_negotiator);
@@ -221,6 +222,23 @@ static void proxy_negotiate(ProxySocket *ps)
         proxy_negotiator_cleanup(ps);
         plug_closing_user_abort(ps->plug);
         return;
+    }
+
+    if (ps->pn->reconnect) {
+        sk_close(ps->sub_socket);
+        SockAddr *proxy_addr = sk_addr_dup(ps->proxy_addr);
+        ps->sub_socket = sk_new(proxy_addr, ps->proxy_port,
+                                ps->proxy_privport, ps->proxy_oobinline,
+                                ps->proxy_nodelay, ps->proxy_keepalive,
+                                &ps->plugimpl);
+        ps->pn->reconnect = false;
+        /* If the negotiator has asked us to reconnect, they are
+         * expecting that on the next call their input queue will
+         * consist entirely of data from the _new_ connection, without
+         * any remaining data buffered from the old one. (If they'd
+         * wanted the latter, they could have read it out of the input
+         * queue before asking us to close the connection.) */
+        bufchain_clear(&ps->pending_input_data);
     }
 
     while (bufchain_size(&ps->output_from_negotiator)) {
@@ -601,10 +619,16 @@ Socket *new_connection(SockAddr *addr, const char *hostname,
         /* create the actual socket we will be using,
          * connected to our proxy server and port.
          */
-        ps->sub_socket = sk_new(proxy_addr,
-                                conf_get_int(conf, CONF_proxy_port),
-                                privport, oobinline,
-                                nodelay, keepalive, &ps->plugimpl);
+        ps->proxy_addr = sk_addr_dup(proxy_addr);
+        ps->proxy_port = conf_get_int(conf, CONF_proxy_port);
+        ps->proxy_privport = privport;
+        ps->proxy_oobinline = oobinline;
+        ps->proxy_nodelay = nodelay;
+        ps->proxy_keepalive = keepalive;
+        ps->sub_socket = sk_new(proxy_addr, ps->proxy_port,
+                                ps->proxy_privport, ps->proxy_oobinline,
+                                ps->proxy_nodelay, ps->proxy_keepalive,
+                                &ps->plugimpl);
         if (sk_socket_error(ps->sub_socket) != NULL)
             return &ps->sock;
 

@@ -150,8 +150,6 @@ void modalfatalbox(const char *fmt, ...)
     exit(1);
 }
 
-static bool has_security;
-
 struct PassphraseProcStruct {
     bool modal;
     const char *help_topic;
@@ -1497,7 +1495,7 @@ static char *answer_filemapping_message(const char *mapname)
     debug("maphandle = %p\n", maphandle);
 #endif
 
-    if (has_security) {
+    if (should_have_security()) {
         DWORD retd;
 
         if ((expectedsid = get_user_sid()) == NULL) {
@@ -1938,6 +1936,23 @@ static NORETURN void opt_error(const char *fmt, ...)
     exit(1);
 }
 
+#ifdef LEGACY_WINDOWS
+BOOL sw_PeekMessage(LPMSG msg, HWND hwnd, UINT min, UINT max, UINT remove)
+{
+    static bool unicode_unavailable = false;
+    if (!unicode_unavailable) {
+        BOOL ret = PeekMessageW(msg, hwnd, min, max, remove);
+        if (!ret && GetLastError() == ERROR_CALL_NOT_IMPLEMENTED)
+            unicode_unavailable = true; /* don't try again */
+        else
+            return ret;
+    }
+    return PeekMessageA(msg, hwnd, min, max, remove);
+}
+#else
+#define sw_PeekMessage PeekMessageW
+#endif
+
 int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 {
     MSG msg;
@@ -1959,14 +1974,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     hinst = inst;
 
-    /*
-     * Determine whether we're an NT system (should have security
-     * APIs) or a non-NT system (don't do security).
-     */
-    init_winver();
-    has_security = (osPlatformId == VER_PLATFORM_WIN32_NT);
-
-    if (has_security) {
+    if (should_have_security()) {
         /*
          * Attempt to get the security API we need.
          */
@@ -2074,8 +2082,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
              * If we see `-c', then the rest of the command line
              * should be treated as a command to be spawned.
              */
-            if (amo.index < amo.argc-1)
-                command = argstart[amo.index + 1];
+            if (amo.index < amo.argc)
+                command = argstart[amo.index];
             else
                 command = "";
             break;
@@ -2121,39 +2129,42 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         /*
          * Set up a named-pipe listener.
          */
-        Plug *pl_plug;
         wpc->plc.vt = &winpgnt_vtable;
         wpc->plc.suppress_logging = true;
-        struct pageant_listen_state *pl =
-            pageant_listener_new(&pl_plug, &wpc->plc);
-        char *pipename = agent_named_pipe_name();
-        Socket *sock = new_named_pipe_listener(pipename, pl_plug);
-        if (sk_socket_error(sock)) {
-            char *err = dupprintf("Unable to open named pipe at %s "
-                                  "for SSH agent:\n%s", pipename,
-                                  sk_socket_error(sock));
-            MessageBox(NULL, err, "Pageant Error", MB_ICONERROR | MB_OK);
-            return 1;
-        }
-        pageant_listener_got_socket(pl, sock);
-
-        /*
-         * If we've been asked to write out an OpenSSH config file
-         * pointing at the named pipe, do so.
-         */
-        if (openssh_config_file) {
-            FILE *fp = fopen(openssh_config_file, "w");
-            if (!fp) {
-                char *err = dupprintf("Unable to write OpenSSH config file "
-                                      "to %s", openssh_config_file);
+        if (should_have_security()) {
+            Plug *pl_plug;
+            struct pageant_listen_state *pl =
+                pageant_listener_new(&pl_plug, &wpc->plc);
+            char *pipename = agent_named_pipe_name();
+            Socket *sock = new_named_pipe_listener(pipename, pl_plug);
+            if (sk_socket_error(sock)) {
+                char *err = dupprintf("Unable to open named pipe at %s "
+                                      "for SSH agent:\n%s", pipename,
+                                      sk_socket_error(sock));
                 MessageBox(NULL, err, "Pageant Error", MB_ICONERROR | MB_OK);
                 return 1;
             }
-            fprintf(fp, "IdentityAgent %s\n", pipename);
-            fclose(fp);
-        }
+            pageant_listener_got_socket(pl, sock);
 
-        sfree(pipename);
+            /*
+             * If we've been asked to write out an OpenSSH config file
+             * pointing at the named pipe, do so.
+             */
+            if (openssh_config_file) {
+                FILE *fp = fopen(openssh_config_file, "w");
+                if (!fp) {
+                    char *err = dupprintf("Unable to write OpenSSH config "
+                                          "file to %s", openssh_config_file);
+                    MessageBox(NULL, err, "Pageant Error",
+                               MB_ICONERROR | MB_OK);
+                    return 1;
+                }
+                fprintf(fp, "IdentityAgent %s\n", pipename);
+                fclose(fp);
+            }
+
+            sfree(pipename);
+        }
 
         /*
          * Set up the window class for the hidden window that receives
@@ -2319,7 +2330,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             handle_wait_activate(hwl, n - WAIT_OBJECT_0);
         handle_wait_list_free(hwl);
 
-        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+        while (sw_PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
             if (msg.message == WM_QUIT)
                 goto finished;         /* two-level break */
 

@@ -3874,6 +3874,19 @@ static void term_out(Terminal *term, bool called_from_term_data)
                 }
                 break;
               case '\007': {            /* BEL: Bell */
+                if (term->termstate == SEEN_OSC ||
+                    term->termstate == SEEN_OSC_W) {
+                    /*
+                     * In an OSC context, BEL is one of the ways to terminate
+                     * the whole sequence. We process it as such even if we
+                     * haven't got into the final OSC_STRING state yet, so that
+                     * OSC sequences without a string will be handled cleanly.
+                     */
+                    do_osc(term);
+                    term->termstate = TOPLEVEL;
+                    break;
+                }
+
                 struct beeptime *newbeep;
                 unsigned long ticks;
 
@@ -7351,6 +7364,23 @@ void term_mouse(Terminal *term, Mouse_Button braw, Mouse_Button bcooked,
     term_schedule_update(term);
 }
 
+void term_cancel_selection_drag(Terminal *term)
+{
+    /*
+     * In unusual circumstances, a mouse drag might be interrupted by
+     * something that steals the rest of the mouse gesture. An example
+     * is the GTK popup menu appearing. In that situation, we'll never
+     * receive the MA_RELEASE that finishes the DRAGGING state, which
+     * means terminal output could be suppressed indefinitely. Call
+     * this function from the front end in such situations to restore
+     * sensibleness.
+     */
+    if (term->selstate == DRAGGING)
+        term->selstate = NO_SELECTION;
+    term_out(term, false);
+    term_schedule_update(term);
+}
+
 static int shift_bitmap(bool shift, bool ctrl, bool alt, bool *consumed_alt)
 {
     int bitmap = (shift ? 1 : 0) + (alt ? 2 : 0) + (ctrl ? 4 : 0);
@@ -7425,7 +7455,7 @@ int format_function_key(char *buf, Terminal *term, int key_number,
     assert(key_number < lenof(key_number_to_tilde_code));
 
     int index = key_number;
-    if (term->funky_type != FUNKY_XTERM_216) {
+    if (term->funky_type != FUNKY_XTERM_216 && term->funky_type != FUNKY_SCO) {
         if (shift && index <= 10) {
             shift = false;
             index += 10;
@@ -7729,7 +7759,8 @@ static inline SeatPromptResult signal_prompts_t(Terminal *term, prompts_t *p,
 {
     assert(p->callback && "Asynchronous userpass input requires a callback");
     queue_toplevel_callback(p->callback, p->callback_ctx);
-    ldisc_enable_prompt_callback(term->ldisc, NULL);
+    if (term->ldisc)
+        ldisc_enable_prompt_callback(term->ldisc, NULL);
     p->spr = spr;
     return spr;
 }
