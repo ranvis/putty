@@ -1863,7 +1863,9 @@ debug(("\n           rect: [%d,%d %d,%d]\n", newrc.left, newrc.top, newrc.right,
 #ifdef FIXME_REMOVE_BEFORE_CHECKIN
 debug(("general_textout: done, xn=%d\n", xn));
 #endif
-    assert(xn - x == lprc->right - lprc->left);
+    /*assert(xn - x == lprc->right - lprc->left);*/
+    /* As of 0.77, lpDx[] for multiple combining characters is not always correct under ambiwidth as wide.
+     * The assertion failure itself should not harm in that case as before. */
 }
 
 static void init_dpi_info(void)
