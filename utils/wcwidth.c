@@ -671,9 +671,7 @@ int mk_wcswidth(const unsigned int *pwcs, size_t n)
  * mk_wcswidth(), except that characters in the East Asian
  * Ambiguous (A) category as defined in Unicode Technical Report #11
  * have a column width of 2. This variant might be useful for users of
- * CJK multibyte encodings who want to migrate to UCS without changing
- * the singlebyte terminal character-width behaviour. It is not
- * otherwise suitable to use.
+ * CJK glyphs for its terminal character-width.
  */
 int mk_wcwidth_cjk(unsigned int ucs)
 {
@@ -683,7 +681,7 @@ int mk_wcwidth_cjk(unsigned int ucs)
    * https://www.unicode.org/Public/14.0.0/ucd/
 
 use strict;
-my ($fp, %chrs, %amb);
+my ($fp, %chrs);
 open($fp, '<', 'EastAsianWidth.txt') or die $!;
 while (<$fp>) {
     my @fields = split(/;/, $_);
