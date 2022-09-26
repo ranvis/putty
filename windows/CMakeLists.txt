@@ -35,6 +35,8 @@ add_sources_from_current_dir(utils
   utils/split_into_argv.c
   utils/version.c
   utils/win_strerror.c
+  winl10n.c
+# winl10n must be used for CLI too. nol10n.c cannot query connection sharing with text translation.
   unicode.c)
 if(NOT HAVE_STRTOUMAX)
   add_sources_from_current_dir(utils utils/strtoumax.c)
@@ -50,9 +52,7 @@ add_sources_from_current_dir(network
 add_sources_from_current_dir(sshcommon
   noise.c)
 add_sources_from_current_dir(sshclient
-  winl10n.c
   agent-client.c gss.c sharing.c)
-# winl10n must be used for CLI too. nol10n.c cannot query connection sharing with text translation.
 add_sources_from_current_dir(sftpclient
   sftp.c)
 add_sources_from_current_dir(otherbackends
@@ -78,7 +78,6 @@ add_library(guimisc STATIC
 add_executable(pageant
   pageant.c
   help.c
-  winl10n.c
   pageant.rc)
 add_dependencies(pageant generated_licence_h)
 target_link_libraries(pageant
@@ -104,7 +103,6 @@ add_executable(putty
   window.c
   putty.c
   help.c
-  winl10n.c
   putty.rc)
 be_list(putty PuTTY SSH SERIAL OTHERBACKENDS)
 add_dependencies(putty generated_licence_h)
@@ -122,7 +120,6 @@ add_executable(puttytel
   window.c
   putty.c
   help.c
-  winl10n.c
   ${CMAKE_SOURCE_DIR}/stubs/no-gss.c
   ${CMAKE_SOURCE_DIR}/stubs/no-ca-config.c
   ${CMAKE_SOURCE_DIR}/stubs/no-rand.c
@@ -150,7 +147,6 @@ add_executable(puttygen
   ${CMAKE_SOURCE_DIR}/sshpubk.c
   ${CMAKE_SOURCE_DIR}/sshrand.c
   controls.c
-  winl10n.c
   puttygen.rc)
 add_dependencies(puttygen generated_licence_h)
 target_link_libraries(puttygen

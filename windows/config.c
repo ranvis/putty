@@ -11,7 +11,7 @@
 #include "storage.h"
 #include "winwallp.h"
 
-static void wallpaper_dropdown_handler(union control *ctrl, void *dlg, void *data, int event);
+static void wallpaper_dropdown_handler(dlgcontrol *ctrl, void *dlg, void *data, int event);
 
 static void about_handler(dlgcontrol *ctrl, dlgparam *dlg,
                           void *data, int event)
@@ -398,7 +398,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, bool has_help,
                                          "Adjust transparency" );
         ctrl_editbox( s, "Alpha value of bg image (0-255):", 'l', 20,
                                   HELPCTX(wallpaper_backtrans),
-                                  conf_editbox_handler, I(CONF_shading), I(-1) );
+                                  conf_editbox_handler, I(CONF_shading), ED_INT);
 
         s = ctrl_getset( b, "Window/Wallpaper", "imgfile",
                                          "Settings for bitmap file" );
@@ -410,9 +410,9 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, bool has_help,
         c = ctrl_checkbox( s, "Use alpha-blending", 'u',
                                    HELPCTX(wallpaper_backimage),
                                    conf_checkbox_handler, I(CONF_use_alphablend) );
-        c->generic.column = 0;
+        c->column = 0;
         c = ctrl_checkbox(s, "Use System Res", 'r', HELPCTX(wallpaper_backimage), conf_checkbox_handler, I(CONF_use_ddb));
-        c->generic.column = 1;
+        c->column = 1;
         ctrl_columns(s, 1, 100);
         ctrl_checkbox( s, "Suspend updating when moving window", 's',
                                    HELPCTX(wallpaper_backimage),
@@ -473,7 +473,7 @@ typedef struct {
     int val;
 } DropdownItem;
 
-static void wallpaper_dropdown_handler(union control *ctrl, void *dlg, void *data, int event)
+static void wallpaper_dropdown_handler(dlgcontrol *ctrl, void *dlg, void *data, int event)
 {
     static const DropdownItem align_items[] = {
         {"Center", WALLPAPER_ALIGN_CENTER | WALLPAPER_ALIGN_MIDDLE},
@@ -497,7 +497,7 @@ static void wallpaper_dropdown_handler(union control *ctrl, void *dlg, void *dat
         {NULL, 0},
     };
     const DropdownItem *items;
-    int conf_item = ctrl->listbox.context.i;
+    int conf_item = ctrl->context.i;
     Conf *conf = (Conf *)data;
     items = (conf_item == CONF_wallpaper_align) ? align_items : place_items;
     if (event == EVENT_REFRESH) {

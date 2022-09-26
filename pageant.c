@@ -342,14 +342,19 @@ static int count_keys(int ssh_version)
 int pageant_count_ssh1_keys(void) { return count_keys(1); }
 int pageant_count_ssh2_keys(void) { return count_keys(2); }
 
-int accept_agent_request_pk(int type, const PageantKey *pk) {
-    const RSAKey *rsaKey = pk->sort.ssh_version == 1 ? pk->rkey : NULL;
-    const ssh2_userkey *ssh2UserKey = pk->sort.ssh_version == 2 ? pk->skey : NULL;
-    if (rsaKey == NULL && ssh2UserKey == NULL) {
+int accept_agent_request_pk_pub(int type, const PageantPublicKey *pub)
+{
+    PageantPrivateKey *priv = pub_to_priv(pub);
+    const RSAKey *rsa_key = priv->sort.ssh_version == 1 ? priv->rkey : NULL;
+    const ssh_key *priv_key = priv->sort.ssh_version == 2 ? priv->skey : NULL;
+    if (rsa_key == NULL && priv_key == NULL) {
         /* key is encrypted. allow without confirmation since user will be asked for a passphrase anyway */
         return 1;
     }
-    return accept_agent_request(type, rsaKey, ssh2UserKey);
+    ssh2_userkey priv_ukey;
+    priv_ukey.key = priv_key;
+    priv_ukey.comment = priv->encrypted_key_comment;
+    return accept_agent_request(type, rsa_key, &priv_ukey);
 }
 
 /*
@@ -1047,7 +1052,7 @@ static PageantAsyncOp *pageant_make_op(
             fail("key not found");
             goto challenge1_cleanup;
         }
-        if (isRemoteCall && !accept_agent_request_pk(type, pk)) {
+        if (isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
             fail("user declined");
             goto challenge1_cleanup;
         }
@@ -1124,7 +1129,7 @@ static PageantAsyncOp *pageant_make_op(
         else
             pageant_client_log(pc, reqid, "no signature flags");
 
-        if (isRemoteCall && !accept_agent_request_pk(type, pk)) {
+        if (isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
             fail("user declined");
             goto responded;
         }
@@ -1295,7 +1300,7 @@ static PageantAsyncOp *pageant_make_op(
 
         pub = findpubkey1(&reqkey);
         freersakey(&reqkey);
-        if (pub && isRemoteCall && !accept_agent_request_pk(type, pk)) {
+        if (pub && isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
             fail("user declined");
         } else if (pub) {
             pageant_client_log(pc, reqid, "found with comment: %s",
@@ -1535,7 +1540,7 @@ static PageantAsyncOp *pageant_make_op(
                 fail("key not found");
                 goto responded;
             }
-            if (isRemoteCall && !accept_agent_request_pk(type, pk)) {
+            if (isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
                 fail("user declined");
                 goto responded;
             }

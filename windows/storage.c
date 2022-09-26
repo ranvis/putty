@@ -187,7 +187,8 @@ char *read_setting_s(settings_r *handle, const char *key)
     if (!handle)
         return NULL;
     if (get_use_inifile()) {
-        for (size = 1024;; size *= 2) {
+        char *ret;
+        for (DWORD size = 1024;; size *= 2) {
             ret = snewn(size, char);
             if (GetPrivateProfileString((char*) handle, key, "\n:", ret, size, inifile) != size - 1)
                 break;
@@ -477,7 +478,8 @@ int check_stored_host_key(const char *hostname, int port,
 
     if (get_use_inifile()) {
         int len = len = 1 + strlen(key);
-        otherstr = snewn(len + 1, char);
+        int ret;
+        char *otherstr = snewn(len + 1, char);
         if (GetPrivateProfileString("SshHostKeys", regname->s, "\n:", otherstr, len + 1, inifile) == (DWORD) len)
             ret = ERROR_MORE_DATA;
         else if (otherstr[0] == '\n')
@@ -514,7 +516,7 @@ int check_stored_host_key(const char *hostname, int port,
             sfree(oldstyle);
         }
 
-        compare = strcmp(otherstr, key);
+        int compare = strcmp(otherstr, key);
 
         sfree(otherstr);
         strbuf_free(regname);
