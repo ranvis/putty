@@ -640,13 +640,18 @@ HWND l10nCreateDialogParamA(HINSTANCE a1, LPCSTR a2, HWND a3, DLGPROC a4, LPARAM
     return r;
 }
 
-char *l10n_dupstr(const char *s)
+const char *l10n_translate_s(const char *str, char *buf, size_t len)
 {
-    const char *a = s;
-    char b[256];
-    if (getEnabled() && ccstrtranslate(s, b, lenof(b)))
-        a = b;
-    return dupstr(a);
+    const char *ptr = str;
+    if (getEnabled() && ccstrtranslate(str, buf, len))
+        ptr = buf;
+    return ptr;
+}
+
+char *l10n_dupstr(const char *str)
+{
+    char buf[256];
+    return dupstr(l10n_translate(str, buf));
 }
 
 void l10n_created_window(HWND hwnd)
@@ -698,6 +703,16 @@ int l10n_vsnprintf(char *buffer, int size, const char *format, va_list args)
 }
 
 #undef dupvprintf
+char *l10n_dupvprintf(const char *format, va_list ap)
+{
+    char format2[1024];
+    if (getEnabled()) {
+        if (ccstrtranslate(format, format2, lenof(format2)))
+            format = format2;
+    }
+    return dupvprintf(format, ap);
+}
+
 char *l10n_dupprintf(const char *format, ...)
 {
     char *r;
@@ -747,6 +762,14 @@ BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
     if (cwstrtranslate(text, buf, lenof(buf)))
         return SetDlgItemTextW(dialog, id, buf);
     return SetDlgItemText(dialog, id, text);
+}
+
+LRESULT l10nSendDlgItemMessage(HWND dialog, int id, UINT msg, WPARAM wp, LPARAM lp)
+{
+    WCHAR buf[256];
+    if (cwstrtranslate((const char *)lp, buf, lenof(buf)))
+        return SendDlgItemMessageW(dialog, id, msg, wp, (LPARAM)buf);
+    return SendDlgItemMessage(dialog, id, msg, wp, lp);
 }
 
 BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text)

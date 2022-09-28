@@ -236,7 +236,7 @@ static Token lex(ptrlen *text, ptrlen *token, char **err)
          */
         p++;
         type = TOK_ERROR;
-        *err = dupstr("unrecognised boolean operator");
+        *err = l10n_dupstr("unrecognised boolean operator");
         goto out;
     } else if (is_atom_char(*p)) {
         /*
@@ -257,7 +257,7 @@ static Token lex(ptrlen *text, ptrlen *token, char **err)
          */
         p++;
         type = TOK_ERROR;
-        *err = dupstr("unexpected character in expression");
+        *err = l10n_dupstr("unexpected character in expression");
         goto out;
     }
 
@@ -389,7 +389,7 @@ static ExprNode *parse_atom(ParserState *ps)
             return NULL;
 
         if (ps->tok != TOK_RPAR) {
-            error(ps, dupstr("expected ')' after parenthesised subexpression"),
+            error(ps, l10n_dupstr("expected ')' after parenthesised subexpression"),
                   subexpr->text);
             exprnode_free(subexpr);
             return NULL;
@@ -441,7 +441,7 @@ static ExprNode *parse_atom(ParserState *ps)
             if (tail.len > 0 && ptrlen_contains_only(tail, DIGITS)) {
                 lo = ptrlen_to_port_number(tail);
                 if (lo >= 65536) {
-                    error(ps, dupstr("port number too large"), tail);
+                    error(ps, l10n_dupstr("port number too large"), tail);
                     return NULL;
                 }
                 hi = lo;
@@ -454,18 +454,18 @@ static ExprNode *parse_atom(ParserState *ps)
 
                     lo = ptrlen_to_port_number(pl_lo);
                     if (lo >= 65536) {
-                        error(ps, dupstr("port number too large"), pl_lo);
+                        error(ps, l10n_dupstr("port number too large"), pl_lo);
                         return NULL;
                     }
 
                     hi = ptrlen_to_port_number(pl_hi);
                     if (hi >= 65536) {
-                        error(ps, dupstr("port number too large"), pl_hi);
+                        error(ps, l10n_dupstr("port number too large"), pl_hi);
                         return NULL;
                     }
 
                     if (hi < lo) {
-                        error(ps, dupstr("port number range is backwards"),
+                        error(ps, l10n_dupstr("port number range is backwards"),
                               make_ptrlen_startend(pl_lo.ptr,
                                                    ptrlen_end(pl_hi)));
                         return NULL;
@@ -476,7 +476,7 @@ static ExprNode *parse_atom(ParserState *ps)
             }
 
             if (!parse_ok) {
-                error(ps, dupstr("unable to parse port number specification"),
+                error(ps, l10n_dupstr("unable to parse port number specification"),
                       ps->toktext);
                 return NULL;
             }
@@ -490,7 +490,7 @@ static ExprNode *parse_atom(ParserState *ps)
         }
     }
 
-    error(ps, dupstr("expected a predicate or a parenthesised subexpression"),
+    error(ps, l10n_dupstr("expected a predicate or a parenthesised subexpression"),
           ps->toktext);
     return NULL;
 }
@@ -529,7 +529,7 @@ static ExprNode *parse_expr(ParserState *ps)
             return en;
 
         if (ps->tok != operator) {
-            error(ps, dupstr("expected parentheses to disambiguate && and || "
+            error(ps, l10n_dupstr("expected parentheses to disambiguate && and || "
                              "on either side of expression"), subexpr->text);
             exprnode_free(en);
             return NULL;
@@ -546,7 +546,7 @@ static ExprNode *parse(ptrlen expr, char **error_msg, ptrlen *error_loc)
 
     ExprNode *en = parse_expr(ps);
     if (en && ps->tok != TOK_END) {
-        error(ps, dupstr("unexpected text at end of expression"),
+        error(ps, l10n_dupstr("unexpected text at end of expression"),
               make_ptrlen_startend(ps->toktext.ptr, ptrlen_end(expr)));
         exprnode_free(en);
         en = NULL;

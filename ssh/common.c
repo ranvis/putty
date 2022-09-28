@@ -1017,33 +1017,41 @@ SeatPromptResult verify_ssh_host_key(
      * we can't present interactive prompts. */
     seat_dialog_text_append(
         text, SDT_BATCH_ABORT, "Connection abandoned.");
+    char pds_trans_buf[128], pds_trans_buf2[128], *pds_str, *pds_str2;
 
     if (storage_status == 1) {
+        pds_str = l10n_translate(pds->hk_accept_action, pds_trans_buf);
         seat_dialog_text_append(
             text, SDT_PARA, "If you trust this host, %s to add the key to "
             "%s's cache and carry on connecting.",
-            pds->hk_accept_action, appname);
+            pds_str, appname);
+        pds_str = l10n_translate(pds->hk_connect_once_action, pds_trans_buf);
         seat_dialog_text_append(
             text, SDT_PARA, "If you want to carry on connecting just once, "
             "without adding the key to the cache, %s.",
-            pds->hk_connect_once_action);
+            pds_str);
+        pds_str = l10n_translate(pds->hk_cancel_action, pds_trans_buf);
         seat_dialog_text_append(
             text, SDT_PARA, "If you do not trust this host, %s to abandon the "
-            "connection.", pds->hk_cancel_action);
+            "connection.", pds_str);
         seat_dialog_text_append(
             text, SDT_PROMPT, "Store key in cache?");
     } else {
+        pds_str = l10n_translate(pds->hk_accept_action, pds_trans_buf);
         seat_dialog_text_append(
             text, SDT_PARA, "If you were expecting this change and trust the "
             "new key, %s to update %s's cache and carry on connecting.",
-            pds->hk_accept_action, appname);
+            pds_str, appname);
+        pds_str = l10n_translate(pds->hk_connect_once_action, pds_trans_buf);
         seat_dialog_text_append(
             text, SDT_PARA, "If you want to carry on connecting but without "
-            "updating the cache, %s.", pds->hk_connect_once_action);
+            "updating the cache, %s.", pds_str);
+        pds_str = l10n_translate(pds->hk_cancel_action, pds_trans_buf);
+        pds_str2 = l10n_translate(pds->hk_cancel_action_Participle, pds_trans_buf2);
         seat_dialog_text_append(
             text, SDT_PARA, "If you want to abandon the connection "
             "completely, %s to cancel. %s is the ONLY guaranteed safe choice.",
-            pds->hk_cancel_action, pds->hk_cancel_action_Participle);
+            pds_str, pds_str2);
         seat_dialog_text_append(
             text, SDT_PROMPT, "Update cached key?");
     }

@@ -94,6 +94,7 @@ static const char HEADER[] = "Session:";
 
 #undef AppendMenu
 #define AppendMenu(m, f, i, t) l10nAppendMenu(m, f, i, t)
+LRESULT l10nSendDlgItemMessage(HWND dialog, int id, UINT msg, WPARAM wp, LPARAM lp);
 
 #define pageant_reencrypt_all() USE_gui_reencrypt_all_INSTEAD()
 static void gui_reencrypt_all(void);
@@ -1077,7 +1078,7 @@ static INT_PTR CALLBACK KeyListProc(HWND hwnd, UINT msg,
 
         int selection = 0;
         for (size_t i = 0; i < lenof(fptypes); i++) {
-            SendDlgItemMessage(hwnd, IDC_KEYLIST_FPTYPE, CB_ADDSTRING,
+            l10nSendDlgItemMessage(hwnd, IDC_KEYLIST_FPTYPE, CB_ADDSTRING,
                                0, (LPARAM)fptypes[i].name);
             if (fptype == fptypes[i].value)
                 selection = (int)i;

@@ -3018,9 +3018,12 @@ void iso2022_autodetect_put (struct iso2022_data *this, unsigned char *buf,
                              int nchars);
 
 /*
- * Exports from winl10n.c/uxl10n.c
+ * Exports from l10n.c
  */
+const char *l10n_translate_s(const char *str, char *buf, size_t len);
+#define l10n_translate(str, buf)  l10n_translate_s(str, buf, lenof(buf))
 char *l10n_dupstr(const char *);
+char *l10n_dupvprintf(const char *format, va_list ap);
 int get_l10n_setting(const char* keyname, char* buf, int size);
 
 /* SURROGATE PAIR */

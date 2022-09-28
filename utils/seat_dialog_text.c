@@ -28,7 +28,7 @@ static void seat_dialog_text_append_v(
     sgrowarray(sdt->items, sdt->itemsize, sdt->nitems);
     SeatDialogTextItem *item = &sdt->items[sdt->nitems++];
     item->type = type;
-    item->text = dupvprintf(fmt, ap);
+    item->text = l10n_dupvprintf(fmt, ap);
 }
 
 void seat_dialog_text_append(SeatDialogText *sdt, SeatDialogTextType type,

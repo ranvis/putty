@@ -1025,6 +1025,7 @@ static INT_PTR HostKeyDialogProc(HWND hwnd, UINT msg,
         int height = SendDlgItemMessage(hwnd, IDC_HK_TEXT,
                                         EM_GETLINECOUNT, 0, 0);
         height *= 8; /* height of a text line, by definition of dialog units */
+        height += 2;
 
         int edittop = ctx->has_title ? 40 : 20;
 
@@ -1041,9 +1042,9 @@ static INT_PTR HostKeyDialogProc(HWND hwnd, UINT msg,
         static const struct {
             int id, x;
         } buttons[] = {
-            { IDCANCEL, 288 },
-            { IDC_HK_ACCEPT, 168 },
-            { IDC_HK_ONCE, 216 },
+            { IDCANCEL, 268 },
+            { IDC_HK_ACCEPT, 135 },
+            { IDC_HK_ONCE, 200 },
             { IDC_HK_MOREINFO, 60 },
             { IDHELP, 12 },
         };
