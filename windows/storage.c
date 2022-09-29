@@ -8,8 +8,8 @@
 #include <limits.h>
 #include <assert.h>
 #include "putty.h"
+#include "ini.h"
 #include "storage.h"
-#include <shlobj.h>
 
 #include <shlobj.h>
 #ifndef CSIDL_APPDATA
@@ -32,44 +32,6 @@ DECL_WINDOWS_FUNCTION(static, HRESULT, SHGetFolderPathA,
 struct settings_w {
     HKEY sesskey;
 };
-
-int use_inifile = 0;
-char inifile[2 * MAX_PATH + 10] = {'\0'};
-
-#define LOCAL_SCOPE
-
-static int get_use_inifile(void)
-{
-    if (inifile[0] == '\0') {
-        char buf[10];
-        char *p;
-        GetModuleFileName(NULL, inifile, sizeof inifile - 10);
-        if((p = strrchr(inifile, '\\'))){
-            *p = '\0';
-        }
-        strcat(inifile, "\\putty.ini");
-        GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
-        use_inifile = buf[0] == '1';
-        if (!use_inifile) {
-            HMODULE module;
-            DECL_WINDOWS_FUNCTION(LOCAL_SCOPE, HRESULT, SHGetFolderPathA, (HWND, int, HANDLE, DWORD, LPSTR));
-            module = load_system32_dll("shell32.dll");
-            GET_WINDOWS_FUNCTION(module, SHGetFolderPathA);
-            if (!p_SHGetFolderPathA) {
-                FreeLibrary(module);
-                module = load_system32_dll("shfolder.dll");
-                GET_WINDOWS_FUNCTION(module, SHGetFolderPathA);
-            }
-            if (p_SHGetFolderPathA && SUCCEEDED(p_SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, inifile))) {
-                strcat(inifile, "\\PuTTY\\putty.ini");
-                GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
-                use_inifile = buf[0] == '1';
-            }
-            FreeLibrary(module);
-        }
-    }
-    return use_inifile;
-}
 
 static const char HEADER[] = "Session:";
 

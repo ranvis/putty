@@ -12,6 +12,7 @@
 #include "storage.h"
 #include "tree234.h"
 #include "security-api.h"
+#include "ini.h"
 
 void cmdline_error(const char *fmt, ...)
 {
@@ -251,9 +252,6 @@ void stdouterr_sent(struct handle *h, size_t new_backlog, int err, bool close)
     }
 }
 
-extern int use_inifile;
-extern char inifile[2 * MAX_PATH + 10];
-
 const bool share_can_be_downstream = true;
 const bool share_can_be_upstream = true;
 
@@ -330,20 +328,13 @@ int main(int argc, char **argv)
             }
         }
     }
-    if (argc > 2 && !strcmp(argv[1], "-ini") && *(argv[2]) != '\0') {
-        char* dummy;
-        DWORD attributes;
-        GetFullPathName(argv[2], sizeof inifile, inifile, &dummy);
-        attributes = GetFileAttributes(inifile);
-        if (attributes != 0xFFFFFFFF && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-            HANDLE handle = CreateFile(inifile, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-            if (handle != INVALID_HANDLE_VALUE) {
-                CloseHandle(handle);
-                use_inifile = 1;
-                argc -= 2;
-                argv += 2;
-            }
+    if (argc > 1 && !strcmp(argv[1], "-ini")) {
+        char *error_msg = change_ini_path(argc > 2 ? argv[2] : NULL);
+        if (error_msg) {
+            cmdline_error(error_msg);
         }
+        argc -= 2;
+        argv += 2;
     }
     while (--argc) {
         char *p = *++argv;

@@ -18,10 +18,10 @@
 #include "cryptoapi.h"
 #include "pageant.h"
 #include "licence.h"
+#include "ini.h"
 #include "pageant-rc.h"
 
 #include <shellapi.h>
-#include <shlobj.h>
 
 #include <aclapi.h>
 #ifdef DEBUG_IPC
@@ -88,8 +88,6 @@ static filereq *keypath = NULL;
 #define PUTTY_DEFAULT     "Default%20Settings"
 static int initial_menuitems_count;
 
-static int use_inifile;
-static char inifile[2 * MAX_PATH + 10] = {'\0'};
 static const char HEADER[] = "Session:";
 
 #undef AppendMenu
@@ -98,41 +96,6 @@ LRESULT l10nSendDlgItemMessage(HWND dialog, int id, UINT msg, WPARAM wp, LPARAM 
 
 #define pageant_reencrypt_all() USE_gui_reencrypt_all_INSTEAD()
 static void gui_reencrypt_all(void);
-
-#define LOCAL_SCOPE
-
-static int get_use_inifile(void)
-{
-    if (inifile[0] == '\0') {
-        char buf[10];
-        char *p;
-        GetModuleFileName(NULL, inifile, sizeof inifile - 10);
-        if((p = strrchr(inifile, '\\'))){
-            *p = '\0';
-        }
-        strcat(inifile, "\\putty.ini");
-        GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
-        use_inifile = buf[0] == '1';
-        if (!use_inifile) {
-            HMODULE module;
-            DECL_WINDOWS_FUNCTION(LOCAL_SCOPE, HRESULT, SHGetFolderPathA, (HWND, int, HANDLE, DWORD, LPSTR));
-            module = load_system32_dll("shell32.dll");
-            GET_WINDOWS_FUNCTION(module, SHGetFolderPathA);
-            if (!p_SHGetFolderPathA) {
-                FreeLibrary(module);
-                module = load_system32_dll("shfolder.dll");
-                GET_WINDOWS_FUNCTION(module, SHGetFolderPathA);
-            }
-            if (p_SHGetFolderPathA && SUCCEEDED(p_SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, inifile))) {
-                strcat(inifile, "\\PuTTY\\putty.ini");
-                GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
-                use_inifile = buf[0] == '1';
-            }
-            FreeLibrary(module);
-        }
-    }
-    return use_inifile;
-}
 
 /*
  * Print a modal (Really Bad) message box and perform a fatal exit.
@@ -2155,20 +2118,13 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
      */
     split_into_argv(cmdline, &argc, &argv, &argstart);
 
-    if (argc > 1 && !strcmp(argv[0], "-ini") && *(argv[1]) != '\0') {
-        char* dummy;
-        DWORD attributes;
-        GetFullPathName(argv[1], sizeof inifile, inifile, &dummy);
-        attributes = GetFileAttributes(inifile);
-        if (attributes != 0xFFFFFFFF && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-            HANDLE handle = CreateFile(inifile, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-            if (handle != INVALID_HANDLE_VALUE) {
-                CloseHandle(handle);
-                use_inifile = 1;
-                argc -= 2;
-                argv += 2;
-            }
+    if (argc > 0 && !strcmp(argv[0], "-ini")) {
+        char *error_msg = change_ini_path(argc > 1 ? argv[1] : NULL);
+        if (error_msg) {
+            opt_error(error_msg);
         }
+        argc -= 2;
+        argv += 2;
     }
 
     bool add_keys_encrypted = false;

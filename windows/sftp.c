@@ -11,6 +11,7 @@
 #include "psftp.h"
 #include "ssh.h"
 #include "security-api.h"
+#include "ini.h"
 
 SeatPromptResult filexfer_get_userpass_input(Seat *seat, prompts_t *p)
 {
@@ -634,9 +635,6 @@ char *ssh_sftp_get_cmdline(const char *prompt, bool no_fds_ok)
     return ctx->line;
 }
 
-extern int use_inifile;
-extern char inifile[2 * MAX_PATH + 10];
-
 void platform_psftp_pre_conn_setup(LogPolicy *lp)
 {
     if (restricted_acl()) {
@@ -653,20 +651,13 @@ int main(int argc, char *argv[])
 
     dll_hijacking_protection();
 
-    if (argc > 2 && !strcmp(argv[1], "-ini") && *(argv[2]) != '\0') {
-        char* dummy;
-        DWORD attributes;
-        GetFullPathName(argv[2], sizeof inifile, inifile, &dummy);
-        attributes = GetFileAttributes(inifile);
-        if (attributes != 0xFFFFFFFF && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-            HANDLE handle = CreateFile(inifile, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-            if (handle != INVALID_HANDLE_VALUE) {
-                CloseHandle(handle);
-                use_inifile = 1;
-                argc -= 2;
-                argv += 2;
-            }
+    if (argc > 1 && !strcmp(argv[1], "-ini")) {
+        char *error_msg = change_ini_path(argc > 2 ? argv[2] : NULL);
+        if (error_msg) {
+            cmdline_error(error_msg);
         }
+        argc -= 2;
+        argv += 2;
     }
 
     ret = psftp_main(argc, argv);

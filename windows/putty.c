@@ -1,8 +1,6 @@
 #include "putty.h"
 #include "storage.h"
-
-extern int use_inifile;
-extern char inifile[2 * MAX_PATH + 10];
+#include "ini.h"
 
 extern bool sesslist_demo_mode;
 extern const char *dialog_box_demo_screenshot_filename;
@@ -63,20 +61,13 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
 
         split_into_argv(cmdline, &argc, &argv, NULL);
 
-        if (argc > 1 && !strcmp(argv[0], "-ini") && *(argv[1]) != '\0') {
-            char* dummy;
-            DWORD attributes;
-            GetFullPathName(argv[1], sizeof inifile, inifile, &dummy);
-            attributes = GetFileAttributes(inifile);
-            if (attributes != 0xFFFFFFFF && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-                HANDLE handle = CreateFile(inifile, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-                if (handle != INVALID_HANDLE_VALUE) {
-                    CloseHandle(handle);
-                    use_inifile = 1;
-                    argc -= 2;
-                    argv += 2;
-                }
+        if (argc > 0 && !strcmp(argv[0], "-ini")) {
+            char *error_msg = change_ini_path(argc > 1 ? argv[1] : NULL);
+            if (error_msg) {
+                cmdline_error(error_msg);
             }
+            argc -= 2;
+            argv += 2;
         }
 
         for (i = 0; i < argc; i++) {

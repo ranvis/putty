@@ -46,6 +46,7 @@ add_sources_from_current_dir(eventloop
 add_sources_from_current_dir(console
   select-cli.c nohelp.c console.c)
 add_sources_from_current_dir(settings
+  ini.c
   storage.c)
 add_sources_from_current_dir(network
   network.c handle-socket.c named-pipe-client.c named-pipe-server.c local-proxy.c x11.c)
@@ -78,6 +79,7 @@ add_library(guimisc STATIC
 add_executable(pageant
   pageant.c
   help.c
+  ini.c
   pageant.rc)
 add_dependencies(pageant generated_licence_h)
 target_link_libraries(pageant
@@ -144,6 +146,7 @@ add_executable(puttygen
   ${CMAKE_SOURCE_DIR}/stubs/no-timing.c
   noise.c
   no-jump-list.c
+  ini.c
   storage.c
   help.c
   ${CMAKE_SOURCE_DIR}/sshpubk.c
