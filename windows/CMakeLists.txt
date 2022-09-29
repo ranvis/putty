@@ -116,6 +116,8 @@ set_target_properties(putty PROPERTIES
   LINK_FLAGS "${LFLAG_MANIFEST_NO}")
 installed_program(putty)
 
+target_compile_definitions(putty PRIVATE PUTTY_WITH_SSH)
+
 add_executable(puttytel
   window.c
   putty.c

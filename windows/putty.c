@@ -9,6 +9,10 @@ extern const char *dialog_box_demo_screenshot_filename;
 static strbuf *demo_terminal_data = NULL;
 static const char *terminal_demo_screenshot_filename;
 
+#if defined(_DEBUG) && defined(PUTTY_WITH_SSH)
+#define DOC_DIALOG
+#endif
+
 const unsigned cmdline_tooltype =
     TOOLTYPE_HOST_ARG |
     TOOLTYPE_PORT_ARG |
@@ -19,6 +23,9 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
     char *p;
     bool special_launchable_argument = false;
     bool demo_config_box = false;
+#ifdef DOC_DIALOG
+    bool demo_doc_dialog = false;
+#endif
 
     settings_set_default_protocol(be_default_protocol);
     /* Find the appropriate default port. */
@@ -139,6 +146,10 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
                         put_data(demo_terminal_data, buf, retd);
                     fclose(fp);
                 }
+#ifdef DOC_DIALOG
+            } else if (!strcmp(p, "-demo-doc-dialog")) {
+                demo_doc_dialog = true;
+#endif
             } else if (*p != '-') {
                 cmdline_error("unexpected argument \"%s\"", p);
             } else {
@@ -160,6 +171,11 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
         load_open_settings(NULL, conf);
         conf_set_str(conf, CONF_host, "demo-server.example.com");
         conf_set_int(conf, CONF_close_on_exit, FORCE_OFF);
+#ifdef DOC_DIALOG
+    } else if (demo_doc_dialog) {
+        extern void doc_dialog(Conf *conf);
+        doc_dialog(conf);
+#endif
     } else {
         /*
          * Bring up the config dialog if the command line hasn't
@@ -220,3 +236,39 @@ void gui_terminal_ready(HWND hwnd, Seat *seat, Backend *backend)
         schedule_timer(TICKSPERSEC, demo_terminal_screenshot, (void *)hwnd);
     }
 }
+
+#ifdef DOC_DIALOG
+#include "ssh.h"
+#include "win-gui-seat.h"
+
+void doc_dialog(Conf *conf)
+{
+    sesslist_demo_mode = true;
+    load_open_settings(NULL, conf);
+    conf_set_str(conf, CONF_host, "demo-server.example.com");
+    do_config(conf);
+
+    extern WinGuiSeat wgs;
+    InteractionReadySeat iseat;
+    iseat.seat = &wgs.seat;
+    const char *host = "ssh.example.com";
+    ssh_key key;
+    key.vt = &ssh_ecdsa_ed25519;
+    const char *fingerprints[8] = {0};
+    fingerprints[SSH_FPTYPE_SHA256] = "ssh-ed25519 255 01:23:45:67:89:ab:cd:ef...";
+    void (*callback)(void *ctx, SeatPromptResult result) = NULL;
+    void *ctx = NULL;
+    // known hosts must be cleared
+    verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr", "keydisp", fingerprints, 0, callback, ctx); // must accept
+    verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr2", "keydisp", fingerprints, 0, callback, ctx);
+
+    // known hosts must be cleared
+    host = "ssh.example.net";
+    key.vt = &opensshcert_ssh_ecdsa_ed25519;
+    verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr", "keydisp", fingerprints, 1, callback, ctx); // must accept
+    verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr2", "keydisp", fingerprints, 1, callback, ctx);
+    verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr3", "keydisp", fingerprints, 0, callback, ctx);
+
+    cleanup_exit(0);
+}
+#endif
