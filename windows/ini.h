@@ -3,7 +3,7 @@
 
 extern char inifile[2 * MAX_PATH + 10];
 
-int get_use_inifile(void);
+bool get_use_inifile(void);
 char *change_ini_path(const char *new_path);
 
 #endif

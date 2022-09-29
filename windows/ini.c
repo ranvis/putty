@@ -1,12 +1,12 @@
 #include "putty.h"
 #include <shlobj.h>
 
-static int use_inifile = 0;
+static bool use_inifile = false;
 char inifile[2 * MAX_PATH + 10];
 
 #define LOCAL_SCOPE
 
-int get_use_inifile(void)
+bool get_use_inifile(void)
 {
     if (inifile[0] == '\0') {
         char buf[10];
@@ -52,7 +52,7 @@ static bool change_ini_path_core(const char *new_path)
         return false;
     }
     CloseHandle(handle);
-    use_inifile = 1;
+    use_inifile = true;
     return true;
 }
 
