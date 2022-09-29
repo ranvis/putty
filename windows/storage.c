@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <assert.h>
 #include "putty.h"
+#include "misc.h"
 #include "ini.h"
 #include "storage.h"
 
@@ -35,12 +36,6 @@ struct settings_w {
 
 static const char HEADER[] = "Session:";
 
-static void escape_ini_key(const char *in, strbuf *out)
-{
-    put_dataz(out, HEADER);
-    escape_registry_key(in, out);
-}
-
 settings_w *open_settings_w(const char *sessionname, char **errmsg)
 {
     *errmsg = NULL;
@@ -48,12 +43,10 @@ settings_w *open_settings_w(const char *sessionname, char **errmsg)
     if (!sessionname || !*sessionname)
         sessionname = "Default Settings";
 
-    strbuf *sb = strbuf_new();
     if (get_use_inifile()) {
-        escape_ini_key(sessionname, sb);
-        WritePrivateProfileString(sb->s, "Present", "1", inifile);
-        return (settings_w *)strbuf_to_str(sb);
+        return (settings_w *)create_ini_section(sessionname, HEADER, inifile);
     }
+    strbuf *sb = strbuf_new();
     escape_registry_key(sessionname, sb);
 
     HKEY sesskey = open_regkey(true, HKEY_CURRENT_USER, puttystr, sb->s);
@@ -74,13 +67,7 @@ void write_setting_s(settings_w *handle, const char *key, const char *value)
 {
     if (get_use_inifile()) {
         if (handle) {
-            int length = strlen(value);
-            char* buffer = snewn(length + 3, char);
-            strcpy(buffer + 1, value);
-            buffer[0] = buffer[length + 1] = '"';
-            buffer[length + 2] = '\0';
-            WritePrivateProfileString((char*) handle, key, buffer, inifile);
-            sfree(buffer);
+            put_ini_sz((char *)handle, key, value, inifile);
         }
         return;
     }
@@ -92,9 +79,7 @@ void write_setting_i(settings_w *handle, const char *key, int value)
 {
     if (get_use_inifile()) {
         if (handle) {
-            char v[32];
-            sprintf(v, "%d", value);
-            WritePrivateProfileString((char*) handle, key, v, inifile);
+            put_ini_int((char *)handle, key, value, inifile);
         }
         return;
     }
@@ -121,17 +106,10 @@ settings_r *open_settings_r(const char *sessionname)
     if (!sessionname || !*sessionname)
         sessionname = "Default Settings";
 
-    strbuf *sb = strbuf_new();
     if (get_use_inifile()) {
-        char temp[3];
-        escape_ini_key(sessionname, sb);
-        GetPrivateProfileString(sb->s, "Present", "", temp, sizeof temp, inifile);
-        if (temp[0] != '1') {
-            strbuf_free(sb);
-            return NULL;
-        }
-        return (settings_r *)strbuf_to_str(sb);
+        return (settings_r *)open_ini_section(sessionname, HEADER, inifile);
     }
+    strbuf *sb = strbuf_new();
     escape_registry_key(sessionname, sb);
     HKEY sesskey = open_regkey(false, HKEY_CURRENT_USER, puttystr, sb->s);
     strbuf_free(sb);
@@ -149,17 +127,7 @@ char *read_setting_s(settings_r *handle, const char *key)
     if (!handle)
         return NULL;
     if (get_use_inifile()) {
-        char *ret;
-        for (DWORD size = 1024;; size *= 2) {
-            ret = snewn(size, char);
-            if (GetPrivateProfileString((char*) handle, key, "\n:", ret, size, inifile) != size - 1)
-                break;
-            sfree(ret);
-        }
-        if (ret[0] != '\n')
-            return ret;
-        sfree(ret);
-        return NULL;
+        return get_ini_sz((char *)handle, key, inifile);
     }
     return get_reg_sz(handle->sesskey, key);
 }
@@ -169,10 +137,9 @@ int read_setting_i(settings_r *handle, const char *key, int defvalue)
     DWORD val;
     if (get_use_inifile()) {
         if (handle) {
-            char buffer[32];
-            GetPrivateProfileString((char*) handle, key, "", buffer, sizeof (buffer), inifile);
-            if ('0' <= buffer[0] && buffer[0] <= '9')
-                return atoi(buffer);
+            int value;
+            if (get_ini_int((char *)handle, key, inifile, &value))
+                return value;
         }
         return defvalue;
     }
@@ -271,10 +238,7 @@ void close_settings_r(settings_r *handle)
 void del_settings(const char *sessionname)
 {
     if (get_use_inifile()) {
-        strbuf *sb = strbuf_new();
-        escape_ini_key(sessionname, sb);
-        WritePrivateProfileSection(sb->s, NULL, inifile);
-        strbuf_free(sb);
+        delete_ini_section(sessionname, HEADER, inifile);
         remove_session_from_jumplist(sessionname);
         return;
     }
@@ -297,29 +261,10 @@ struct settings_e {
     int i;
 };
 
-struct enumsettings_ini {
-    char* buffer;
-    const char* p;
-};
-typedef struct enumsettings_ini enumsettings_ini;
-
 settings_e *enum_settings_start(void)
 {
     if (get_use_inifile()) {
-        enumsettings_ini *ret;
-        char* buffer;
-        int length = 256;
-        while (1) {
-            buffer = snewn(length, char);
-            if (GetPrivateProfileSectionNames(buffer, length, inifile) < (DWORD) length - 2)
-                break;
-            sfree(buffer);
-            length += 256;
-        }
-        ret = snew(enumsettings_ini);
-        ret->buffer = buffer;
-        ret->p = buffer;
-        return (settings_e *)ret;
+        return (settings_e *)enum_ini_sections(inifile);
     }
     HKEY key = open_regkey(false, HKEY_CURRENT_USER, puttystr);
     if (!key)
@@ -334,29 +279,10 @@ settings_e *enum_settings_start(void)
     return ret;
 }
 
-static bool enum_settings_next_ini(enumsettings_ini *e, strbuf *sb)
-{
-    while (*e->p != '\0') {
-        if (!strncmp((char*)e->p, HEADER, sizeof(HEADER) - 1)) {
-            char temp[3];
-            GetPrivateProfileString(e->p, "Present", "", temp, sizeof(temp), inifile);
-            if (temp[0] == '1') {
-                unescape_registry_key(e->p + sizeof(HEADER) - 1, sb);
-                while (*e->p++ != '\0')
-                    ;
-                return true;
-            }
-        }
-        while (*e->p++ != '\0')
-            ;
-    }
-    return false;
-}
-
 bool enum_settings_next(settings_e *e, strbuf *sb)
 {
     if (get_use_inifile()) {
-        return enum_settings_next_ini((enumsettings_ini *)e, sb);
+        return enum_ini_section_next((ini_sections *)e, sb, HEADER);
     }
     char *name = enum_regkey(e->key, e->i);
     if (!name)
@@ -368,16 +294,10 @@ bool enum_settings_next(settings_e *e, strbuf *sb)
     return true;
 }
 
-static void enum_settings_finish_ini(enumsettings_ini *e)
-{
-    sfree(e->buffer);
-    sfree(e);
-}
-
 void enum_settings_finish(settings_e *e)
 {
     if (get_use_inifile()) {
-        enum_settings_finish_ini((enumsettings_ini *)e);
+        enum_ini_section_finish((ini_sections *)e);
         return;
     }
     close_regkey(e->key);
