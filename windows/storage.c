@@ -359,27 +359,11 @@ int check_stored_host_key(const char *hostname, int port,
     hostkey_regname(regname, hostname, port, keytype);
 
     if (get_use_inifile()) {
-        int len = len = 1 + strlen(key);
-        int ret;
-        char *otherstr = snewn(len + 1, char);
-        if (GetPrivateProfileString("SshHostKeys", regname->s, "\n:", otherstr, len + 1, inifile) == (DWORD) len)
-            ret = ERROR_MORE_DATA;
-        else if (otherstr[0] == '\n')
-            ret = ERROR_FILE_NOT_FOUND;
-        else
-            ret = ERROR_SUCCESS;
-        if (ret != ERROR_SUCCESS && ret != ERROR_MORE_DATA &&
-                !strcmp(keytype, "rsa")) {
+        char *otherstr = get_ini_sz("SshHostKeys", regname->s, inifile);
+        if (!otherstr && !strcmp(keytype, "rsa")) {
             const char *justhost = regname->s + 1 + strcspn(regname->s, ":");
-            char *oldstyle = snewn(len + 10, char);     /* safety margin */
-            if (GetPrivateProfileString("SshHostKeys", justhost, "\n:", oldstyle, len + 1, inifile) == (DWORD) len)
-                ret = ERROR_MORE_DATA;
-            else if (oldstyle[0] == '\n')
-                ret = ERROR_FILE_NOT_FOUND;
-            else
-                ret = ERROR_SUCCESS;
-
-            if (ret == ERROR_SUCCESS) {
+            char *oldstyle = get_ini_sz("SshHostKeys", justhost, inifile);
+            if (oldstyle) {
                 strbuf *new = convert_old_style_host_key(oldstyle);
 
                 /*
@@ -390,7 +374,7 @@ int check_stored_host_key(const char *hostname, int port,
                 if (!strcmp(new->s, key)) {
                     sfree(otherstr);
                     otherstr = strbuf_to_str(new);
-                    WritePrivateProfileString("SshHostKeys", regname->s, otherstr, inifile);
+                    put_ini_sz("SshHostKeys", regname->s, otherstr, inifile);
                 } else {
                     strbuf_free(new);
                 }
@@ -398,18 +382,17 @@ int check_stored_host_key(const char *hostname, int port,
             sfree(oldstyle);
         }
 
-        int compare = strcmp(otherstr, key);
+        int compare = otherstr && strcmp(otherstr, key);
 
         sfree(otherstr);
         strbuf_free(regname);
 
-        if (ret == ERROR_MORE_DATA ||
-                (ret == ERROR_SUCCESS && compare))
-                return 2;                      /* key is different in registry */
-        else if (ret != ERROR_SUCCESS)
-                return 1;                      /* key does not exist in registry */
+        if (!otherstr)
+            return 1;                      /* key does not exist in registry */
+        else if (compare)
+            return 2;                      /* key is different in registry */
         else
-                return 0;                      /* key matched OK in registry */
+            return 0;                      /* key matched OK in registry */
     }
     HKEY rkey = open_regkey(false, HKEY_CURRENT_USER,
                             PUTTY_REG_POS "\\SshHostKeys");
@@ -480,7 +463,7 @@ void store_host_key(const char *hostname, int port,
     hostkey_regname(regname, hostname, port, keytype);
 
     if (get_use_inifile()) {
-        WritePrivateProfileString("SshHostKeys", regname->s, key, inifile);
+        put_ini_sz("SshHostKeys", regname->s, key, inifile);
         strbuf_free(regname);
         return;
     }
@@ -682,19 +665,20 @@ static HANDLE access_random_seed(int action)
      * Registry, if any.
      */
     if (get_use_inifile()) {
-        char seedpath[MAX_PATH + 1];
-        if (GetPrivateProfileString("Generic", "RandSeedFile", "\n:", seedpath, sizeof(seedpath), inifile) >= sizeof(seedpath) - 1 || seedpath[0] == '\n') {
-            char *p;
-            GetModuleFileName(NULL, seedpath, sizeof(seedpath));
-            if ((p = strrchr(seedpath, '\\')) != NULL) {
-                *p = '\0';
-                strcat(seedpath, "\\putty.rnd");
+        char *seedpath = get_ini_sz("Generic", "RandSeedFile", inifile);
+        if (!seedpath) {
+            seedpath = snewn(MAX_PATH + 1, char);
+            GetModuleFileName(NULL, seedpath, MAX_PATH + 1);
+            char *p = strrchr(seedpath, '\\');
+            if (p) {
+                strcpy(p, "\\putty.rnd");
             } else {
                 seedpath[0] = 0;
             }
         }
         if (*seedpath && try_random_seed(seedpath, action, &rethandle))
             return rethandle;
+        sfree(seedpath);
     } else {
         HKEY rkey = open_regkey(false, HKEY_CURRENT_USER, PUTTY_REG_POS);
         if (rkey) {

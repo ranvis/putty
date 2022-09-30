@@ -625,15 +625,17 @@ static int getConfValueInt(const char *name, int def, int min, int max)
 {
     int value = def;
     if (get_use_inifile()) {
-        value = GetPrivateProfileInt(APPNAME, name, def, inifile);
+        if (!get_ini_int(APPNAME, name, inifile, &value))
+            value = def;
     } else {
-        HKEY hkey;
-        if (RegOpenKey(HKEY_CURRENT_USER, "Software\\SimonTatham\\PuTTY\\" APPNAME, &hkey) == ERROR_SUCCESS) {
-            DWORD type;
-            DWORD size = sizeof value;
-            if (RegQueryValueEx(hkey, name, 0, &type, (LPBYTE)&value, &size) != ERROR_SUCCESS || type != REG_DWORD)
+        HKEY hkey = open_regkey(false, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+        if (hkey) {
+            DWORD dw;
+            if (get_reg_dword(hkey, name, &dw))
+                value = dw;
+            else
                 value = def;
-            RegCloseKey(hkey);
+            close_regkey(hkey);
         }
     }
     if (value < min || max < value) {
@@ -800,26 +802,23 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
     }
 
     if (keyname != NULL) {
-        char value[8];
+        char *value;
         if (get_use_inifile()) {
-            char null = '\0';
-            GetPrivateProfileString(APPNAME, keyname, &null, value, sizeof value, inifile);
-        }else{
-            HKEY hkey;
-            if (RegOpenKey(HKEY_CURRENT_USER, "Software\\SimonTatham\\PuTTY\\" APPNAME, &hkey) == ERROR_SUCCESS) {
-                DWORD type;
-                DWORD size = sizeof value;
-                if (RegQueryValueEx(hkey, keyname, 0, &type, (LPBYTE) value, &size) != ERROR_SUCCESS || type != REG_SZ)
-                    value[0] = '\0';
-                RegCloseKey(hkey);
+            value = get_ini_sz(APPNAME, keyname, inifile);
+        } else {
+            HKEY hkey = open_regkey(false, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+            if (hkey) {
+                value = get_reg_sz(hkey, keyname);
+                close_regkey(hkey);
             }
         }
-        if (strcmp(value, VALUE_ACCEPT) == 0)
+        if (value && strcmp(value, VALUE_ACCEPT) == 0)
             accept = 1;
-        else if (strcmp(value, VALUE_REFUSE) == 0)
+        else if (value && strcmp(value, VALUE_REFUSE) == 0)
             accept = 0;
         else
             accept = -1;
+        sfree(value);
         if (!confirm_any_request && accept >= 0)
             return accept;
     }
@@ -844,18 +843,20 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
 
         if (keyname != NULL) {
             if (get_use_inifile()) {
-                WritePrivateProfileString(APPNAME, keyname, info.dont_ask_again ? accept ? VALUE_ACCEPT : VALUE_REFUSE : NULL, inifile);
-            }else{
+                put_ini_sz(APPNAME, keyname, info.dont_ask_again ? accept ? VALUE_ACCEPT : VALUE_REFUSE : NULL, inifile);
+            } else {
                 HKEY hkey;
                 if (info.dont_ask_again) {
-                    if (RegCreateKey(HKEY_CURRENT_USER, "Software\\SimonTatham\\PuTTY\\" APPNAME, &hkey) == ERROR_SUCCESS) {
-                        RegSetValueEx(hkey, keyname, 0, REG_SZ, (LPBYTE) (accept ? VALUE_ACCEPT : VALUE_REFUSE), accept ? sizeof VALUE_ACCEPT : sizeof VALUE_REFUSE);
-                        RegCloseKey(hkey);
+                    hkey = open_regkey(true, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+                    if (hkey) {
+                        put_reg_sz(hkey, keyname, (accept ? VALUE_ACCEPT : VALUE_REFUSE));
+                        close_regkey(hkey);
                     }
-                }else{
-                    if (RegOpenKey(HKEY_CURRENT_USER, "Software\\SimonTatham\\PuTTY\\" APPNAME, &hkey) == ERROR_SUCCESS) {
-                        RegDeleteValue(hkey, keyname);
-                        RegCloseKey(hkey);
+                } else {
+                    hkey = open_regkey(false, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+                    if (hkey) {
+                        del_regkey(hkey, keyname);
+                        close_regkey(hkey);
                     }
                 }
             }
@@ -1320,17 +1321,7 @@ static void update_sessions(void)
         return;
 
     if (get_use_inifile()) {
-        char* buffer;
-        int length = 256;
-        char* p;
-        while (1) {
-            buffer = snewn(length, char);
-            if (GetPrivateProfileSectionNames(buffer, length, inifile) < (DWORD) length - 2)
-                break;
-            sfree(buffer);
-            length += 256;
-        }
-        p = buffer;
+        ini_sections *sects = enum_ini_sections(inifile);
 
         for (num_entries = GetMenuItemCount(session_menu);
             num_entries > initial_menuitems_count;
@@ -1339,26 +1330,22 @@ static void update_sessions(void)
 
         index_menu = 0;
         sb = strbuf_new();
-        while (*p != '\0') {
-            if (!strncmp(p, HEADER, sizeof(HEADER) - 1)) {
-                if (strcmp(buf, PUTTY_DEFAULT) != 0) {
-                    strbuf_clear(sb);
-                    unescape_registry_key(p + sizeof(HEADER) - 1, sb);
-                    memset(&mii, 0, sizeof(mii));
-                    mii.cbSize = sizeof(mii);
-                    mii.fMask = MIIM_TYPE | MIIM_STATE | MIIM_ID;
-                    mii.fType = MFT_STRING;
-                    mii.fState = MFS_ENABLED;
-                    mii.wID = (index_menu * 16) + IDM_SESSIONS_BASE;
-                    mii.dwTypeData = sb->s;
-                    InsertMenuItem(session_menu, index_menu, TRUE, &mii);
-                    index_menu++;
-                }
+        while (enum_ini_section_next(sects, sb, HEADER)) {
+            if (strcmp(buf, PUTTY_DEFAULT) != 0) {
+                memset(&mii, 0, sizeof(mii));
+                mii.cbSize = sizeof(mii);
+                mii.fMask = MIIM_TYPE | MIIM_STATE | MIIM_ID;
+                mii.fType = MFT_STRING;
+                mii.fState = MFS_ENABLED;
+                mii.wID = (index_menu * 16) + IDM_SESSIONS_BASE;
+                mii.dwTypeData = sb->s;
+                InsertMenuItem(session_menu, index_menu, TRUE, &mii);
+                index_menu++;
             }
-            p += strlen(p) + 1;
+            strbuf_clear(sb);
         }
         strbuf_free(sb);
-        sfree(buffer);
+        enum_ini_section_finish(sects);
 
         if(index_menu == 0) {
             mii.cbSize = sizeof(mii);
