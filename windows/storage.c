@@ -34,7 +34,8 @@ struct settings_w {
     HKEY sesskey;
 };
 
-static const char HEADER[] = "Session:";
+static const char session_pfx[] = "Session:";
+static const char host_ca_pfx[] = "SshHostCA:";
 
 settings_w *open_settings_w(const char *sessionname, char **errmsg)
 {
@@ -44,7 +45,7 @@ settings_w *open_settings_w(const char *sessionname, char **errmsg)
         sessionname = "Default Settings";
 
     if (get_use_inifile()) {
-        return (settings_w *)create_ini_section(sessionname, HEADER, inifile);
+        return (settings_w *)create_ini_section(sessionname, session_pfx, inifile);
     }
     strbuf *sb = strbuf_new();
     escape_registry_key(sessionname, sb);
@@ -107,7 +108,7 @@ settings_r *open_settings_r(const char *sessionname)
         sessionname = "Default Settings";
 
     if (get_use_inifile()) {
-        return (settings_r *)open_ini_section(sessionname, HEADER, inifile);
+        return (settings_r *)open_ini_section(sessionname, session_pfx, inifile);
     }
     strbuf *sb = strbuf_new();
     escape_registry_key(sessionname, sb);
@@ -238,7 +239,7 @@ void close_settings_r(settings_r *handle)
 void del_settings(const char *sessionname)
 {
     if (get_use_inifile()) {
-        delete_ini_section(sessionname, HEADER, inifile);
+        delete_ini_section(sessionname, session_pfx, inifile);
         remove_session_from_jumplist(sessionname);
         return;
     }
@@ -282,7 +283,7 @@ settings_e *enum_settings_start(void)
 bool enum_settings_next(settings_e *e, strbuf *sb)
 {
     if (get_use_inifile()) {
-        return enum_ini_section_next((ini_sections *)e, sb, HEADER);
+        return enum_ini_section_next((ini_sections *)e, sb, session_pfx);
     }
     char *name = enum_regkey(e->key, e->i);
     if (!name)
@@ -484,6 +485,9 @@ struct host_ca_enum {
 
 host_ca_enum *enum_host_ca_start(void)
 {
+    if (get_use_inifile()) {
+        return (host_ca_enum *)enum_ini_sections(inifile);
+    }
     host_ca_enum *e;
     HKEY key;
 
@@ -499,6 +503,9 @@ host_ca_enum *enum_host_ca_start(void)
 
 bool enum_host_ca_next(host_ca_enum *e, strbuf *sb)
 {
+    if (get_use_inifile()) {
+        return enum_ini_section_next((ini_sections *)e, sb, host_ca_pfx);
+    }
     char *regbuf = enum_regkey(e->key, e->i);
     if (!regbuf)
         return false;
@@ -511,14 +518,64 @@ bool enum_host_ca_next(host_ca_enum *e, strbuf *sb)
 
 void enum_host_ca_finish(host_ca_enum *e)
 {
+    if (get_use_inifile()) {
+        enum_ini_section_finish((ini_sections *)e);
+        return;
+    }
     close_regkey(e->key);
     sfree(e);
+}
+
+static void host_ca_load_match_hosts(strbuf *sb, host_ca *hca)
+{
+    BinarySource src[1];
+    BinarySource_BARE_INIT_PL(src, ptrlen_from_strbuf(sb));
+    CertExprBuilder *eb = cert_expr_builder_new();
+
+    const char *wc;
+    while (wc = get_asciz(src), !get_err(src))
+        cert_expr_builder_add(eb, wc);
+
+    hca->validity_expression = cert_expr_expression(eb);
+    cert_expr_builder_free(eb);
 }
 
 host_ca *host_ca_load(const char *name)
 {
     strbuf *sb;
     const char *s;
+    if (get_use_inifile()) {
+        char *section = open_ini_section(name, host_ca_pfx, inifile);
+        if (!section)
+            return NULL;
+        int val;
+
+        host_ca *hca = host_ca_new();
+        hca->name = dupstr(name);
+
+        if ((s = get_ini_sz(section, "PublicKey", inifile)) != NULL)
+            hca->ca_public_key = base64_decode_sb(ptrlen_from_asciz(s));
+        sfree(s);
+
+        if ((s = get_ini_sz(section, "Validity", inifile)) != NULL) {
+            hca->validity_expression = strbuf_to_str(
+                percent_decode_sb(ptrlen_from_asciz(s)));
+            sfree(s);
+        } else if ((sb = get_ini_multi_sz(section, "MatchHosts", inifile)) != NULL) {
+            host_ca_load_match_hosts(sb, hca);
+            strbuf_free(sb);
+        }
+
+        if (get_ini_int(section, "PermitRSASHA1", inifile, &val))
+            hca->opts.permit_rsa_sha1 = val;
+        if (get_ini_int(section, "PermitRSASHA256", inifile, &val))
+            hca->opts.permit_rsa_sha256 = val;
+        if (get_ini_int(section, "PermitRSASHA512", inifile, &val))
+            hca->opts.permit_rsa_sha512 = val;
+
+        sfree(section);
+        return hca;
+    }
 
     sb = strbuf_new();
     escape_registry_key(name, sb);
@@ -535,21 +592,15 @@ host_ca *host_ca_load(const char *name)
 
     if ((s = get_reg_sz(rkey, "PublicKey")) != NULL)
         hca->ca_public_key = base64_decode_sb(ptrlen_from_asciz(s));
+    sfree(s);
 
     if ((s = get_reg_sz(rkey, "Validity")) != NULL) {
         hca->validity_expression = strbuf_to_str(
             percent_decode_sb(ptrlen_from_asciz(s)));
+        sfree(s);
     } else if ((sb = get_reg_multi_sz(rkey, "MatchHosts")) != NULL) {
-        BinarySource src[1];
-        BinarySource_BARE_INIT_PL(src, ptrlen_from_strbuf(sb));
-        CertExprBuilder *eb = cert_expr_builder_new();
-
-        const char *wc;
-        while (wc = get_asciz(src), !get_err(src))
-            cert_expr_builder_add(eb, wc);
-
-        hca->validity_expression = cert_expr_expression(eb);
-        cert_expr_builder_free(eb);
+        host_ca_load_match_hosts(sb, hca);
+        strbuf_free(sb);
     }
 
     if (get_reg_dword(rkey, "PermitRSASHA1", &val))
@@ -566,7 +617,32 @@ host_ca *host_ca_load(const char *name)
 char *host_ca_save(host_ca *hca)
 {
     if (!*hca->name)
-        return dupstr("CA record must have a name");
+        return l10n_dupstr("CA record must have a name");
+    if (get_use_inifile()) {
+        char *section = create_ini_section(hca->name, host_ca_pfx, inifile);
+        if (!section) {
+            char *err = dupprintf("Unable to create HostCA section\n"
+                                  "%s", hca->name);
+            return err;
+        }
+
+        strbuf *base64_pubkey = base64_encode_sb(
+            ptrlen_from_strbuf(hca->ca_public_key), 0);
+        put_ini_sz(section, "PublicKey", base64_pubkey->s, inifile);
+        strbuf_free(base64_pubkey);
+
+        strbuf *validity = percent_encode_sb(
+            ptrlen_from_asciz(hca->validity_expression), NULL);
+        put_ini_sz(section, "Validity", validity->s, inifile);
+        strbuf_free(validity);
+
+        put_ini_int(section, "PermitRSASHA1", hca->opts.permit_rsa_sha1, inifile);
+        put_ini_int(section, "PermitRSASHA256", hca->opts.permit_rsa_sha256, inifile);
+        put_ini_int(section, "PermitRSASHA512", hca->opts.permit_rsa_sha512, inifile);
+
+        sfree(section);
+        return NULL;
+    }
 
     strbuf *sb = strbuf_new();
     escape_registry_key(hca->name, sb);
@@ -599,6 +675,10 @@ char *host_ca_save(host_ca *hca)
 
 char *host_ca_delete(const char *name)
 {
+    if (get_use_inifile()) {
+        delete_ini_section(name, host_ca_pfx, inifile);
+        return NULL;
+    }
     HKEY rkey = open_regkey(false, HKEY_CURRENT_USER, host_ca_key);
     if (!rkey)
         return NULL;

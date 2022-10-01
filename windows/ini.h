@@ -20,5 +20,7 @@ bool put_ini_sz(const char *section, const char *name, const char *value, const 
 char *get_ini_sz(const char *section, const char *name, const char *ini_file);
 bool put_ini_int(const char *section, const char *name, int value, const char *ini_file);
 bool get_ini_int(const char *section, const char *name, const char *ini_file, int *value);
+strbuf *get_ini_multi_sz(const char *section, const char *name, const char *ini_file);
+bool put_ini_multi_sz(const char *section, const char *name, strbuf *value, const char *ini_file);
 
 #endif

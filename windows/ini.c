@@ -17,12 +17,12 @@ bool get_use_inifile(void)
 {
     if (inifile[0] == '\0') {
         char buf[10];
-        char *p;
         GetModuleFileName(NULL, inifile, sizeof inifile - 10);
-        if((p = strrchr(inifile, '\\'))){
-            *p = '\0';
+        char *p = strrchr(inifile, '\\');
+        if (!p) {
+            p = inifile;
         }
-        strcat(inifile, "\\putty.ini");
+        strcpy(p, "\\putty.ini");
         GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
         use_inifile = buf[0] == '1';
         if (!use_inifile) {
@@ -154,10 +154,50 @@ void enum_ini_section_finish(ini_sections *e)
     sfree(e);
 }
 
+static size_t strspn_table(char *str, const char *tab)
+{
+    char *p = str;
+    while (*p) {
+        if (!tab[*(unsigned char *)p]) {
+            break;
+        }
+        p++;
+    }
+    return (size_t)(p - str);
+}
+
+/*
+# the following table is generated with this Perl script:
+use 5.030;
+use warnings;
+my $bareChars = ',-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+my @tab = (0) x 256;
+$tab[ord($_)] = 1 foreach (split(//, $bareChars));
+say '    ', join(', ', splice(@tab, 0, 16)), ',' while (@tab);
+*/
+static const char ini_nq_table[256] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
 bool put_ini_sz(const char *section, const char *name, const char *value, const char *ini_file)
 {
     BOOL result;
-    if (value[strspn(value, ",-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")] == '\0') {
+    if (value == NULL || value[strspn_table(value, ini_nq_table)] == '\0') {
         result = WritePrivateProfileString(section, name, value, ini_file);
     } else {
         // quote so that Windows will not strip surrounding quotes or spaces on retrieval
@@ -179,7 +219,7 @@ char *get_ini_sz(const char *section, const char *name, const char *ini_file)
     for (DWORD size = 1024;; size *= 2) {
         value = snewn(size, char);
         if (GetPrivateProfileString(section, name, "\n:", value, size, ini_file) != size - 1)
-            break;
+            break; // not resized, but most allocations will not last long
         sfree(value);
     }
     if (value[0] != '\n') // distinguish missing value from empty value
@@ -205,4 +245,27 @@ bool get_ini_int(const char *section, const char *name, const char *ini_file, in
         return true;
     }
     return false;
+}
+
+strbuf *get_ini_multi_sz(const char *section, const char *name, const char *ini_file)
+
+{
+    char *value = get_ini_sz(section, name, ini_file);
+    if (!value)
+        return NULL;
+    strbuf *values = strbuf_new();
+    unescape_registry_key(value, values);
+    sfree(value);
+    while (strbuf_chomp(values, '\0')) ;
+    put_byte(values, '\0');
+    return values;
+}
+
+bool put_ini_multi_sz(const char *section, const char *name, strbuf *value, const char *ini_file)
+{
+    strbuf *flat = strbuf_new();
+    escape_ini_value_n(value->s, value->len + 1, flat);
+    bool result = put_ini_sz(section, name, flat->s, ini_file);
+    strbuf_free(flat);
+    return result;
 }

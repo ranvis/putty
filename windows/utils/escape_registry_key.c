@@ -28,6 +28,20 @@ void escape_registry_key(const char *in, strbuf *out)
     }
 }
 
+void escape_ini_value_n(const char *in, size_t n, strbuf *out)
+{
+    static const char hex[16] = "0123456789ABCDEF";
+    while (n-- > 0) {
+        if (*in == '\\' || *in == '%' || *in < ' ' || *in > '~') {
+            put_byte(out, '%');
+            put_byte(out, hex[((unsigned char) *in) >> 4]);
+            put_byte(out, hex[((unsigned char) *in) & 15]);
+        } else
+            put_byte(out, *in);
+        in++;
+    }
+}
+
 void unescape_registry_key(const char *in, strbuf *out)
 {
     while (*in) {
