@@ -36,6 +36,8 @@ struct settings_w {
 
 static const char session_pfx[] = "Session:";
 static const char host_ca_pfx[] = "SshHostCA:";
+static const char ini_jumplist[] = "JumpList";
+static const char ini_jumplist_recent[] = "RecentSessions";
 
 settings_w *open_settings_w(const char *sessionname, char **errmsg)
 {
@@ -135,7 +137,6 @@ char *read_setting_s(settings_r *handle, const char *key)
 
 int read_setting_i(settings_r *handle, const char *key, int defvalue)
 {
-    DWORD val;
     if (get_use_inifile()) {
         if (handle) {
             int value;
@@ -144,6 +145,7 @@ int read_setting_i(settings_r *handle, const char *key, int defvalue)
         }
         return defvalue;
     }
+    DWORD val;
     if (!handle || !get_reg_dword(handle->sesskey, key, &val))
         return defvalue;
     else
@@ -887,12 +889,20 @@ void write_random_seed(void *data, int len)
 static int transform_jumplist_registry(
     const char *add, const char *rem, char **out)
 {
-    HKEY rkey = open_regkey(true, HKEY_CURRENT_USER, reg_jumplist_key);
-    if (!rkey)
-        return JUMPLISTREG_ERROR_KEYOPENCREATE_FAILURE;
-
+    HKEY rkey;
+    strbuf *oldlist;
     /* Get current list of saved sessions in the registry. */
-    strbuf *oldlist = get_reg_multi_sz(rkey, reg_jumplist_value);
+    if (get_use_inifile()) {
+        rkey = NULL;
+        oldlist = get_ini_multi_sz(ini_jumplist, ini_jumplist_recent, inifile);
+    } else {
+        rkey = open_regkey(true, HKEY_CURRENT_USER, reg_jumplist_key);
+        if (!rkey)
+            return JUMPLISTREG_ERROR_KEYOPENCREATE_FAILURE;
+
+        oldlist = get_reg_multi_sz(rkey, reg_jumplist_value);
+    }
+
     if (!oldlist) {
         /* Start again with the empty list. */
         oldlist = strbuf_new();
@@ -930,13 +940,19 @@ static int transform_jumplist_registry(
         }
 
         /* Save the new list to the registry. */
-        write_failure = !put_reg_multi_sz(rkey, reg_jumplist_value, newlist);
+        if (oldlist->len != newlist->len || memcmp(oldlist->s, newlist->s, oldlist->len)) {
+            if (!rkey)
+                write_failure = !put_ini_multi_sz(ini_jumplist, ini_jumplist_recent, newlist, inifile);
+            else
+                write_failure = !put_reg_multi_sz(rkey, reg_jumplist_value, newlist);
+        }
 
         strbuf_free(oldlist);
         oldlist = newlist;
     }
 
-    close_regkey(rkey);
+    if (rkey)
+        close_regkey(rkey);
 
     if (out && !write_failure)
         *out = strbuf_to_str(oldlist);
