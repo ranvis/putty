@@ -74,16 +74,16 @@ char *change_ini_path(const char *new_path)
     return NULL;
 }
 
-static void escape_ini_section(const char *in, strbuf *out, const char *prefix)
+static void put_ini_section(const char *in, strbuf *out, const char *prefix)
 {
     put_dataz(out, prefix);
-    escape_registry_key(in, out);
+    escape_ini_section(in, out);
 }
 
 char *create_ini_section(const char *name, const char *prefix, const char *ini_file)
 {
     strbuf *sb = strbuf_new();
-    escape_ini_section(name, sb, prefix);
+    put_ini_section(name, sb, prefix);
     WritePrivateProfileString(sb->s, "Present", "1", ini_file);
     return strbuf_to_str(sb);
 }
@@ -92,7 +92,7 @@ char *open_ini_section(const char *name, const char *prefix, const char *ini_fil
 {
     strbuf *sb = strbuf_new();
     char temp[3];
-    escape_ini_section(name, sb, prefix);
+    put_ini_section(name, sb, prefix);
     GetPrivateProfileString(sb->s, "Present", "", temp, sizeof temp, ini_file);
     if (temp[0] != '1') {
         strbuf_free(sb);
@@ -104,7 +104,7 @@ char *open_ini_section(const char *name, const char *prefix, const char *ini_fil
 void delete_ini_section(const char *name, const char *prefix, const char *ini_file)
 {
     strbuf *sb = strbuf_new();
-    escape_ini_section(name, sb, prefix);
+    put_ini_section(name, sb, prefix);
     WritePrivateProfileSection(sb->s, NULL, ini_file);
     strbuf_free(sb);
 }

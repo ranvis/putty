@@ -9,10 +9,11 @@
 
 #include "putty.h"
 
+static const char hex[16] = "0123456789ABCDEF";
+
 void escape_registry_key(const char *in, strbuf *out)
 {
     bool candot = false;
-    static const char hex[16] = "0123456789ABCDEF";
 
     while (*in) {
         if (*in == ' ' || *in == '\\' || *in == '*' || *in == '?' ||
@@ -28,9 +29,28 @@ void escape_registry_key(const char *in, strbuf *out)
     }
 }
 
+void escape_ini_section(const char *in, strbuf *out)
+{
+    bool candot = false;
+
+    // while retaining compatibility with the previous versions which used escape_registry_key(), ']' is escaped for safety
+    while (*in) {
+        if (*in == ' ' || *in == '\\' || *in == '*' || *in == '?' ||
+            *in == ']' ||
+            *in == '%' || *in < ' ' || *in > '~' || (*in == '.'
+                                                     && !candot)) {
+            put_byte(out, '%');
+            put_byte(out, hex[((unsigned char) *in) >> 4]);
+            put_byte(out, hex[((unsigned char) *in) & 15]);
+        } else
+            put_byte(out, *in);
+        in++;
+        candot = true;
+    }
+}
+
 void escape_ini_value_n(const char *in, size_t n, strbuf *out)
 {
-    static const char hex[16] = "0123456789ABCDEF";
     while (n-- > 0) {
         if (*in == '\\' || *in == '%' || *in < ' ' || *in > '~') {
             put_byte(out, '%');
