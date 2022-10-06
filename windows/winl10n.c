@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include "putty.h"
 
+#define IN_STR_MAX 448
+#define OUT_STR_MAX_A 512
+#define OUT_STR_MAX_W 448
+#define SHORT_STR_MAX 192
+
 static const WCHAR *lng_path = L"";
 static WCHAR lng_section[32];
 static WCHAR ofontname[128];
@@ -29,7 +34,7 @@ static DLGPROC lastolddlgproc;
 
 static WCHAR *low_url_escape(const WCHAR *p)
 {
-    static WCHAR tmp_str[1024];
+    static WCHAR tmp_str[IN_STR_MAX];
     int i;
     for (i = 0; i < lenof(tmp_str) - 1 - 2 - 2 && *p; i++) {
         if (i == 0 && *p == ' ' || (*p > 0 && *p < 32) || *p == '=' || *p == '%') {
@@ -79,7 +84,7 @@ int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
 {
     int r;
     WCHAR *out;
-    WCHAR in_str[256];
+    WCHAR in_str[IN_STR_MAX];
     const WCHAR *str_esc;
     {
         const WCHAR *p = str;
@@ -123,16 +128,14 @@ WCHAR *strtranslatefb(const WCHAR *str, WCHAR *out_buf, int out_size)
 
 static int cwstrtranslate(const char *str, WCHAR *out_buf, int out_size)
 {
-    WCHAR in_str[256];
-    {
-        int i;
-        for (i = 0; i < lenof(in_str) - 1 && str[i]; i++) {
-            if (IsDBCSLeadByte(str[i]))
-                return 0;
-            in_str[i] = str[i];
-        }
-        in_str[i] = 0;
+    WCHAR in_str[IN_STR_MAX];
+    int i;
+    for (i = 0; i < lenof(in_str) - 1 && str[i]; i++) {
+        if (IsDBCSLeadByte(str[i]))
+            return 0;
+        in_str[i] = str[i];
     }
+    in_str[i] = 0;
     return strtranslate(in_str, out_buf, out_size);
 }
 
@@ -152,22 +155,21 @@ static int cwstrtranslatefb(const char *str, WCHAR *out_buf, int out_size)
 
 static int ccstrtranslate(const char *str, char *out_buf, int out_size)
 {
-    WCHAR *w_buf = snewn(out_size, WCHAR);
-    int r = cwstrtranslate(str, w_buf, out_size);
+    WCHAR w_buf[OUT_STR_MAX_W];
+    int r = cwstrtranslate(str, w_buf, lenof(w_buf));
     if (r) {
         r = ws_to_mbs(w_buf, r + 1, out_buf, out_size);
         if (r) {
             r--;
         }
     }
-    sfree(w_buf);
     return r;
 }
 
 static void domenu(HMENU menu)
 {
     int i, n;
-    WCHAR a[256];
+    WCHAR a[SHORT_STR_MAX];
     MENUITEMINFOW b;
 
     n = GetMenuItemCount(menu);
@@ -222,7 +224,7 @@ static LRESULT hook_setfont(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LP
 
 static LRESULT hook_create(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-    WCHAR text[256], trtext[256];
+    WCHAR text[SHORT_STR_MAX], trtext[SHORT_STR_MAX];
     LRESULT result;
 
     result = CallWindowProc(proc, hwnd, msg, (WPARAM)hfont, lparam);
@@ -236,7 +238,7 @@ static LRESULT hook_tvm_insertitem(WNDPROC proc, HWND hwnd, UINT msg, WPARAM wpa
 {
     TVINSERTSTRUCTW *p;
     WCHAR *text;
-    WCHAR trtext[256];
+    WCHAR trtext[SHORT_STR_MAX];
     LRESULT result;
 
     p = (TVINSERTSTRUCTW*)lparam;
@@ -304,7 +306,7 @@ static LRESULT CALLBACK wndproc_listbox(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     switch (msg) {
       case WM_SETFONT: return hook_setfont(proc, hwnd, msg, wparam, lparam);
       case LB_ADDSTRING: {
-        WCHAR buffer[256];
+        WCHAR buffer[SHORT_STR_MAX];
         WCHAR *text = (WCHAR *)lparam;
         if (strtranslate(text, buffer, lenof(buffer)))
             text = buffer;
@@ -322,7 +324,7 @@ static LRESULT CALLBACK wndproc_combobox(HWND hwnd, UINT msg, WPARAM wparam, LPA
     switch (msg) {
       case WM_SETFONT: return hook_setfont(proc, hwnd, msg, wparam, lparam);
       case CB_ADDSTRING: {
-        WCHAR buffer[256];
+        WCHAR buffer[SHORT_STR_MAX];
         WCHAR *text = (WCHAR *)lparam;
         if (strtranslate(text, buffer, lenof(buffer)))
             text = buffer;
@@ -479,7 +481,6 @@ static HWND override_wndproc(HWND r)
     char classname[256];
     DWORD style;
     struct prop *qq;
-    WCHAR buf[256];
     enum { TYPE_OFF, TYPE_MAIN, TYPE_OTHER } type;
 
     if (!r)
@@ -496,6 +497,7 @@ static HWND override_wndproc(HWND r)
     if (type == TYPE_OFF)
         return r;
     if (type == TYPE_OTHER) {
+        WCHAR buf[SHORT_STR_MAX];
         if (GetWindowTextW(r, buf, lenof(buf)))
             if (strtranslate(buf, buf, lenof(buf)))
                 SetWindowTextW(r, buf);
@@ -523,11 +525,11 @@ static void translate_children(HWND hwnd)
 {
     HWND a;
     LOGFONTW l;
-    WCHAR buf[256];
 
     a = GetWindow(hwnd, GW_CHILD);
     while (a) {
         translate_children(a);
+        WCHAR buf[SHORT_STR_MAX];
         if (GetWindowTextW(a, buf, lenof(buf)))
             if (strtranslate(buf, buf, lenof(buf)))
                 SetWindowTextW(a, buf);
@@ -567,10 +569,9 @@ static INT_PTR CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
 #undef MessageBoxA
 int l10nMessageBoxA(HWND hWnd, LPCSTR text, LPCSTR caption, UINT type)
 {
-    WCHAR textw[256], captionw[256];
-
     if (!getEnabled())
         return MessageBoxA(hWnd, text, caption, type);
+    WCHAR textw[OUT_STR_MAX_W], captionw[SHORT_STR_MAX];
     cwstrtranslatefb(text, textw, lenof(textw));
     cwstrtranslatefb(caption, captionw, lenof(captionw));
     return MessageBoxW(hWnd, textw, captionw, type);
@@ -650,7 +651,7 @@ const char *l10n_translate_s(const char *str, char *buf, size_t len)
 
 char *l10n_dupstr(const char *str)
 {
-    char buf[256];
+    char buf[OUT_STR_MAX_A];
     return dupstr(l10n_translate(str, buf));
 }
 
@@ -674,7 +675,7 @@ HFONT l10n_getfont(HFONT f)
 int l10n_sprintf(char *buffer, const char *format, ...)
 {
     int r;
-    char format2[1024];
+    char format2[OUT_STR_MAX_A];
     va_list args;
     va_start(args, format);
     if (getEnabled()) {
@@ -694,7 +695,7 @@ int l10n_sprintf(char *buffer, const char *format, ...)
 #endif
 int l10n_vsnprintf(char *buffer, int size, const char *format, va_list args)
 {
-    char format2[1024];
+    char format2[OUT_STR_MAX_A];
     if (getEnabled()) {
         if (ccstrtranslate(format, format2, lenof(format2)))
             format = format2;
@@ -705,7 +706,7 @@ int l10n_vsnprintf(char *buffer, int size, const char *format, va_list args)
 #undef dupvprintf
 char *l10n_dupvprintf(const char *format, va_list ap)
 {
-    char format2[1024];
+    char format2[OUT_STR_MAX_A];
     if (getEnabled()) {
         if (ccstrtranslate(format, format2, lenof(format2)))
             format = format2;
@@ -716,7 +717,7 @@ char *l10n_dupvprintf(const char *format, va_list ap)
 char *l10n_dupprintf(const char *format, ...)
 {
     char *r;
-    char format2[1024];
+    char format2[OUT_STR_MAX_A];
     va_list args;
     va_start(args, format);
     if (getEnabled()) {
@@ -730,9 +731,9 @@ char *l10n_dupprintf(const char *format, ...)
 
 static int getOpenSaveFilename(OPENFILENAME *ofn, int (WINAPI *f)(OPENFILENAME *))
 {
-    char title[256];
-    char file_title[256];
-    char filter[256];
+    char title[SHORT_STR_MAX];
+    char file_title[SHORT_STR_MAX];
+    char filter[SHORT_STR_MAX];
     if (getEnabled()) {
         if (ofn->lpstrTitle != NULL && ccstrtranslate(ofn->lpstrTitle, title, lenof(title)))
             ofn->lpstrTitle = title;
@@ -758,7 +759,7 @@ int l10nGetSaveFileNameA(OPENFILENAMEA *ofn)
 
 BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 {
-    WCHAR buf[256];
+    WCHAR buf[SHORT_STR_MAX];
     if (cwstrtranslate(text, buf, lenof(buf)))
         return SetDlgItemTextW(dialog, id, buf);
     return SetDlgItemText(dialog, id, text);
@@ -766,7 +767,7 @@ BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 
 LRESULT l10nSendDlgItemMessage(HWND dialog, int id, UINT msg, WPARAM wp, LPARAM lp)
 {
-    WCHAR buf[256];
+    WCHAR buf[SHORT_STR_MAX];
     if (cwstrtranslate((const char *)lp, buf, lenof(buf)))
         return SendDlgItemMessageW(dialog, id, msg, wp, (LPARAM)buf);
     return SendDlgItemMessage(dialog, id, msg, wp, lp);
@@ -774,7 +775,7 @@ LRESULT l10nSendDlgItemMessage(HWND dialog, int id, UINT msg, WPARAM wp, LPARAM 
 
 BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text)
 {
-    WCHAR buf[256];
+    WCHAR buf[SHORT_STR_MAX];
     if (flags != MF_SEPARATOR && cwstrtranslate(text, buf, lenof(buf)))
         return AppendMenuW(menu, flags, id, buf);
     return AppendMenu(menu, flags, id, text);
