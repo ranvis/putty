@@ -195,12 +195,12 @@ static LRESULT CALLBACK wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpara
     proc = p->oldproc;
     switch (msg) {
       case WM_DESTROY:
-        RemoveProp(hwnd, propstr);
-        LocalFree((HANDLE)p);
-        if (p->is_unicode)
+        p = RemoveProp(hwnd, propstr);
+        if (p && p->is_unicode)
             SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)proc);
         else
             SetWindowLongPtrA(hwnd, GWLP_WNDPROC, (LONG_PTR)proc);
+        LocalFree((HANDLE)p);
         break;
       case WM_INITMENUPOPUP:
         domenu((HMENU)wparam);
@@ -554,7 +554,7 @@ static INT_PTR CALLBACK dlgproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
         p = (struct prop *)LocalAlloc(0, sizeof(*p));
         if (p && !SetProp(hwnd, propstr, (HANDLE)p))
             LocalFree((HANDLE)p);
-        else
+        else if (p)
             *p = defaultprop;
     }
     p = GetProp(hwnd, propstr);
