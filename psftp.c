@@ -13,6 +13,7 @@
 #include "storage.h"
 #include "ssh.h"
 #include "ssh/sftp.h"
+#include "ssh/xferlimit.h"
 
 /*
  * Since SFTP is a request-response oriented protocol, it requires
@@ -2550,6 +2551,7 @@ static void usage(void)
     printf("  -hostkey keyid\n");
     printf("            manually specify a host key (may be repeated)\n");
     printf("  -batch    disable all interactive prompts\n");
+    printf("  -limit num  limit upload speed per file (kbit/s)\n");
     printf("  -no-sanitise-stderr  don't strip control chars from"
            " standard error\n");
     printf("  -proxycmd command\n");
@@ -2844,6 +2846,11 @@ int psftp_main(int argc, char *argv[])
             modeflags = modeflags | 1;
         } else if (strcmp(argv[i], "-be") == 0) {
             modeflags = modeflags | 2;
+        } else if (strcmp(argv[i], "-limit") == 0) {
+            char *error_msg = xfer_limit_set_arg(i + 1 < argc ? argv[i + 1] : NULL);
+            if (error_msg)
+                cmdline_error(error_msg);
+            i++;
         } else if (strcmp(argv[i], "-sanitise-stderr") == 0) {
             sanitise_stderr = true;
         } else if (strcmp(argv[i], "-no-sanitise-stderr") == 0) {

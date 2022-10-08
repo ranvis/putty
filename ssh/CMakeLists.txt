@@ -48,5 +48,6 @@ add_library(sshserver STATIC
   $<TARGET_OBJECTS:sftpcommon>
   $<TARGET_OBJECTS:sshcommon>)
 
-add_sources_from_current_dir(sftpclient sftp.c)
+add_sources_from_current_dir(sftpclient sftp.c
+  xferlimit.c)
 target_sources(sftpclient PRIVATE $<TARGET_OBJECTS:sftpcommon>)

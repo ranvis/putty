@@ -18,6 +18,7 @@ add_sources_from_current_dir(utils
   utils/pgp_fingerprints.c
   utils/pollwrap.c
   utils/signal.c
+  utils/sleep_ticks.c
   utils/x11_ignore_error.c
   # We want the ISO C implementation of ltime(), because we don't have
   # a local better alternative

@@ -3026,6 +3026,8 @@ char *l10n_dupstr(const char *);
 char *l10n_dupvprintf(const char *format, va_list ap);
 int get_l10n_setting(const char* keyname, char* buf, int size);
 
+void sleep_ticks(int ticks);
+
 /* SURROGATE PAIR */
 #ifndef HIGH_SURROGATE_START /* in some toolchains <winnls.h> defines these */
 #define HIGH_SURROGATE_START 0xd800

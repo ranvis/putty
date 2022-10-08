@@ -11,6 +11,7 @@
 #include "misc.h"
 #include "tree234.h"
 #include "sftp.h"
+#include "xferlimit.h"
 
 static const char *fxp_error_message;
 static int fxp_errtype;
@@ -1105,6 +1106,7 @@ struct fxp_xfer *xfer_upload_init(struct fxp_handle *fh, uint64_t offset)
      * handled once that's done.
      */
     xfer->eof = true;
+    xfer_limit_start();
 
     return xfer;
 }
@@ -1114,7 +1116,7 @@ bool xfer_upload_ready(struct fxp_xfer *xfer)
     return sftp_sendbuffer() == 0;
 }
 
-void xfer_upload_data(struct fxp_xfer *xfer, char *buffer, int len)
+void xfer_upload_data_real(struct fxp_xfer *xfer, char *buffer, int len)
 {
     struct req *rr;
     struct sftp_request *req;
@@ -1144,6 +1146,11 @@ void xfer_upload_data(struct fxp_xfer *xfer, char *buffer, int len)
     printf("queueing write request %p at %"PRIu64" [len %d]\n",
            rr, rr->offset, len);
 #endif
+}
+
+void xfer_upload_data(struct fxp_xfer *xfer, char *buffer, int len)
+{
+    xfer_upload_data_limited(xfer, buffer, len);
 }
 
 /*
