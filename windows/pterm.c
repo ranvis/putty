@@ -1,4 +1,5 @@
 #include "putty.h"
+#include "ini.h"
 #include "storage.h"
 
 const unsigned cmdline_tooltype =
@@ -18,6 +19,8 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
     int argc;
     char **argv, **argstart;
     split_into_argv(cmdline, &argc, &argv, &argstart);
+
+    process_ini_option(&argc, &argv, 0, cmdline_error);
 
     for (int i = 0; i < argc; i++) {
         char *arg = argv[i];

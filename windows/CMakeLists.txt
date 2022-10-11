@@ -178,6 +178,7 @@ if(HAVE_CONPTY)
   add_dependencies(pterm generated_licence_h)
   target_link_libraries(pterm
     guiterminal guimisc eventloop settings network utils
+    iso2022
     ${platform_libraries})
   set_target_properties(pterm PROPERTIES
     WIN32_EXECUTABLE ON
