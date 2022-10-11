@@ -74,6 +74,21 @@ char *change_ini_path(const char *new_path)
     return NULL;
 }
 
+void process_ini_option(int *argc, char ***argv, int offset, sprintf_void_fp error_cb)
+{
+    int count = *argc;
+    char **vec = *argv;
+    if (count > offset && !strcmp(vec[offset], "-ini")) {
+        char *error_msg = change_ini_path(count > offset + 1 ? vec[offset + 1] : NULL);
+        if (error_msg) {
+            error_cb(error_msg);
+            exit(1);
+        }
+        *argc -= 2;
+        *argv += 2;
+    }
+}
+
 static void put_ini_section(const char *in, strbuf *out, const char *prefix)
 {
     put_dataz(out, prefix);

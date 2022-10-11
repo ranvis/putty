@@ -2105,14 +2105,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
      */
     split_into_argv(cmdline, &argc, &argv, &argstart);
 
-    if (argc > 0 && !strcmp(argv[0], "-ini")) {
-        char *error_msg = change_ini_path(argc > 1 ? argv[1] : NULL);
-        if (error_msg) {
-            opt_error(error_msg);
-        }
-        argc -= 2;
-        argv += 2;
-    }
+    process_ini_option(&argc, &argv, 0, opt_error);
 
     bool add_keys_encrypted = false;
     AuxMatchOpt amo = aux_match_opt_init(argc, argv, 0, opt_error);

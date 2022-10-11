@@ -61,14 +61,7 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
 
         split_into_argv(cmdline, &argc, &argv, NULL);
 
-        if (argc > 0 && !strcmp(argv[0], "-ini")) {
-            char *error_msg = change_ini_path(argc > 1 ? argv[1] : NULL);
-            if (error_msg) {
-                cmdline_error(error_msg);
-            }
-            argc -= 2;
-            argv += 2;
-        }
+        process_ini_option(&argc, &argv, 0, cmdline_error);
 
         for (i = 0; i < argc; i++) {
             char *p = argv[i];

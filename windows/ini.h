@@ -5,8 +5,11 @@ typedef struct ini_sections ini_sections;
 
 extern char inifile[2 * MAX_PATH + 10];
 
+typedef void (*sprintf_void_fp)(const char *fmt, ...);
+
 bool get_use_inifile(void);
 char *change_ini_path(const char *new_path);
+void process_ini_option(int *argc, char ***argv, int offset, sprintf_void_fp error_cb);
 
 char *create_ini_section(const char *name, const char *prefix, const char *ini_file);
 char *open_ini_section(const char *name, const char *prefix, const char *ini_file);

@@ -328,14 +328,7 @@ int main(int argc, char **argv)
             }
         }
     }
-    if (argc > 1 && !strcmp(argv[1], "-ini")) {
-        char *error_msg = change_ini_path(argc > 2 ? argv[2] : NULL);
-        if (error_msg) {
-            cmdline_error(error_msg);
-        }
-        argc -= 2;
-        argv += 2;
-    }
+    process_ini_option(&argc, &argv, 1, cmdline_error);
     while (--argc) {
         char *p = *++argv;
         int ret = cmdline_process_param(p, (argc > 1 ? argv[1] : NULL),
