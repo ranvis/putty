@@ -1617,7 +1617,7 @@ void cmdline_error(const char *fmt, ...)
     char *message, *title;
 
     va_start(ap, fmt);
-    message = dupvprintf(fmt, ap);
+    message = l10n_dupvprintf(fmt, ap);
     va_end(ap);
     title = dupprintf("%s Command Line Error", appname);
     MessageBox(wgs.term_hwnd, message, title, MB_ICONERROR | MB_OK);

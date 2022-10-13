@@ -12,22 +12,23 @@
 
 static const WCHAR *lng_path = L"";
 static WCHAR lng_section[32];
-static WCHAR ofontname[128];
+static WCHAR ofontname[64];
 static HFONT hfont;
 static WNDPROC orig_wndproc_button, orig_wndproc_static,
                orig_wndproc_systreeview32, orig_wndproc_edit, orig_wndproc_listbox, orig_wndproc_combobox;
-static int collect = 0;
+static int collect_len = 0;
 static INT_PTR CALLBACK defdlgproc(HWND a1, UINT a2, WPARAM a3, LPARAM a4)
 {
     return 0;
 }
 static struct prop {
-    BOOL is_unicode;
+    bool is_unicode;
     WNDPROC oldproc;
     DLGPROC olddlgproc;
 } defaultprop = { TRUE, DefWindowProcW, defdlgproc };
 static char propstr[] = "l10n";
 static DLGPROC lastolddlgproc;
+static int getEnabled();
 
 #define WC_HOOK(orig) ("x" WC_##orig)
 #define WC_HOOKW(orig) (L"x" WC_##orig##W)
@@ -82,6 +83,8 @@ static int ws_to_mbs(const WCHAR *wstr, int in_size, char *str, int str_size)
 
 int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
 {
+    if (!getEnabled())
+        return 0;
     int r;
     WCHAR *out;
     WCHAR in_str[IN_STR_MAX];
@@ -101,7 +104,7 @@ int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
     }
     r = GetPrivateProfileStringW(lng_section, str_esc, L"\n:", out_buf, out_size, lng_path);
     if (out_buf[0] == '\n') {
-        if (collect > 0 && (int)wcslen(str) > collect)
+        if (collect_len > 0 && (int)wcslen(str) > collect_len)
             WritePrivateProfileStringW(lng_section, str_esc, str_esc, lng_path);
         return 0;
     }
@@ -453,9 +456,10 @@ static int getEnabled()
                     wndclass.lpfnWndProc = b[i].new_wndproc;
                     RegisterClassW(&wndclass);
                 }
-                collect = GetPrivateProfileIntW(lng_section, L"_COLLECT_", 0, lng_path);
+                collect_len = GetPrivateProfileIntW(lng_section, L"_COLLECT_", 0, lng_path);
             }
-        } else
+        }
+        if (!enabled)
             lng_path = L"";
     }
     return enabled;
@@ -489,7 +493,7 @@ static HWND override_wndproc(HWND r)
     style = GetWindowLong(r, GWL_STYLE);
     type = TYPE_OFF;
     if (!(style & WS_CHILD)) {
-        if (!strcmp(classname, "PuTTY"))
+        if (!strcmp(classname, "PuTTY") || !strcmp(classname, "PuTTYtel") || !strcmp(classname, "pterm"))
             type = TYPE_MAIN;
         else
             type = TYPE_OTHER;
@@ -760,7 +764,7 @@ int l10nGetSaveFileNameA(OPENFILENAMEA *ofn)
 BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 {
     WCHAR buf[SHORT_STR_MAX];
-    if (cwstrtranslate(text, buf, lenof(buf)))
+    if (getEnabled() && cwstrtranslate(text, buf, lenof(buf)))
         return SetDlgItemTextW(dialog, id, buf);
     return SetDlgItemText(dialog, id, text);
 }
@@ -768,7 +772,7 @@ BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)
 LRESULT l10nSendDlgItemMessage(HWND dialog, int id, UINT msg, WPARAM wp, LPARAM lp)
 {
     WCHAR buf[SHORT_STR_MAX];
-    if (cwstrtranslate((const char *)lp, buf, lenof(buf)))
+    if (getEnabled() && cwstrtranslate((const char *)lp, buf, lenof(buf)))
         return SendDlgItemMessageW(dialog, id, msg, wp, (LPARAM)buf);
     return SendDlgItemMessage(dialog, id, msg, wp, lp);
 }
@@ -776,7 +780,7 @@ LRESULT l10nSendDlgItemMessage(HWND dialog, int id, UINT msg, WPARAM wp, LPARAM 
 BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text)
 {
     WCHAR buf[SHORT_STR_MAX];
-    if (flags != MF_SEPARATOR && cwstrtranslate(text, buf, lenof(buf)))
+    if (getEnabled() && flags != MF_SEPARATOR && cwstrtranslate(text, buf, lenof(buf)))
         return AppendMenuW(menu, flags, id, buf);
     return AppendMenu(menu, flags, id, text);
 }
