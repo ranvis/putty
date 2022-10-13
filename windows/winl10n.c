@@ -81,6 +81,12 @@ static int ws_to_mbs(const WCHAR *wstr, int in_size, char *str, int str_size)
     return result;
 }
 
+static bool load_ini_wsz(const WCHAR *section, const WCHAR *name, WCHAR *dest, DWORD size, const WCHAR *ini_file)
+{
+    DWORD len = GetPrivateProfileStringW(section, name, L"\n", dest, size, ini_file);
+    return len != size - 1 && *dest != L'\n';
+}
+
 int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
 {
     if (!getEnabled())
@@ -410,6 +416,21 @@ static WCHAR *get_lng_file_path_w()
     return lng_path_w;
 }
 
+static WCHAR *resolve_cname_path(const WCHAR *cname, const WCHAR *base)
+{
+    WCHAR *base_sep = wcsrchr(base, L'\\');
+    if (!base_sep || wcschr(cname, L'\\')) {
+        return NULL;
+    }
+    base_sep++;
+    size_t base_dir_len = base_sep - base;
+    size_t cname_len = wcslen(cname);
+    WCHAR *path = snewn(base_dir_len + cname_len + 1, WCHAR);
+    memcpy(path, base, base_dir_len * sizeof(WCHAR));
+    memcpy(path + base_dir_len, cname, (cname_len + 1) * sizeof(WCHAR));
+    return path;
+}
+
 static int getEnabled()
 {
     static int enabled = -1;
@@ -434,8 +455,24 @@ static int getEnabled()
         enabled = 0;
         lng_path = get_lng_file_path_w();
         if (lng_path) {
-            if (GetPrivateProfileStringW(L"Default", L"Language", L"", lng_section, lenof(lng_section),
-                lng_path)) {
+            if (!load_ini_wsz(L"Default", L"Language", lng_section, lenof(lng_section), lng_path) && *lng_section == L'\0') {
+                WCHAR cname[32];
+                WCHAR *cname_path;
+                if (!load_ini_wsz(L"Default", L"CanonicalName", cname, lenof(cname), lng_path)
+                        || *lng_section == L'\0'
+                        || !(cname_path = resolve_cname_path(cname, lng_path))) {
+                    sfree(lng_path);
+                    lng_path = NULL;
+                } else {
+                    sfree(lng_path);
+                    lng_path = cname_path;
+                    if (!load_ini_wsz(L"Default", L"Language", lng_section, lenof(lng_section), lng_path) && *lng_section == L'\0') {
+                        sfree(lng_path);
+                        lng_path = NULL;
+                    }
+                }
+            }
+            if (lng_path) {
                 HINSTANCE hinst = GetModuleHandle(NULL);
                 WCHAR fontname[128];
                 enabled = 1;
