@@ -91,10 +91,6 @@ int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
 {
     if (!getEnabled())
         return 0;
-    int r;
-    WCHAR *out;
-    WCHAR in_str[IN_STR_MAX];
-    const WCHAR *str_esc;
     {
         const WCHAR *p = str;
         while (*p != '\0') {
@@ -103,30 +99,27 @@ int strtranslate(const WCHAR *str, WCHAR *out_buf, int out_size)
             p++;
         }
     }
-    str_esc = low_url_escape(str);
-    if (out_buf == str) {
-        str = memcpy(in_str, str, sizeof in_str);
-        in_str[lenof(in_str) - 1] = '\0';
-    }
-    r = GetPrivateProfileStringW(lng_section, str_esc, L"\n:", out_buf, out_size, lng_path);
-    if (out_buf[0] == '\n') {
-        if (collect_len > 0 && (int)wcslen(str) > collect_len)
+    const WCHAR *str_esc = low_url_escape(str);
+    if (!load_ini_wsz(lng_section, str_esc, out_buf, out_size, lng_path)) {
+        // N.B. str may be out_buf; you cannot do wcslen(str)
+        if (collect_len > 0 && (int)wcslen(str_esc) > collect_len)
             WritePrivateProfileStringW(lng_section, str_esc, str_esc, lng_path);
         return 0;
     }
-    for (out = out_buf; (*out = *out_buf); out++, out_buf++) {
+    WCHAR *out;
+    int len = 0;
+    for (out = out_buf; (*out = *out_buf); out++, out_buf++, len++) {
         if (*out_buf == '%') {
-            int d, e;
-            if ((d = uchex_to_int(out_buf[1])) < 0)
+            int hi, lo;
+            if ((hi = uchex_to_int(out_buf[1])) < 0)
                 continue;
-            if ((e = uchex_to_int(out_buf[2])) < 0)
+            if ((lo = uchex_to_int(out_buf[2])) < 0)
                 continue;
-            *out = d * 16 + e;
+            *out = hi * 16 + lo;
             out_buf += 2;
-            r -= 2;
         }
     }
-    return r;
+    return len;
 }
 
 WCHAR *strtranslatefb(const WCHAR *str, WCHAR *out_buf, int out_size)
