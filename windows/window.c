@@ -5713,8 +5713,10 @@ void write_aclip(int clipboard, char *data, int len, bool must_deselect)
     if (!clipdata)
         return;
     lock = GlobalLock(clipdata);
-    if (!lock)
+    if (!lock) {
+        GlobalFree(clipdata);
         return;
+    }
     memcpy(lock, data, len);
     ((unsigned char *) lock)[len] = 0;
     GlobalUnlock(clipdata);

@@ -69,7 +69,7 @@ bool open_for_write_would_lose_data(const Filename *fn)
              */
             return false;
         }
-        CloseHandle(h);
+        FindClose(h);
         return open_for_write_would_lose_data_impl(
             fd.dwFileAttributes, fd.nFileSizeHigh, fd.nFileSizeLow);
     }

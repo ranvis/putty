@@ -48,8 +48,7 @@ bool get_use_inifile(void)
 
 static bool change_ini_path_core(const char *new_path)
 {
-    char *file_part;
-    GetFullPathName(new_path, sizeof inifile, inifile, &file_part);
+    GetFullPathName(new_path, sizeof inifile, inifile, NULL);
     DWORD attributes = GetFileAttributes(inifile);
     if (attributes == 0xFFFFFFFF || (attributes & FILE_ATTRIBUTE_DIRECTORY)) {
         return false;

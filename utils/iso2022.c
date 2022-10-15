@@ -1543,7 +1543,6 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
   int i, f, j, k = 0;
   int tmp_lockgr, tmp_mskanji, tmp_big5, tmp_win95flag, tmp_ssgr, tmp_utf8cjk;
   int tmp_utf8noncjk, tmp_autojp_eucjp, tmp_autojp_mskanji, tmp_autojp_utf8;
-  unsigned char *init_string = this->initstring;
 
   if (!stricmp (p, "euc-jp"))
     p = "iso2022 lockgr euc-jp";
@@ -1814,6 +1813,7 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
       return 0;
     if (this == NULL)
       return -1;
+    unsigned char *init_string = this->initstring;
     initstring[i++] = 0;
     initstring[i++] = 0;
     initstring[i++] = 0;
