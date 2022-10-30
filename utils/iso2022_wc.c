@@ -1,114 +1,105 @@
 #include <string.h>
 #include "putty.h"
 
-#ifdef _WINDOWS
-int
-xMultiByteToWideChar (UINT a1, DWORD a2, LPCSTR a3, int a4, LPWSTR a5, int a6)
-{
-  static int (WINAPI *f)(UINT, DWORD, LPCSTR, int, LPWSTR, int) = 0;
-  int i, j, k;
-  unsigned char c;
-  unsigned long w;
+// This patch may be duplicate under LEGACY_WINDOWS since 0.78.
 
-  if (!f)
-    (FARPROC)f = GetProcAddress (GetModuleHandle ("kernel32"), "MultiByteToWideChar");
-  if (a1 != CP_UTF8)
-    return f (a1, a2, a3, a4, a5, a6);
-  if (a4 == -1)
-    a4 = lstrlenA (a3);
-  k = 0;
-  a6--;
-  for (i = 0 ; i < a4 ; i++)
+#ifdef _WINDOWS
+int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs, int wcsize)
+{
+    static int (WINAPI *native_call)(UINT, DWORD, LPCSTR, int, LPWSTR, int) = 0;
+    if (!native_call)
+        (FARPROC)native_call = GetProcAddress(GetModuleHandle("kernel32"), "MultiByteToWideChar");
+    if (cp != CP_UTF8)
+        return native_call(cp, flags, mbs, mblen, wcs, wcsize);
+    if (mblen == -1)
+        mblen = lstrlenA(mbs);
+    int outlen = 0;
+    wcsize--;
+    for (int i = 0; i < mblen; i++)
     {
-      unsigned long min_w;
-      c = a3[i];
-      if ((c & 0x80) == 0)
-        j = 1, min_w = 0x0000, w = c;
-      else if ((c & 0xe0) == 0xc0)
-        j = 2, min_w = 0x0080, w = c & 0x1f;
-      else if ((c & 0xf0) == 0xe0)
-        j = 3, min_w = 0x0800, w = c & 0x0f;
-      else if ((c & 0xf8) == 0xf0)
-        j = 4, min_w = 0x10000, w = c & 0x07;
-      else  /* invalid */
-        continue;
-      if (i + j <= a4)
-        {
-          while (--j)
-            w = (w << 6) | (a3[++i] & 0x3f);
-          if (w < min_w || (w >= 0xd800 && w <= 0xdfff))  /* ill-fromed */
+        unsigned long min_w, w;
+        unsigned char c = mbs[i];
+        int clen;
+        if ((c & 0x80) == 0)
+            clen = 1, min_w = 0x0000, w = c;
+        else if ((c & 0xe0) == 0xc0)
+            clen = 2, min_w = 0x0080, w = c & 0x1f;
+        else if ((c & 0xf0) == 0xe0)
+            clen = 3, min_w = 0x0800, w = c & 0x0f;
+        else if ((c & 0xf8) == 0xf0)
+            clen = 4, min_w = 0x10000, w = c & 0x07;
+        else  /* invalid */
             continue;
-          if (w >= 0x10000) {
-            if (k + 1 >= a6)
-              break;
-            a5[k++] = (WCHAR)HIGH_SURROGATE_OF(w);
-            a5[k] = (WCHAR)LOW_SURROGATE_OF(w);
-          } else if (k < a6)
-            a5[k] = (WCHAR)w;
-          else if (k == a6)
+        if (i + clen <= mblen)
+        {
+            while (--clen)
+                w = (w << 6) | (mbs[++i] & 0x3f);
+            if (w < min_w || (w >= 0xd800 && w <= 0xdfff))  /* ill-fromed */
+                continue;
+            if (w >= 0x10000) {
+                if (outlen + 1 >= wcsize)
+                    break;
+                wcs[outlen++] = (WCHAR)HIGH_SURROGATE_OF(w);
+                wcs[outlen] = (WCHAR)LOW_SURROGATE_OF(w);
+            } else if (outlen < wcsize)
+                wcs[outlen] = (WCHAR)w;
+            else if (outlen == wcsize)
+                break;
+            outlen++;
+        } else
             break;
-          k++;
-        }
-      else
-        break;
     }
-  if (k <= a6)
-    a5[k] = 0;
-  return k + 1;
+    if (outlen <= wcsize)
+        wcs[outlen] = 0;
+    return outlen + 1;
 }
 
-int
-xWideCharToMultiByte (UINT a1, DWORD a2, LPCWSTR a3, int a4, LPSTR a5, int a6,
-                     LPCSTR a7, LPBOOL a8)
+int xWideCharToMultiByte(UINT cp, DWORD flags, LPCWSTR wcs, int wclen, LPSTR mbs, int mbsize, LPCSTR fbchar, LPBOOL fbused)
 {
-  static int (WINAPI *f)(UINT, DWORD, LPCWSTR, int, LPSTR, int, LPCSTR,
-                         LPBOOL) = 0;
-  int i, j, k;
-  WCHAR w;
-  unsigned char b[10];
-
-  if (!f)
-    (FARPROC)f = GetProcAddress (GetModuleHandle ("kernel32"), "WideCharToMultiByte");
-  if (a1 != CP_UTF8)
-    return f (a1, a2, a3, a4, a5, a6, a7, a8);
-  if (a4 == -1)
-    a4 = lstrlenW (a3);
-  k = 0;
-  a6--;
-  for (i = 0 ; i < a4 ; i++)
+    static int (WINAPI *native_call)(UINT, DWORD, LPCWSTR, int, LPSTR, int, LPCSTR, LPBOOL) = 0;
+    if (!native_call)
+        (FARPROC)native_call = GetProcAddress(GetModuleHandle("kernel32"), "WideCharToMultiByte");
+    if (cp != CP_UTF8)
+        return native_call(cp, flags, wcs, wclen, mbs, mbsize, fbchar, fbused);
+    if (wclen == -1)
+        wclen = lstrlenW(wcs);
+    int outlen = 0;
+    mbsize--;
+    for (int i = 0; i < wclen; i++)
     {
-      w = a3[i];
-      if (w < 0x80)
-        j = 1, b[0] = (unsigned char)w;
-      else if (w < 0x800)
-        j = 2, b[1] = 0x80 | (w & 0x3f), b[0] = 0xc0 | ((w >> 6) & 0x1f);
-      else if (!IS_SURROGATE(w))
-        j = 3, b[2] = 0x80 | (w & 0x3f),
-          b[1] = 0x80 | ((w >> 6) & 0x3f), b[0] = 0xe0 | ((w >> 12) & 0x0f);
-      else if (IS_LOW_SURROGATE(w) && i + 1 < a4) {
-        unsigned long ww = FROM_SURROGATES(w, a3[i + 1]);
-        j = 4, b[3] = 0x80 | (ww & 0x3f), b[2] = 0x80 | ((ww >> 6) & 0x3f),
-          b[1] = 0x80 | ((ww >> 12) & 0x3f), b[0] = 0xf0 | ((ww >> 18) & 0x7);
-      } else
-        j = 1, b[0] = '?';
-      if (k + j <= a6 || a6 == -1)
+        WCHAR w = wcs[i];
+        unsigned char b[10];
+        int clen;
+        if (w < 0x80)
+            clen = 1, b[0] = (unsigned char)w;
+        else if (w < 0x800)
+            clen = 2, b[1] = 0x80 | (w & 0x3f), b[0] = 0xc0 | ((w >> 6) & 0x1f);
+        else if (!IS_SURROGATE(w))
+            clen = 3, b[2] = 0x80 | (w & 0x3f),
+            b[1] = 0x80 | ((w >> 6) & 0x3f), b[0] = 0xe0 | ((w >> 12) & 0x0f);
+        else if (IS_LOW_SURROGATE(w) && i + 1 < wclen) {
+            unsigned long ww = FROM_SURROGATES(w, wcs[i + 1]);
+            clen = 4, b[3] = 0x80 | (ww & 0x3f), b[2] = 0x80 | ((ww >> 6) & 0x3f),
+                b[1] = 0x80 | ((ww >> 12) & 0x3f), b[0] = 0xf0 | ((ww >> 18) & 0x7);
+        } else
+            clen = 1, b[0] = '?';
+        if (outlen + clen <= mbsize || mbsize == -1)
         {
-          if (a6 == -1)
-            k += j;
-          else
+            if (mbsize == -1)
+                outlen += clen;
+            else
             {
-              a5[k++] = b[0];
-              if (j >= 2)
-                a5[k++] = b[1];
-              if (j == 3)
-                a5[k++] = b[2];
+                mbs[outlen++] = b[0];
+                if (clen >= 2)
+                    mbs[outlen++] = b[1];
+                if (clen == 3)
+                    mbs[outlen++] = b[2];
             }
-        }
-      else
-        break;
+        } else
+            break;
     }
-  if (k <= a6)
-    a5[k] = '\0';
-  return k + 1;
+    if (outlen <= mbsize)
+        mbs[outlen] = '\0';
+    return outlen + 1;
 }
 #endif
