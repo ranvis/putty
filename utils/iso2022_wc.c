@@ -12,7 +12,7 @@ int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs
     if (cp != CP_UTF8)
         return native_call(cp, flags, mbs, mblen, wcs, wcsize);
     if (mblen == -1)
-        mblen = lstrlenA(mbs);
+        mblen = lstrlenA(mbs) + 1; // include NUL if input length is -1
     int outlen = 0;
     wcsize--;
     for (int i = 0; i < mblen; i++)
@@ -49,9 +49,7 @@ int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs
         } else
             break;
     }
-    if (outlen <= wcsize)
-        wcs[outlen] = 0;
-    return outlen + 1;
+    return outlen;
 }
 
 int xWideCharToMultiByte(UINT cp, DWORD flags, LPCWSTR wcs, int wclen, LPSTR mbs, int mbsize, LPCSTR fbchar, LPBOOL fbused)
@@ -62,7 +60,7 @@ int xWideCharToMultiByte(UINT cp, DWORD flags, LPCWSTR wcs, int wclen, LPSTR mbs
     if (cp != CP_UTF8)
         return native_call(cp, flags, wcs, wclen, mbs, mbsize, fbchar, fbused);
     if (wclen == -1)
-        wclen = lstrlenW(wcs);
+        wclen = lstrlenW(wcs) + 1; // include NUL if input length is -1
     int outlen = 0;
     mbsize--;
     for (int i = 0; i < wclen; i++)
@@ -98,8 +96,6 @@ int xWideCharToMultiByte(UINT cp, DWORD flags, LPCWSTR wcs, int wclen, LPSTR mbs
         } else
             break;
     }
-    if (outlen <= mbsize)
-        mbs[outlen] = '\0';
-    return outlen + 1;
+    return outlen;
 }
 #endif
