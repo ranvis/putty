@@ -15,8 +15,7 @@ int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs
         mblen = lstrlenA(mbs) + 1; // include NUL if input length is -1
     int outlen = 0;
     wcsize--;
-    for (int i = 0; i < mblen; i++)
-    {
+    for (int i = 0; i < mblen; i++) {
         unsigned long min_w, w;
         unsigned char c = mbs[i];
         int clen;
@@ -30,8 +29,7 @@ int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs
             clen = 4, min_w = 0x10000, w = c & 0x07;
         else  /* invalid */
             continue;
-        if (i + clen <= mblen)
-        {
+        if (i + clen <= mblen) {
             while (--clen)
                 w = (w << 6) | (mbs[++i] & 0x3f);
             if (w < min_w || (w >= 0xd800 && w <= 0xdfff))  /* ill-fromed */
@@ -63,8 +61,7 @@ int xWideCharToMultiByte(UINT cp, DWORD flags, LPCWSTR wcs, int wclen, LPSTR mbs
         wclen = lstrlenW(wcs) + 1; // include NUL if input length is -1
     int outlen = 0;
     mbsize--;
-    for (int i = 0; i < wclen; i++)
-    {
+    for (int i = 0; i < wclen; i++) {
         WCHAR w = wcs[i];
         unsigned char b[10];
         int clen;
@@ -81,12 +78,10 @@ int xWideCharToMultiByte(UINT cp, DWORD flags, LPCWSTR wcs, int wclen, LPSTR mbs
                 b[1] = 0x80 | ((ww >> 12) & 0x3f), b[0] = 0xf0 | ((ww >> 18) & 0x7);
         } else
             clen = 1, b[0] = '?';
-        if (outlen + clen <= mbsize || mbsize == -1)
-        {
+        if (outlen + clen <= mbsize || mbsize == -1) {
             if (mbsize == -1)
                 outlen += clen;
-            else
-            {
+            else {
                 mbs[outlen++] = b[0];
                 if (clen >= 2)
                     mbs[outlen++] = b[1];
