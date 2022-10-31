@@ -791,7 +791,7 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
                 char* fp = ssh2_fingerprint(ssh2UserKey->key, SSH_FPTYPE_DEFAULT);
                 strncpy(fingerprint, fp, fingerprint_length);
                 fp_length = strlen(fingerprint);
-                if (fp_length < fingerprint_length - 2) {
+                if (fp_length < fingerprint_length - 2 && ssh2UserKey->comment) { // comment should always be non-null, but just in case
                     fingerprint[fp_length] = ' ';
                     strncpy(fingerprint + fp_length + 1, ssh2UserKey->comment,
                             fingerprint_length - fp_length - 1);

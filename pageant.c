@@ -353,7 +353,7 @@ int accept_agent_request_pk_pub(int type, const PageantPublicKey *pub)
     }
     ssh2_userkey priv_ukey;
     priv_ukey.key = priv_key;
-    priv_ukey.comment = priv->encrypted_key_comment;
+    priv_ukey.comment = pub->comment;
     return accept_agent_request(type, rsa_key, &priv_ukey);
 }
 
