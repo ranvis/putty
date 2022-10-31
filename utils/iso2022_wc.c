@@ -4,13 +4,13 @@
 // This patch may be duplicate under LEGACY_WINDOWS since 0.78.
 
 #ifdef _WINDOWS
+#undef MultiByteToWideChar
+#undef WideCharToMultiByte
+
 int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs, int wcsize)
 {
-    static int (WINAPI *native_call)(UINT, DWORD, LPCSTR, int, LPWSTR, int) = 0;
-    if (!native_call)
-        (FARPROC)native_call = GetProcAddress(GetModuleHandle("kernel32"), "MultiByteToWideChar");
     if (cp != CP_UTF8)
-        return native_call(cp, flags, mbs, mblen, wcs, wcsize);
+        return MultiByteToWideChar(cp, flags, mbs, mblen, wcs, wcsize);
     if (mblen == -1)
         mblen = lstrlenA(mbs) + 1; // include NUL if input length is -1
     int outlen = 0;
@@ -51,11 +51,8 @@ int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs
 
 int xWideCharToMultiByte(UINT cp, DWORD flags, LPCWSTR wcs, int wclen, LPSTR mbs, int mbsize, LPCSTR fbchar, LPBOOL fbused)
 {
-    static int (WINAPI *native_call)(UINT, DWORD, LPCWSTR, int, LPSTR, int, LPCSTR, LPBOOL) = 0;
-    if (!native_call)
-        (FARPROC)native_call = GetProcAddress(GetModuleHandle("kernel32"), "WideCharToMultiByte");
     if (cp != CP_UTF8)
-        return native_call(cp, flags, wcs, wclen, mbs, mbsize, fbchar, fbused);
+        return WideCharToMultiByte(cp, flags, wcs, wclen, mbs, mbsize, fbchar, fbused);
     if (wclen == -1)
         wclen = lstrlenW(wcs) + 1; // include NUL if input length is -1
     int outlen = 0;
