@@ -412,7 +412,7 @@ static WCHAR *get_lng_file_path_w()
 static WCHAR *resolve_cname_path(const WCHAR *cname, const WCHAR *base)
 {
     WCHAR *base_sep = wcsrchr(base, L'\\');
-    if (!base_sep || wcschr(cname, L'\\')) {
+    if (!base_sep || wcschr(cname, L'\\') || wcschr(cname, L'/')) {
         return NULL;
     }
     base_sep++;
