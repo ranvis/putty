@@ -2394,6 +2394,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
                                 HELPCTX(copy_charclasses),
                                 charclass_handler, P(ccd));
     ccd->listbox->listbox.multisel = 1;
+    ccd->listbox->listbox.height = 10;
     ccd->listbox->listbox.ncols = 4;
     ccd->listbox->listbox.percentages = snewn(4, int);
     ccd->listbox->listbox.percentages[0] = 15;
@@ -2794,7 +2795,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
             c = ctrl_draglist(s, "Algorithm selection policy:", 's',
                               HELPCTX(ssh_hklist),
                               hklist_handler, P(NULL));
-            c->listbox.height = 5;
+            c->listbox.height = 6;
 
             ctrl_checkbox(s, "Prefer algorithms for which a host key is known",
                           'p', HELPCTX(ssh_hk_known), conf_checkbox_handler,
@@ -2867,7 +2868,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
             c = ctrl_draglist(s, "Encryption cipher selection policy:", 's',
                               HELPCTX(ssh_ciphers),
                               cipherlist_handler, P(NULL));
-            c->listbox.height = 6;
+            c->listbox.height = 8;
 
             ctrl_checkbox(s, "Enable legacy use of single-DES in SSH-2", 'i',
                           HELPCTX(ssh_ciphers),
@@ -3022,7 +3023,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
             td->listbox = ctrl_listbox(s, NULL, NO_SHORTCUT,
                                        HELPCTX(ssh_ttymodes),
                                        ttymodes_handler, P(td));
-            td->listbox->listbox.height = 8;
+            td->listbox->listbox.height = 14;
             td->listbox->listbox.ncols = 2;
             td->listbox->listbox.percentages = snewn(2, int);
             td->listbox->listbox.percentages[0] = 40;
