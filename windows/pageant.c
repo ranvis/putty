@@ -782,20 +782,13 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
             char* buffer = (char*) alloca(keyname_length + fingerprint_length);
             strcpy(buffer, keyname);
             fingerprint = buffer + keyname_length;
-            if (rsaKey != NULL) {
-                strcpy(fingerprint, "ssh1:");
+            if (rsaKey) {
                 char *rsa_fingerprint = rsa_ssh1_fingerprint((RSAKey *)rsaKey);
-                strncat(fingerprint, rsa_fingerprint, keyname_length + fingerprint_length - strlen(fingerprint) - 1);
+                snprintf(fingerprint, fingerprint_length, "ssh1:%s", rsa_fingerprint);
             } else {
-                size_t fp_length;
-                char* fp = ssh2_fingerprint(ssh2UserKey->key, SSH_FPTYPE_DEFAULT);
-                strncpy(fingerprint, fp, fingerprint_length);
-                fp_length = strlen(fingerprint);
-                if (fp_length < fingerprint_length - 2 && ssh2UserKey->comment) { // comment should always be non-null, but just in case
-                    fingerprint[fp_length] = ' ';
-                    strncpy(fingerprint + fp_length + 1, ssh2UserKey->comment,
-                            fingerprint_length - fp_length - 1);
-                }
+                char *fp = ssh2_fingerprint(ssh2UserKey->key, SSH_FPTYPE_DEFAULT);
+                const char *comment = ssh2UserKey->comment ? ssh2UserKey->comment : ""; // comment should always be non-null, but just in case
+                snprintf(fingerprint, fingerprint_length, "%s %s", fp, comment);
             }
             keyname = buffer;
         }
