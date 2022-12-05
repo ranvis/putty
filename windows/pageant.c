@@ -54,7 +54,7 @@ static HMENU systray_menu, session_menu;
 static bool already_running;
 static FingerprintType fptype = SSH_FPTYPE_DEFAULT;
 
-static int confirm_any_request = 0;
+static bool confirm_any_request = false;
 static int defer_reencrypt_state = 0;
 static bool deferred_reencrypt;
 static struct {
@@ -794,7 +794,7 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
         }
     }
 
-    if (keyname != NULL) {
+    if (!confirm_any_request && keyname) {
         char *value;
         if (get_use_inifile()) {
             value = get_ini_sz(APPNAME, keyname, inifile);
@@ -812,7 +812,7 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
         else
             accept = -1;
         sfree(value);
-        if (!confirm_any_request && accept >= 0)
+        if (accept >= 0)
             return accept;
     }
 
@@ -2134,7 +2134,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         } else if (match_optval("-openssh-config", "-openssh_config")) {
             openssh_config_file = val;
         } else if (match_opt("-confirm")) {
-            confirm_any_request = 1;
+            confirm_any_request = true;
         } else if (match_optval("-reencrypt-on", "-reencrypt_on")) {
             char *error = parse_reencrypt_settings(val);
             if (error) {
