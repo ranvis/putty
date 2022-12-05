@@ -239,7 +239,7 @@ void doc_dialog(Conf *conf)
     ssh_key key;
     key.vt = &ssh_ecdsa_ed25519;
     const char *fingerprints[8] = {0};
-    fingerprints[SSH_FPTYPE_SHA256] = "ssh-ed25519 255 01:23:45:67:89:ab:cd:ef...";
+    fingerprints[SSH_FPTYPE_SHA256] = "ssh-ed25519 255 SHA256:ab0Cd1Ef2Gh3Ij4KL5Mn6Op7Qr8ST9Uv+Wx/Yz...";
     void (*callback)(void *ctx, SeatPromptResult result) = NULL;
     void *ctx = NULL;
     // known hosts must be cleared
