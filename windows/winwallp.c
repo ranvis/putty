@@ -249,14 +249,16 @@ int gdip_init(void)
         || !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateBitmapFromFile)
         || !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipCreateHBITMAPFromBitmap)
         || !GET_WINDOWS_FUNCTION_NO_TYPECHECK(module, GdipDisposeImage)) {
-        FreeLibrary(module);
-        return 0;
+        goto bail;
     }
     if (p_GdiplusStartup(&gdip_token, &input, 0) != GDIP_STATUS_OK) {
         gdip_token = 0;
-        return 0;
+        goto bail;
     }
     return 1;
+bail:
+    FreeLibrary(module);
+    return 0;
 }
 
 void gdip_terminate(void)
