@@ -2317,7 +2317,7 @@ int psftp_main(int argc, char *argv[])
         } else if (strcmp(argv[i], "-limit") == 0) {
             char *error_msg = xfer_limit_set_arg(i + 1 < argc ? argv[i + 1] : NULL);
             if (error_msg)
-                cmdline_error(error_msg);
+                cmdline_error("%s", error_msg);
             i++;
         } else if (strcmp(argv[i], "-sanitise-stderr") == 0) {
             sanitise_stderr = true;

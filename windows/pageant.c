@@ -2138,7 +2138,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         } else if (match_optval("-reencrypt-on", "-reencrypt_on")) {
             char *error = parse_reencrypt_settings(val);
             if (error) {
-                opt_error(error);
+                opt_error("%s", error);
             }
         } else if (match_optval("-unix")) {
             unixsocket = val;
