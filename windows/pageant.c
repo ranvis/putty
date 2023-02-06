@@ -621,7 +621,7 @@ static void prompt_add_keyfile(bool encrypted)
     sfree(filelist);
 }
 
-static int getConfValueInt(const char *name, int def, int min, int max)
+static int app_conf_get_int(const char *name, int def, int min, int max)
 {
     int value = def;
     if (get_use_inifile()) {
@@ -694,15 +694,18 @@ INT_PTR CALLBACK ConfirmAcceptAgentProc(HWND dialog, UINT message, WPARAM wParam
             SendDlgItemMessage(dialog, 102, BM_SETCHECK, info->dont_ask_again >= 0 ? BST_CHECKED : BST_UNCHECKED, 0);
             SendMessage(dialog, WM_NEXTDLGCTL, (WPARAM) GetDlgItem(dialog, info->dont_ask_again > 0 ? IDYES : IDNO), TRUE);
 
-            info->delay = getConfValueInt("ConfirmDelayMs", 400, 0, 10000);
+            info->delay = app_conf_get_int("ConfirmDelayMs", 400, 0, 10000);
             if (info->delay) {
                 SetTimer(dialog, DELAY_TIMER_ID, info->delay, NULL);
                 EnableWindow(GetDlgItem(dialog, IDYES), FALSE);
             }
-            info->timeout = getConfValueInt("ConfirmTimeout", 30, 0, 3600) * 1000;
+            info->timeout = app_conf_get_int("ConfirmTimeout", 30, 0, 3600) * 1000;
             if (info->timeout) {
                 info->tickCount = GetTickCount();
                 SetTimer(dialog, TIMEOUT_TIMER_ID, 1000, NULL);
+            }
+            if (app_conf_get_int("ConfirmDefaultYes", 0, 0, 1)) {
+                SendMessage(dialog, DM_SETDEFID, IDYES, 0);
             }
         }
         return FALSE;
