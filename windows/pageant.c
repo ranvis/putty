@@ -2103,6 +2103,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     process_ini_option(&argc, &argv, 0, opt_error);
 
+    confirm_any_request = (bool)app_conf_get_int("ConfirmAnyRequest", 0, 0, 1);
     bool add_keys_encrypted = false;
     AuxMatchOpt amo = aux_match_opt_init(argc, argv, 0, opt_error);
     while (!aux_match_done(&amo)) {
@@ -2138,6 +2139,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             openssh_config_file = val;
         } else if (match_opt("-confirm")) {
             confirm_any_request = true;
+        } else if (match_opt("-no-confirm", "-no_confirm", "-noconfirm")) {
+            confirm_any_request = false;
         } else if (match_optval("-reencrypt-on", "-reencrypt_on")) {
             char *error = parse_reencrypt_settings(val);
             if (error) {
