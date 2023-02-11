@@ -144,8 +144,11 @@ static bool load_chm_resource(void)
 static bool find_chm_from_installation(void)
 {
     static const char *const reg_paths[] = {
+#ifdef _WIN64
         "Software\\SimonTatham\\PuTTY64\\CHMPath",
+#else
         "Software\\SimonTatham\\PuTTY\\CHMPath",
+#endif
     };
 
     for (size_t i = 0; i < lenof(reg_paths); i++) {
