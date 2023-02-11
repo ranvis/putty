@@ -20,6 +20,7 @@
 #include "licence.h"
 #include "ini.h"
 #include "pageant-rc.h"
+#include "platform.h"
 
 #include <shellapi.h>
 
@@ -628,7 +629,7 @@ static int app_conf_get_int(const char *name, int def, int min, int max)
         if (!get_ini_int(APPNAME, name, inifile, &value))
             value = def;
     } else {
-        HKEY hkey = open_regkey(false, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+        HKEY hkey = open_regkey_ro(HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
         if (hkey) {
             DWORD dw;
             if (get_reg_dword(hkey, name, &dw))
@@ -802,7 +803,7 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
         if (get_use_inifile()) {
             value = get_ini_sz(APPNAME, keyname, inifile);
         } else {
-            HKEY hkey = open_regkey(false, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+            HKEY hkey = open_regkey_ro(HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
             if (hkey) {
                 value = get_reg_sz(hkey, keyname);
                 close_regkey(hkey);
@@ -843,13 +844,13 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
             } else {
                 HKEY hkey;
                 if (info.dont_ask_again) {
-                    hkey = open_regkey(true, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+                    hkey = create_regkey(HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
                     if (hkey) {
                         put_reg_sz(hkey, keyname, (accept ? VALUE_ACCEPT : VALUE_REFUSE));
                         close_regkey(hkey);
                     }
                 } else {
-                    hkey = open_regkey(false, HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
+                    hkey = open_regkey_rw(HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
                     if (hkey) {
                         del_regkey(hkey, keyname);
                         close_regkey(hkey);
