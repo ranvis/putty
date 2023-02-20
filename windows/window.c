@@ -1790,7 +1790,7 @@ static void general_textout2(HDC hdc, int x, int y, CONST RECT *lprc,
     int i, j, xp, xn;
     RECT newrc;
 
-#ifdef FIXME_REMOVE_BEFORE_CHECKIN
+#ifdef PUTTYJP_DUMP_TEXTOUT2
 int k;
 debug(("general_textout: %d,%d", x, y));
 for(k=0;k<cbCount;k++)debug((" U+%04X", lpString[k]));
@@ -1821,7 +1821,7 @@ debug(("\n"));
             newrc.right = lprc->left + xn - x;
             newrc.top = lprc->top;
             newrc.bottom = lprc->bottom;
-#ifdef FIXME_REMOVE_BEFORE_CHECKIN
+#ifdef PUTTYJP_DUMP_TEXTOUT2
 {
 int k;
 debug(("  exact_textout: %d,%d", xp, y));
@@ -1831,7 +1831,7 @@ debug(("\n           rect: [%d,%d %d,%d]\n", newrc.left, newrc.top, newrc.right,
 #endif
             exact_textout(hdc, xp, y, &newrc, lpString+i, j-i, lpDx+i, opaque);
         } else {
-#ifdef FIXME_REMOVE_BEFORE_CHECKIN
+#ifdef PUTTYJP_DUMP_TEXTOUT2
 {
 int k;
 debug(("  ExtTextOut   : %d,%d", xp, y));
@@ -1851,7 +1851,7 @@ debug(("\n           rect: [%d,%d %d,%d]\n", newrc.left, newrc.top, newrc.right,
         xp = xn;
     }
 
-#ifdef FIXME_REMOVE_BEFORE_CHECKIN
+#ifdef PUTTYJP_DUMP_TEXTOUT2
 debug(("general_textout: done, xn=%d\n", xn));
 #endif
     /*assert(xn - x == lprc->right - lprc->left);*/
