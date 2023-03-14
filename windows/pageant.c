@@ -799,7 +799,7 @@ static int do_accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_us
     }
 
     if (!confirm_any_request && keyname) {
-        char *value;
+        char *value = NULL;
         if (get_use_inifile()) {
             value = get_ini_sz(APPNAME, keyname, inifile);
         } else {
