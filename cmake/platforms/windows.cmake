@@ -166,7 +166,11 @@ if(CMAKE_C_COMPILER_ID MATCHES "MSVC")
   #    something _else_ const should make no difference.
 
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
+/w14703 \
 /wd4244 /wd4267 /wd4018 /wd4146 /wd4293 /wd4090")
+
+  # Set the warning level to 1
+  #  - 4703: Potentially uninitialized local pointer variable 'name' used
 
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
