@@ -1025,6 +1025,12 @@ SeatPromptResult verify_ssh_host_key(
             text, SDT_PARA, "If you trust this host, %s to add the key to "
             "%s's cache and carry on connecting.",
             pds_str, appname);
+        if (key && ssh_key_alg(key)->is_certificate) {
+            seat_dialog_text_append(
+                text, SDT_PARA, "(Storing this certified key in the cache "
+                "will NOT cause its certification authority to be trusted "
+                "for any other key or host.)");
+        }
         pds_str = l10n_translate(pds->hk_connect_once_action, pds_trans_buf);
         seat_dialog_text_append(
             text, SDT_PARA, "If you want to carry on connecting just once, "

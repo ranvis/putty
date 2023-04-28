@@ -81,6 +81,9 @@
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL 0x020A           /* not defined in earlier SDKs */
 #endif
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL 0x020E          /* not defined in earlier SDKs */
+#endif
 #ifndef WHEEL_DELTA
 #define WHEEL_DELTA 120
 #endif
@@ -1315,7 +1318,7 @@ char *handle_restrict_acl_cmdline_prefix(char *p)
      * pointer past the prefix. Returns the updated pointer (whether
      * it moved or not).
      */
-    while (*p && isspace(*p))
+    while (*p && isspace((unsigned char)*p))
         p++;
     if (*p == '&' && p[1] == 'R' &&
         (!p[2] || p[2] == '@' || p[2] == '&')) {
@@ -2170,20 +2173,27 @@ static void wintw_request_resize(TermWin *tw, int w, int h)
 {
     const struct BackendVtable *vt;
     int width, height;
+    int resize_action = conf_get_int(conf, CONF_resize_action);
+    bool deny_resize = false;
 
-    /* If the window is maximized suppress resizing attempts */
-    if (IsZoomed(wgs.term_hwnd)) {
-        if (conf_get_int(conf, CONF_resize_action) == RESIZE_TERM) {
-            term_resize_request_completed(term);
-            return;
-        }
+    /* Suppress server-originated resizing attempts if local resizing
+     * is disabled entirely, or if it's supposed to change
+     * rows/columns but the window is maximised. */
+    if (resize_action == RESIZE_DISABLED
+        || (resize_action == RESIZE_TERM && IsZoomed(wgs.term_hwnd))) {
+        deny_resize = true;
     }
 
-    if (conf_get_int(conf, CONF_resize_action) == RESIZE_DISABLED) return;
     vt = backend_vt_from_proto(be_default_protocol);
     if (vt && vt->flags & BACKEND_RESIZE_FORBIDDEN)
+        deny_resize = true;
+    if (h == term->rows && w == term->cols) deny_resize = true;
+
+    /* We still need to acknowledge a suppressed resize attempt. */
+    if (deny_resize) {
+        term_resize_request_completed(term);
         return;
-    if (h == term->rows && w == term->cols) return;
+    }
 
     /* Sanity checks ... */
     {
@@ -2204,8 +2214,7 @@ static void wintw_request_resize(TermWin *tw, int w, int h)
         }
     }
 
-    if (conf_get_int(conf, CONF_resize_action) != RESIZE_FONT &&
-        !IsZoomed(wgs.term_hwnd)) {
+    if (resize_action != RESIZE_FONT && !IsZoomed(wgs.term_hwnd)) {
         width = extra_width + font_width * w;
         height = extra_height + font_height * h;
 
@@ -3312,6 +3321,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                        TO_CHR_X(X_POS(lParam)),
                        TO_CHR_Y(Y_POS(lParam)), wParam & MK_SHIFT,
                        wParam & MK_CONTROL, is_alt_pressed());
+        } else {
+            term_mouse(term, MBT_NOTHING, MBT_NOTHING, MA_MOVE,
+                       TO_CHR_X(X_POS(lParam)),
+                       TO_CHR_Y(Y_POS(lParam)), false,
+                       false, false);
         }
         return 0;
       }
@@ -4020,10 +4034,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
         }
         break;
       default:
-        if (message == wm_mousewheel || message == WM_MOUSEWHEEL) {
+        if (message == wm_mousewheel || message == WM_MOUSEWHEEL
+                                                || message == WM_MOUSEHWHEEL) {
             bool shift_pressed = false, control_pressed = false;
 
-            if (message == WM_MOUSEWHEEL) {
+            if (message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL) {
                 wheel_accumulator += (short)HIWORD(wParam);
                 shift_pressed=LOWORD(wParam) & MK_SHIFT;
                 control_pressed=LOWORD(wParam) & MK_CONTROL;
@@ -4045,10 +4060,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 
                     /* reduce amount for next time */
                     if (wheel_accumulator > 0) {
-                        b = MBT_WHEEL_UP;
+                        b = message == WM_MOUSEHWHEEL ? MBT_WHEEL_RIGHT : MBT_WHEEL_UP;
                         wheel_accumulator -= WHEEL_DELTA;
                     } else if (wheel_accumulator < 0) {
-                        b = MBT_WHEEL_DOWN;
+                        b =  message == WM_MOUSEHWHEEL ? MBT_WHEEL_LEFT : MBT_WHEEL_DOWN;
                         wheel_accumulator += WHEEL_DELTA;
                     } else
                         break;
@@ -4065,7 +4080,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                                    control_pressed, is_alt_pressed());
                     } /* else: not sure when this can fail */
                 }
-            } else {
+            } else if (message != WM_MOUSEHWHEEL) {
                 int count = wheel_accumulator / WHEEL_DELTA_PER_LINE;
                 if (count != 0) {
                     wheel_accumulator -= count * WHEEL_DELTA_PER_LINE;
@@ -5795,7 +5810,7 @@ static void wintw_clip_write(
         unsigned char *tdata = (unsigned char *)lock2;
         wchar_t *udata = (wchar_t *)lock;
         int uindex = 0, tindex = 0;
-        int multilen, blen, alen, totallen, i;
+        int multilen, blen, alen, i;
         char before[16], after[4];
         int fgcolour,  lastfgcolour  = -1;
         int bgcolour,  lastbgcolour  = -1;
@@ -6083,19 +6098,6 @@ static void wintw_clip_write(
                 }
             }
             assert(tindex + multilen <= len2);
-            totallen = blen + alen;
-            for (i = 0; i < multilen; i++) {
-                if (tdata[tindex+i] == '\\' ||
-                    tdata[tindex+i] == '{' ||
-                    tdata[tindex+i] == '}')
-                    totallen += 2;
-                else if (tdata[tindex+i] == 0x0D || tdata[tindex+i] == 0x0A)
-                    totallen += 6;     /* \par\r\n */
-                else if (tdata[tindex+i] > 0x7E || tdata[tindex+i] < 0x20)
-                    totallen += 4;
-                else
-                    totallen++;
-            }
 
             put_data(rtf, before, blen);
             for (i = 0; i < multilen; i++) {
