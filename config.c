@@ -3188,6 +3188,10 @@ void setup_config_box(struct controlbox *b, bool midsession,
 
             s = ctrl_getset(b, "Connection/SSH/More bugs", "main",
                             "Detection of known bugs in SSH servers");
+            ctrl_droplist(s, "Old RSA/SHA2 cert algorithm naming", 'l', 20,
+                          HELPCTX(ssh_bugs_rsa_sha2_cert_userauth),
+                          sshbug_handler,
+                          I(CONF_sshbug_rsa_sha2_cert_userauth));
             ctrl_droplist(s, "Requires padding on SSH-2 RSA signatures", 'p', 20,
                           HELPCTX(ssh_bugs_rsapad2),
                           sshbug_handler, I(CONF_sshbug_rsapad2));
