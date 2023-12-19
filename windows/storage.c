@@ -891,6 +891,7 @@ static int transform_jumplist_registry(
 {
     HKEY rkey;
     strbuf *oldlist;
+
     /* Get current list of saved sessions in the registry. */
     if (get_use_inifile()) {
         rkey = NULL;
