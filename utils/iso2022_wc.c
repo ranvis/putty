@@ -1,15 +1,20 @@
 #include <string.h>
 #include "putty.h"
 
-// This patch may be duplicate under LEGACY_WINDOWS since 0.78.
-
 #ifdef _WINDOWS
 #undef MultiByteToWideChar
 #undef WideCharToMultiByte
 
+static int8_t is_utf8_aware = -1;
+
 int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs, int wcsize)
 {
-    if (cp != CP_UTF8)
+    if (is_utf8_aware == -1) {
+        init_winver();
+        // Test Windows 98. Not sure if it's worth doing this on no LEGACY_WINDOWS build.
+        is_utf8_aware = osMajorVersion > 4 || (osMajorVersion == 4 && osMinorVersion >= 10);
+    }
+    if (is_utf8_aware || cp != CP_UTF8)
         return MultiByteToWideChar(cp, flags, mbs, mblen, wcs, wcsize);
     if (mblen == -1)
         mblen = lstrlenA(mbs) + 1; // include NUL if input length is -1
@@ -26,25 +31,39 @@ int xMultiByteToWideChar(UINT cp, DWORD flags, LPCSTR mbs, int mblen, LPWSTR wcs
             clen = 3, min_w = 0x0800, w = c & 0x0f;
         else if ((c & 0xf8) == 0xf0)
             clen = 4, min_w = 0x10000, w = c & 0x07;
-        else  /* invalid */
-            continue;
-        if (i + clen <= mblen) {
-            while (--clen)
-                w = (w << 6) | (mbs[++i] & 0x3f);
-            if (w < min_w || (w >= 0xd800 && w <= 0xdfff))  /* ill-fromed */
-                continue;
-            if (w >= 0x10000) {
-                if (outlen + 1 >= wcsize)
-                    break;
-                wcs[outlen++] = (WCHAR)HIGH_SURROGATE_OF(w);
-                wcs[outlen] = (WCHAR)LOW_SURROGATE_OF(w);
-            } else if (outlen < wcsize)
-                wcs[outlen] = (WCHAR)w;
-            else if (outlen == wcsize)
+        else { // invalid
+            wcs[outlen++] = 0xfffd;
+            if (outlen >= wcsize) {
                 break;
-            outlen++;
-        } else
+            }
+            continue;
+        }
+        while (--clen) {
+            if (i >= mblen) {
+                w = 0xfffd;
+                break;
+            }
+            unsigned char ci = mbs[++i];
+            if (ci < 0x80 || ci > 0xbf) {
+                w = 0xfffd;
+                i--;
+                break;
+            }
+            w = (w << 6) | (ci & 0x3f);
+        }
+        if (w < min_w || (w >= 0xd800 && w <= 0xdfff) || w > 0x10ffff) {  // ill-fromed
+            w = 0xfffd;
+        }
+        if (w >= 0x10000) {
+            if (outlen + 1 >= wcsize)
+                break;
+            wcs[outlen++] = (WCHAR)HIGH_SURROGATE_OF(w);
+            wcs[outlen] = (WCHAR)LOW_SURROGATE_OF(w);
+        } else if (outlen < wcsize)
+            wcs[outlen] = (WCHAR)w;
+        else if (outlen >= wcsize)
             break;
+        outlen++;
     }
     return outlen;
 }
