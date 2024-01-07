@@ -1101,6 +1101,8 @@ SeatPromptResult confirm_weak_crypto_primitive(
     SeatDialogText *text = seat_dialog_text_new();
     const SeatDialogPromptDescriptions *pds =
         seat_prompt_descriptions(iseat.seat);
+    char algtype_buf[128];
+    algtype = l10n_translate(algtype, algtype_buf);
 
     seat_dialog_text_append(text, SDT_TITLE, "%s Security Alert", appname);
 
@@ -1144,10 +1146,13 @@ SeatPromptResult confirm_weak_crypto_primitive(
      * abort message, and stop. */
     seat_dialog_text_append(text, SDT_BATCH_ABORT, "Connection abandoned.");
 
+    char pds_accept_buf[128], pds_cancel_buf[128];
+    const char *weak_accept_action = l10n_translate(pds->weak_accept_action, pds_accept_buf);
+    const char *weak_cancel_action = l10n_translate(pds->weak_cancel_action, pds_cancel_buf);
     seat_dialog_text_append(
         text, SDT_PARA, "To accept the risk and continue, %s. "
         "To abandon the connection, %s.",
-        pds->weak_accept_action, pds->weak_cancel_action);
+        weak_accept_action, weak_cancel_action);
 
     seat_dialog_text_append(text, SDT_PROMPT, "Continue with connection?");
 
@@ -1184,10 +1189,13 @@ SeatPromptResult confirm_weak_cached_hostkey(
      * abort message, and stop. */
     seat_dialog_text_append(text, SDT_BATCH_ABORT, "Connection abandoned.");
 
+    char pds_accept_buf[128], pds_cancel_buf[128];
+    const char *weak_accept_action = l10n_translate(pds->weak_accept_action, pds_accept_buf);
+    const char *weak_cancel_action = l10n_translate(pds->weak_cancel_action, pds_cancel_buf);
     seat_dialog_text_append(
         text, SDT_PARA, "To accept the risk and continue, %s. "
         "To abandon the connection, %s.",
-        pds->weak_accept_action, pds->weak_cancel_action);
+        weak_accept_action, weak_cancel_action);
 
     seat_dialog_text_append(text, SDT_PROMPT, "Continue with connection?");
 

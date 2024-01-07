@@ -225,6 +225,8 @@ void gui_terminal_ready(HWND hwnd, Seat *seat, Backend *backend)
 #include "ssh.h"
 #include "win-gui-seat.h"
 
+static void confirm_callback(void *ctx, SeatPromptResult result) {}
+
 void doc_dialog(Conf *conf)
 {
     sesslist_demo_mode = true;
@@ -233,8 +235,7 @@ void doc_dialog(Conf *conf)
     do_config(conf);
 
     extern WinGuiSeat wgs;
-    InteractionReadySeat iseat;
-    iseat.seat = &wgs.seat;
+    InteractionReadySeat iseat = {.seat = &wgs.seat};
     const char *host = "ssh.example.com";
     ssh_key key;
     key.vt = &ssh_ecdsa_ed25519;
@@ -252,6 +253,14 @@ void doc_dialog(Conf *conf)
     verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr", "keydisp", fingerprints, 1, callback, ctx); // must accept
     verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr2", "keydisp", fingerprints, 1, callback, ctx);
     verify_ssh_host_key(iseat, conf, host, 22, &key, "ssh-ed25519", "keystr3", "keydisp", fingerprints, 0, callback, ctx);
+
+    const char *better_algs[] = {"BETTER", "BETTER2", NULL};
+    confirm_weak_cached_hostkey(iseat, "ANY", better_algs, confirm_callback, NULL);
+    confirm_weak_crypto_primitive(iseat, "key-exchange algorithm", "ANY", confirm_callback, NULL, WCR_BELOW_THRESHOLD);
+    confirm_weak_crypto_primitive(iseat, "host key type", "ANY", confirm_callback, NULL, WCR_BELOW_THRESHOLD);
+    confirm_weak_crypto_primitive(iseat, "client-to-server cipher", "SSH2_CIPHER", confirm_callback, NULL, WCR_BELOW_THRESHOLD);
+    confirm_weak_crypto_primitive(iseat, "client-to-server cipher", "ChaCha20-Poly1305", confirm_callback, NULL, WCR_TERRAPIN);
+    confirm_weak_crypto_primitive(iseat, "server-to-client cipher", "a CBC-mode cipher in OpenSSH ETM mode", confirm_callback, NULL, WCR_TERRAPIN_AVOIDABLE);
 
     cleanup_exit(0);
 }
