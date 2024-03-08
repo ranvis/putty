@@ -448,7 +448,7 @@ static int getEnabled()
         enabled = 0;
         lng_path = get_lng_file_path_w();
         if (lng_path) {
-            if (!load_ini_wsz(L"Default", L"Language", lng_section, lenof(lng_section), lng_path) && *lng_section == L'\0') {
+            if (!load_ini_wsz(L"Default", L"Language", lng_section, lenof(lng_section), lng_path) || *lng_section == L'\0') {
                 WCHAR cname[32];
                 WCHAR *cname_path;
                 if (!load_ini_wsz(L"Default", L"CanonicalName", cname, lenof(cname), lng_path)
@@ -459,7 +459,7 @@ static int getEnabled()
                 } else {
                     sfree(lng_path);
                     lng_path = cname_path;
-                    if (!load_ini_wsz(L"Default", L"Language", lng_section, lenof(lng_section), lng_path) && *lng_section == L'\0') {
+                    if (!load_ini_wsz(L"Default", L"Language", lng_section, lenof(lng_section), lng_path) || *lng_section == L'\0') {
                         sfree(lng_path);
                         lng_path = NULL;
                     }
