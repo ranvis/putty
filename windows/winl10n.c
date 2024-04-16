@@ -26,9 +26,9 @@ static struct prop {
     WNDPROC oldproc;
     DLGPROC olddlgproc;
 } defaultprop = { TRUE, DefWindowProcW, defdlgproc };
-static char propstr[] = "l10n";
+static const char propstr[] = "l10n";
 static DLGPROC lastolddlgproc;
-static int getEnabled();
+static bool getEnabled();
 
 #define WC_HOOK(orig) ("x" WC_##orig)
 #define WC_HOOKW(orig) (L"x" WC_##orig##W)
@@ -424,9 +424,9 @@ static WCHAR *resolve_cname_path(const WCHAR *cname, const WCHAR *base)
     return path;
 }
 
-static int getEnabled()
+static bool getEnabled()
 {
-    static int enabled = -1;
+    static char enabled = -1;
     if (enabled == -1) {
         int i;
         int fontsize;
@@ -445,7 +445,7 @@ static int getEnabled()
             { NULL }
         };
 
-        enabled = 0;
+        enabled = false;
         lng_path = get_lng_file_path_w();
         if (lng_path) {
             if (!load_ini_wsz(L"Default", L"Language", lng_section, lenof(lng_section), lng_path) || *lng_section == L'\0') {
@@ -468,7 +468,7 @@ static int getEnabled()
             if (lng_path) {
                 HINSTANCE hinst = GetModuleHandle(NULL);
                 WCHAR fontname[128];
-                enabled = 1;
+                enabled = true;
                 GetPrivateProfileStringW(lng_section, L"_FONTNAME_", L"System", fontname, lenof(fontname),
                     lng_path);
                 GetPrivateProfileStringW(lng_section, L"_OFONTNAME_", L"MS Sans Serif",
