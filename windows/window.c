@@ -2958,6 +2958,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                 term_notify_palette_changed(term);
 
             /* > transparent background patch */
+            xtrans_init();
             /* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
             if (conf_get_int(conf, CONF_vtmode) == VT_UNICODE && conf_get_int(conf, CONF_transparent_mode))
