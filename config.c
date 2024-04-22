@@ -1916,7 +1916,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
                                 HELPCTX(session_saved),
                                 sessionsaver_handler, P(ssd));
     ssd->listbox->column = 0;
-    ssd->listbox->listbox.height = 7;
+    ssd->listbox->listbox.height = 11;
     if (!midsession) {
         ssd->loadbutton = ctrl_pushbutton(s, "Load", 'l',
                                           HELPCTX(session_saved),
@@ -2447,7 +2447,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
     cd->listbox = ctrl_listbox(s, "Select a colour to adjust:", 'u',
                                HELPCTX(colours_config), colour_handler, P(cd));
     cd->listbox->column = 0;
-    cd->listbox->listbox.height = 7;
+    cd->listbox->listbox.height = 11;
     c = ctrl_text(s, "RGB value:", HELPCTX(colours_config));
     c->column = 1;
     cd->redit = ctrl_editbox(s, "Red", 'r', 50, HELPCTX(colours_config),
@@ -2575,7 +2575,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
             ed->listbox = ctrl_listbox(s, NULL, NO_SHORTCUT,
                                        HELPCTX(telnet_environ),
                                        environ_handler, P(ed));
-            ed->listbox->listbox.height = 3;
+            ed->listbox->listbox.height = 9;
             ed->listbox->listbox.ncols = 2;
             ed->listbox->listbox.percentages = snewn(2, int);
             ed->listbox->listbox.percentages[0] = 30;
@@ -3025,7 +3025,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
             td->listbox = ctrl_listbox(s, NULL, NO_SHORTCUT,
                                        HELPCTX(ssh_ttymodes),
                                        ttymodes_handler, P(td));
-            td->listbox->listbox.height = 14;
+            td->listbox->listbox.height = 19;
             td->listbox->listbox.ncols = 2;
             td->listbox->listbox.percentages = snewn(2, int);
             td->listbox->listbox.percentages[0] = 40;
@@ -3110,7 +3110,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
         pfd->listbox = ctrl_listbox(s, NULL, NO_SHORTCUT,
                                     HELPCTX(ssh_tunnels_portfwd),
                                     portfwd_handler, P(pfd));
-        pfd->listbox->listbox.height = 3;
+        pfd->listbox->listbox.height = 6;
         pfd->listbox->listbox.ncols = 2;
         pfd->listbox->listbox.percentages = snewn(2, int);
         pfd->listbox->listbox.percentages[0] = 20;

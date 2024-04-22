@@ -471,7 +471,7 @@ static HTREEITEM treeview_insert(struct treeview_faff *faff,
     sfree (ins.INSITEM.pszText);
     if (level > 0)
         TreeView_Expand(faff->treeview, faff->lastat[level - 1],
-                        (level > 1 ? TVE_COLLAPSE : TVE_EXPAND));
+                        (level > 1 && strncmp(path, "Connection/SSH", 14) ? TVE_COLLAPSE : TVE_EXPAND));
     faff->lastat[level] = newitem;
     for (i = level + 1; i < 4; i++)
         faff->lastat[i] = NULL;
@@ -535,7 +535,7 @@ static INT_PTR GenericMainDlgProc(HWND hwnd, UINT msg, WPARAM wParam,
             r.left = 3;
             r.right = r.left + 95;
             r.top = 13;
-            r.bottom = r.top + 219;
+            r.bottom = r.top + 235+24-1;
             MapDialogRect(hwnd, &r);
             treeview = CreateWindowEx(WS_EX_CLIENTEDGE, WC_TREEVIEW, "",
                                       WS_CHILD | WS_VISIBLE |
