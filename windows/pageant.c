@@ -21,6 +21,7 @@
 #include "ini.h"
 #include "pageant-rc.h"
 #include "platform.h"
+#include "winl10n.h"
 
 #include <shellapi.h>
 
@@ -162,7 +163,7 @@ static INT_PTR CALLBACK AboutProc(HWND hwnd, UINT msg,
             ver, buildinfo_text,
             "\251 " SHORT_COPYRIGHT_DETAILS ". All rights reserved.");
         sfree(buildinfo_text);
-        SetDlgItemText(hwnd, IDC_ABOUT_TEXTBOX, text);
+        SetDlgItemTextCp1252(hwnd, IDC_ABOUT_TEXTBOX, text);
         MakeDlgItemBorderless(hwnd, IDC_ABOUT_TEXTBOX);
         sfree(text);
         return 1;

@@ -293,12 +293,12 @@ struct iso2022struct
     } type;
     int len;
   } g0, g1, g2, g3, *gl, *gr, *ssl, *ssr, lgr, *usgr, uslgr;
-  int jisx02081990flag;
-  int esc;
   int width;
-  int lockgr, uslockgr;
-  int ssgr;
-  int transchar;
+  bool jisx02081990flag;
+  bool esc;
+  bool lockgr, uslockgr;
+  bool ssgr;
+  bool transchar;
   enum {
     SWITCH_UTF8_NONE,
     SWITCH_UTF8_TO_UTF8,
@@ -312,7 +312,7 @@ struct iso2022struct
 #define AUTODETECT_BUFLEN 10
 
 struct iso2022_data {
-  int win95flag;
+  bool win95flag;
   struct iso2022struct rcv, trns;
   unsigned char initstring[512];
   struct {
@@ -320,7 +320,7 @@ struct iso2022_data {
     struct {
       int n;
       struct iso2022_autodetect_jp {
-        int e;
+        bool enabled;
         unsigned char buf[AUTODETECT_BUFLEN];
         int buflen;
       } eucjp, mskanji, utf8cjk;
@@ -330,6 +330,7 @@ struct iso2022_data {
 
 struct unicode_data {
     bool dbcs_screenfont;
+    bool iso2022;
     int font_codepage;
     int line_codepage;
     wchar_t unitab_scoacs[256];
@@ -338,7 +339,6 @@ struct unicode_data {
     wchar_t unitab_xterm[256];
     wchar_t unitab_oemcp[256];
     unsigned char unitab_ctrl[256];
-    int iso2022;
     struct iso2022_data iso2022_data;
 };
 
@@ -3012,7 +3012,7 @@ int iso2022_width (struct iso2022_data *this, unsigned int c);
 int iso2022_width_sub (struct iso2022_data *this, unsigned int c);
 unsigned char iso2022_tgetbuf (struct iso2022_data *this);
 unsigned char iso2022_getbuf (struct iso2022_data *this);
-void iso2022_settranschar (struct iso2022_data *this, int value);
+void iso2022_settranschar(struct iso2022_data *this, bool value);
 void iso2022_tbufclear (struct iso2022_data *this);
 int iso2022_tbuflen (struct iso2022_data *this);
 int iso2022_buflen (struct iso2022_data *this);

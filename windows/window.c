@@ -256,11 +256,12 @@ static int compose_state = 0;
 
 static UINT wm_mousewheel = WM_MOUSEWHEEL;
 
-static void ExtTextOutW2 (HDC, int, int, UINT, const RECT *, WCHAR *, UINT, const int *, int);
+static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT* rc,
+    WCHAR* str, UINT cnt, const int* dx, bool wide);
 
 /* */
 
-static int ime_mode = 0;
+static bool ime_mode = false;
 LRESULT wndproc_document_feed(RECONVERTSTRING *rs);
 
 
@@ -2571,17 +2572,6 @@ static bool is_alt_pressed(void)
     if (keystate[VK_RMENU] & 0x80)
         return true;
     return false;
-}
-
-static int is_shift_pressed(void)
-{
-    BYTE keystate[256];
-    int r = GetKeyboardState(keystate);
-    if (!r)
-        return FALSE;
-    if (keystate[VK_SHIFT] & 0x80)
-        return TRUE;
-    return FALSE;
 }
 
 struct ctrl_tab_info {
@@ -6652,25 +6642,23 @@ static bool win_seat_can_set_trust_status(Seat *seat)
 
 /* (opt & ETO_CLIPPED) must not be zero. */
 static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT *rc,
-                         WCHAR *str, UINT cnt, const int *dx, int wide)
+                         WCHAR *str, UINT cnt, const int *dx, bool wide)
 {
     unsigned int i;
     SIZE s;
     RECT rc2;
-    int f;
-    int w95;
     LONG cx2;
     HDC dc = NULL, dc2;
     HBITMAP oldbm;
     int bk_mode = 0;
-    extern int iso2022_win95flag;
+    extern bool iso2022_win95flag;
     if (!dx) {
         ExtTextOutW(hdc, x, y, opt, rc, str, cnt, dx);
         return;
     }
-    f = 0;
+    bool f = false;
+    bool w95 = wide ? iso2022_win95flag : false;
     rc2 = *rc;
-    w95 = wide ? iso2022_win95flag : 0;
     while (cnt) {
         int dxsum = 0;
         cx2 = 0;

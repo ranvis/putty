@@ -395,16 +395,20 @@ static char *get_lng_file_path()
     return NULL;
 }
 
+static WCHAR *strdup_to_wc(const char *str, int cp)
+{
+    int w_len = MultiByteToWideChar(cp, 0, str, -1, NULL, 0);
+    WCHAR *str_w = snewn(w_len, WCHAR);
+    MultiByteToWideChar(cp, 0, str, -1, str_w, w_len);
+    return str_w;
+}
+
 static WCHAR *get_lng_file_path_w()
 {
-    int w_len;
-    WCHAR *lng_path_w;
     char *lng_path_a = get_lng_file_path();
     if (!lng_path_a)
         return NULL;
-    w_len = MultiByteToWideChar(CP_ACP, 0, lng_path_a, -1, NULL, 0);
-    lng_path_w = snewn(w_len, WCHAR);
-    MultiByteToWideChar(CP_ACP, 0, lng_path_a, -1, lng_path_w, w_len);
+    WCHAR *lng_path_w = strdup_to_wc(lng_path_a, CP_ACP);
     sfree(lng_path_a);
     return lng_path_w;
 }
@@ -813,4 +817,12 @@ BOOL l10nAppendMenu(HMENU menu, UINT flags, UINT_PTR id, LPCSTR text)
     if (getEnabled() && flags != MF_SEPARATOR && cwstrtranslate(text, buf, lenof(buf)))
         return AppendMenuW(menu, flags, id, buf);
     return AppendMenu(menu, flags, id, text);
+}
+
+BOOL SetDlgItemTextCp1252(HWND dialog, int item, LPCSTR text)
+{
+    WCHAR *text_w = strdup_to_wc(text, 1252);
+    BOOL result = SetDlgItemTextW(dialog, item, text_w);
+    sfree(text_w);
+    return result;
 }

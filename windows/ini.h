@@ -3,7 +3,7 @@
 
 typedef struct ini_sections ini_sections;
 
-extern char inifile[2 * MAX_PATH + 10];
+extern char inifile[];
 
 typedef void (*sprintf_void_fp)(const char *fmt, ...);
 

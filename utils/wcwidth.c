@@ -689,7 +689,7 @@ while (<$fp>) {
     my ($chr, $end) = map(hex, split(/\.\./, $fields[0]));
     $end //= $chr;
     while ($chr <= $end) {
-    	$chrs{$chr++} = 1;
+        $chrs{$chr++} = 1;
     }
 }
 # exclude combining[]

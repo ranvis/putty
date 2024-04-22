@@ -16,6 +16,7 @@
 #include "storage.h"
 #include "dialog.h"
 #include "licence.h"
+#include "winl10n.h"
 
 #include <commctrl.h>
 #include <commdlg.h>
@@ -392,7 +393,7 @@ static INT_PTR CALLBACK AboutProc(HWND hwnd, UINT msg,
             appname, ver, buildinfo_text,
             "\251 " SHORT_COPYRIGHT_DETAILS ". All rights reserved.");
         sfree(buildinfo_text);
-        SetDlgItemText(hwnd, IDA_TEXT, text);
+        SetDlgItemTextCp1252(hwnd, IDA_TEXT, text);
         MakeDlgItemBorderless(hwnd, IDA_TEXT);
         sfree(text);
         l10n_created_window(hwnd);

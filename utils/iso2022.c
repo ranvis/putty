@@ -4,13 +4,12 @@
 
 #define strlenu(s) strlen ((char *)s)
 
-int iso2022_win95flag;
+bool iso2022_win95flag;
 
 #ifdef _WINDOWS
 #define UCS2CHAR WCHAR
 
-static int
-get_win95flag (void)
+static bool get_win95flag(void)
 {
     // assume init_winver() is already called
     return osPlatformId == VER_PLATFORM_WIN32_WINDOWS;
@@ -58,10 +57,9 @@ cp950_to_wchar (unsigned char *src, UCS2CHAR *dest, int destlen)
 #define BOOL int
 #define UCS2CHAR uint16_t
 
-static int
-get_win95flag (void)
+static bool get_win95flag(void)
 {
-  return 0;
+    return false;
 }
 
 static int
@@ -171,8 +169,7 @@ iso2022_tbufclear (struct iso2022_data *this)
   this->trns.buflen = this->trns.bufoff = 0;
 }
 
-void
-iso2022_settranschar (struct iso2022_data *this, int value)
+void iso2022_settranschar(struct iso2022_data *this, bool value)
 {
   this->trns.transchar = value;
 }
@@ -266,7 +263,7 @@ setg_94_n (struct iso2022struct *q, struct g *p)
         case '@': p->type = JISC6226_1978; break;
         case 'B':
           if (q->jisx02081990flag)
-            q->jisx02081990flag = 0, p->type = JISX0208_1990;
+            q->jisx02081990flag = false, p->type = JISX0208_1990;
           else
             p->type = JISX0208_1983;
           break;
@@ -614,7 +611,7 @@ if(j!=94){buf[0]=i+0x20;buf[1]=j+0x21;buf[2]=0;return 1;}
 static void
 clearesc (struct iso2022struct *q)
 {
-  q->esc = 0;
+  q->esc = false;
 }
 
 void
@@ -780,7 +777,7 @@ put (struct iso2022struct *q, unsigned char c)
           switch (q->buf[2])
             {
             case '@':
-              q->jisx02081990flag = 1;
+              q->jisx02081990flag = true;
               goto clear;
             }
           goto esc;
@@ -846,7 +843,7 @@ put (struct iso2022struct *q, unsigned char c)
         }
       break;
     esc:                        /* to esc mode */
-      q->esc = 1;
+      q->esc = true;
       goto pass;
     pass:                       /* pass through the buffer */
       q->buf[q->buflen = q->bufoff] = 0;
@@ -913,7 +910,7 @@ try2 (struct iso2022struct *q, UCS2CHAR buf2, unsigned char *p,
   while (*ppp)
     {
       pp = p;
-      q->esc = 0;
+      q->esc = false;
       q->buflen = 1;
       while (*ppp)
         put (q, *pp++ = *ppp++);
@@ -947,7 +944,7 @@ try3 (struct iso2022struct *q, UCS2CHAR buf2, unsigned char *p,
   while (*ppp)
     {
       pp = p;
-      q->esc = 0;
+      q->esc = false;
       q->buflen = 1;
       while (*ppp)
         put (q, *pp++ = *ppp++);
@@ -981,7 +978,7 @@ try4 (struct iso2022struct *q, UCS2CHAR buf2, unsigned char *p,
   while (*ppp)
     {
       pp = p;
-      q->esc = 0;
+      q->esc = false;
       q->buflen = 1;
       while (*ppp)
         put (q, *pp++ = *ppp++);
@@ -1069,7 +1066,7 @@ transmit (struct iso2022_data *this, struct iso2022struct *q, unsigned char c)
             {
               p5 = pp;
               saveq = *q;
-              q->esc = 0;
+              q->esc = false;
               q->buflen = 1;
               while (*ppp)
                 put (q, *pp++ = *ppp++);
@@ -1126,7 +1123,7 @@ transmit2 (struct iso2022_data *this, struct iso2022struct *q, unsigned char c)
             {
               p5 = pp;
               saveq = *q;
-              q->esc = 0;
+              q->esc = false;
               q->buflen = 1;
               while (*ppp)
                 put (q, *pp++ = *ppp++);
@@ -1352,7 +1349,7 @@ autodetect_jp (struct iso2022_data *this, unsigned char *buf, int nchars)
   mskanji.good = mskanji.bad = 0;
   utf8cjk.good = utf8cjk.bad = 0;
 #define DO_AUTODETECT(ENCODING) do { \
-    if (this->autodetect.jp.ENCODING.e) \
+    if (this->autodetect.jp.ENCODING.enabled) \
       r = autodetect_jp_##ENCODING (&this->autodetect.jp.ENCODING, buf[i]); \
     else \
       r = AD_BAD; \
@@ -1443,7 +1440,7 @@ iso2022_put (struct iso2022_data *this, unsigned char c)
                 this->rcv.lgr.type = UTF8NONCJK;
               this->rcv.lgr.len = 0;
               this->rcv.gr = &this->rcv.lgr;
-              this->rcv.lockgr = 1;
+              this->rcv.lockgr = true;
               this->trns.lgr = this->rcv.lgr;
               this->trns.gr = &this->trns.lgr;
             }
@@ -1502,12 +1499,12 @@ init (struct iso2022struct *q)
   q->ssl = 0;
   q->ssr = 0;
   q->usgr = 0;
-  q->jisx02081990flag = 0;
+  q->jisx02081990flag = false;
   q->buflen = q->bufoff = 0;
-  q->esc = 0;
-  q->lockgr = 0;
-  q->ssgr = 0;
-  q->transchar = 0;
+  q->esc = false;
+  q->lockgr = false;
+  q->ssgr = false;
+  q->transchar = false;
   q->inslen = 0;
 }
 
@@ -1541,8 +1538,8 @@ int
 iso2022_init (struct iso2022_data *this, const char *p, int mode)
 {
   int i, f, j, k = 0;
-  int tmp_lockgr, tmp_mskanji, tmp_big5, tmp_win95flag, tmp_ssgr, tmp_utf8cjk;
-  int tmp_utf8noncjk, tmp_autojp_eucjp, tmp_autojp_mskanji, tmp_autojp_utf8;
+  bool tmp_lockgr, tmp_mskanji, tmp_big5, tmp_win95flag, tmp_ssgr, tmp_utf8cjk;
+  bool tmp_utf8noncjk, tmp_autojp_eucjp, tmp_autojp_mskanji, tmp_autojp_utf8;
 
   if (!stricmp (p, "euc-jp"))
     p = "iso2022 lockgr euc-jp";
@@ -1578,8 +1575,8 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
     unsigned char initstring[512];
 
     tmp_win95flag = get_win95flag ();
-    tmp_lockgr = tmp_mskanji = tmp_big5 = tmp_ssgr = tmp_utf8cjk = tmp_utf8noncjk = 0;
-    tmp_autojp_eucjp = tmp_autojp_mskanji = tmp_autojp_utf8 = 0;
+    tmp_lockgr = tmp_mskanji = tmp_big5 = tmp_ssgr = tmp_utf8cjk = tmp_utf8noncjk = false;
+    tmp_autojp_eucjp = tmp_autojp_mskanji = tmp_autojp_utf8 = false;
     for (;;)
       {
         if (*p == ' ')
@@ -1589,18 +1586,18 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
           }
         if (!strnicmp (p, "w95", 3))
           {
-            tmp_win95flag = 1;
+            tmp_win95flag = true;
             p += 3;
             if (!strnicmp (p, "off", 3))
               {
-                tmp_win95flag = 0;
+                tmp_win95flag = false;
                 p += 3;
               }
             continue;
           }
         if (!strnicmp (p, "lockgr", 6))
           {
-            tmp_lockgr = 1;
+            tmp_lockgr = true;
             p += 6;
             continue;
           }
@@ -1618,7 +1615,7 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
           }
         if (!strnicmp (p, "ssgr", 4))
           {
-            tmp_ssgr = 1;
+            tmp_ssgr = true;
             p += 4;
             continue;
           }
@@ -1636,19 +1633,19 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
           }
         if (!strnicmp (p, "autojp-eucjp", 12))
           {
-            tmp_autojp_eucjp = 1;
+            tmp_autojp_eucjp = true;
             p += 12;
             continue;
           }
         if (!strnicmp (p, "autojp-mskanji", 14))
           {
-            tmp_autojp_mskanji = 1;
+            tmp_autojp_mskanji = true;
             p += 14;
             continue;
           }
         if (!strnicmp (p, "autojp-utf8", 11))
           {
-            tmp_autojp_utf8 = 1;
+            tmp_autojp_utf8 = true;
             p += 11;
             continue;
           }
@@ -1683,7 +1680,7 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
               "00"
               /* 7bit/8bit */
               "08";
-            tmp_ssgr = 1;
+            tmp_ssgr = true;
             break;
           }
         if (!stricmp (p, "euc-kr"))
@@ -1832,9 +1829,9 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
             && tmp_big5 == (this->rcv.lgr.type == BIG5 && this->rcv.gr == &this->rcv.lgr)
             && tmp_utf8cjk == (this->rcv.lgr.type == UTF8CJK && this->rcv.gr == &this->rcv.lgr)
             && tmp_utf8noncjk == (this->rcv.lgr.type == UTF8NONCJK && this->rcv.gr == &this->rcv.lgr)
-            && tmp_autojp_eucjp == this->autodetect.jp.eucjp.e
-            && tmp_autojp_mskanji == this->autodetect.jp.mskanji.e
-            && tmp_autojp_utf8 == this->autodetect.jp.utf8cjk.e)
+            && tmp_autojp_eucjp == this->autodetect.jp.eucjp.enabled
+            && tmp_autojp_mskanji == this->autodetect.jp.mskanji.enabled
+            && tmp_autojp_utf8 == this->autodetect.jp.utf8cjk.enabled)
           return 0;
       }
     memcpy (init_string, initstring, i);
@@ -1883,32 +1880,32 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
     {
       this->rcv.lgr = *this->rcv.gr;
       this->rcv.gr = &this->rcv.lgr;
-      this->rcv.lockgr = 1;
+      this->rcv.lockgr = true;
     }
   if (tmp_ssgr)
-    this->trns.ssgr = 1;
+    this->trns.ssgr = true;
   this->autodetect.n = 0;
   this->autodetect.jp.n = 0;
-  this->autodetect.jp.eucjp.e = 0;
-  this->autodetect.jp.mskanji.e = 0;
-  this->autodetect.jp.utf8cjk.e = 0;
+  this->autodetect.jp.eucjp.enabled = false;
+  this->autodetect.jp.mskanji.enabled = false;
+  this->autodetect.jp.utf8cjk.enabled = false;
   if (tmp_autojp_eucjp)
     {
-      this->autodetect.jp.eucjp.e = 1;
+      this->autodetect.jp.eucjp.enabled = true;
       this->autodetect.jp.eucjp.buflen = 0;
       this->autodetect.jp.n++;
       this->autodetect.n++;
     }
   if (tmp_autojp_mskanji)
     {
-      this->autodetect.jp.mskanji.e = 1;
+      this->autodetect.jp.mskanji.enabled = true;
       this->autodetect.jp.mskanji.buflen = 0;
       this->autodetect.jp.n++;
       this->autodetect.n++;
     }
   if (tmp_autojp_utf8)
     {
-      this->autodetect.jp.utf8cjk.e = 1;
+      this->autodetect.jp.utf8cjk.enabled = true;
       this->autodetect.jp.utf8cjk.buflen = 0;
       this->autodetect.jp.n++;
       this->autodetect.n++;

@@ -1181,29 +1181,27 @@ void progressbar(struct ctlpos *cp, int id)
  */
 static char *shortcut_escape(const char *text, char shortcut)
 {
-        int text_len;
     char *ret;
     char const *p;
     char *q;
-    char *r, lastchar = '\0';
-    int search;
 
     if (!text)
         return NULL;                   /* sfree won't choke on this */
 
-        text_len = strlen(text);
-        ret = snewn(text_len > 4 ? 2*text_len+1 : text_len + 5, char);   /* size potentially doubles! */
+    int text_len = strlen(text);
+    ret = snewn(text_len > 4 ? 2 * text_len+1 : text_len+5, char); /* size potentially doubles! */
     shortcut = tolower((unsigned char)shortcut);
 
+    char *r, lastchar = '\0';
     p = text;
-    search = 1;
+    bool search = true;
     while (*p) {
-         r = CharNext (p);
-         if (r - p > 1) {
-              search = 0;
-              break;
-         }
-         p = r;
+        r = CharNext(p);
+        if (r - p > 1) {
+            search = false;
+            break;
+        }
+        p = r;
     }
     p = text;
     q = ret;
@@ -1216,19 +1214,19 @@ static char *shortcut_escape(const char *text, char shortcut)
             *q++ = '&';
         }
         lastchar = *p;
-        r = CharNext (p);
+        r = CharNext(p);
         while (p != r)
-             *q++ = *p++;
+            *q++ = *p++;
     }
     if (shortcut != NO_SHORTCUT) { /* Japanese style shortcut */
-         if (lastchar == ':')
-              q--;
-         *q++ = '(';
-         *q++ = '&';
-         *q++ = toupper(shortcut);
-         *q++ = ')';
-         if (lastchar == ':')
-              *q++ = lastchar;
+        if (lastchar == ':')
+            q--;
+        *q++ = '(';
+        *q++ = '&';
+        *q++ = toupper(shortcut);
+        *q++ = ')';
+        if (lastchar == ':')
+            *q++ = lastchar;
     }
     *q = '\0';
     return ret;
@@ -2389,7 +2387,7 @@ void dlg_label_change(dlgcontrol *ctrl, dlgparam *dp, char const *text2)
     struct winctrl *c = dlg_findbyctrl(dp, ctrl);
     char *escaped = NULL;
     int id = -1;
-    char *text = l10n_dupstr (text2);
+    char *text = l10n_dupstr(text2);
 
     assert(c);
     switch (c->ctrl->type) {
@@ -2431,7 +2429,7 @@ void dlg_label_change(dlgcontrol *ctrl, dlgparam *dp, char const *text2)
         SetDlgItemText(dp->hwnd, id, escaped);
         sfree(escaped);
     }
-    sfree (text);
+    sfree(text);
 }
 
 void dlg_filesel_set(dlgcontrol *ctrl, dlgparam *dp, Filename *fn)

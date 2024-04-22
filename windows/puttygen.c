@@ -12,6 +12,7 @@
 #include "sshkeygen.h"
 #include "licence.h"
 #include "security-api.h"
+#include "winl10n.h"
 #include "puttygen-rc.h"
 
 #include <commctrl.h>
@@ -32,11 +33,6 @@
 static char *cmdline_keyfile = NULL;
 static ptrlen cmdline_demo_keystr;
 static const char *demo_screenshot_filename = NULL;
-
-/*
- * Export from l10n
- */
-BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text);
 
 /*
  * Print a modal (Really Bad) message box and perform a fatal exit.
@@ -556,7 +552,7 @@ static INT_PTR CALLBACK AboutProc(HWND hwnd, UINT msg,
                 ver, buildinfo_text,
                 "\251 " SHORT_COPYRIGHT_DETAILS ". All rights reserved.");
             sfree(buildinfo_text);
-            SetDlgItemText(hwnd, 1000, text);
+            SetDlgItemTextCp1252(hwnd, 1000, text);
             MakeDlgItemBorderless(hwnd, 1000);
             sfree(text);
         }
