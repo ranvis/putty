@@ -2,6 +2,8 @@
 #include <shlobj.h>
 #include "ini.h"
 
+#undef sprintf /* no auto translate */
+
 struct ini_sections {
     const char *ini_path;
     char *buffer;

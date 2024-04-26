@@ -637,7 +637,8 @@ Network error: Resource temporarily unavailable=ネットワークエラー: リ
 %25s Internal Error=%25s 内部エラー
 Unsupported protocol number found=対応していないプロトコル番号です
 %25s Error=%25s エラー
-Unable to open connection to%0A%25.800s%0A%25s=%25.800s%0Aに接続できません%0A%25s
+Unable to open terminal:%0A%25s=端末を開けません。:%0A%25s
+Unable to open connection to%0A%25s%0A%25s=%25s%0Aに接続できません。%0A%25s
 ;;%25.70s (inactive)
 %25s Fatal Error=%25s 重大なエラー
 ;Windows refuses to report a version
@@ -654,6 +655,8 @@ This procedure will remove ALL Registry entries%0Aassociated with %25s, and will
 %25.70s Fatal Error=%25.70s 重大なエラー
 ;;%25.70s Command Line Error
 Connection closed by remote host=リモートホストが接続を閉じました
+Remote side closed network connection=リモート側がネットワーク接続を閉じました
+Remote side unexpectedly closed network connection=リモート側が突然にネットワーク接続を閉じました
 %25s Exit Confirmation=%25s 終了確認
 Are you sure you want to close this session?=このセッションを閉じますか?
 Are you sure you want to close this session?%25s%25s=このセッションを閉じますか? %25s%25s
@@ -798,7 +801,8 @@ the -pwfile option can only be used with the SSH protocol=-pwfile オプショ�
 -ini must be followed by a filename=-ini に続けてファイル名の指定が必要です
 cannot use "%25s" as ini file="%s" をiniファイルとして使用できません
 option "%25s" requires an argument=オプション "%s" は値が必要です
-unrecognised option "%25s"=オプション "%s" は不明な名前です
+unrecognised option "%25s"=オプション '%s' は認識できません。
+unknown option "%25s"=オプション "%s" は認識できません。
 unexpected non-option argument "%25s"=予期しないパラメータです: "%s"
 ;BUG: formatted string is translated: unable to open password file '%25s'=パスワードファイル '%25s' を開けません
 ;unable to read a password from file '%25s'=パスワードファイル '%25s' から読み込めません

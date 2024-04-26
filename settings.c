@@ -13,6 +13,8 @@
 #include "ssh/gss.h"
 #endif
 
+#undef sprintf /* no auto translate */
+
 /* The cipher order given here is the default order. */
 static const struct keyvalwhere ciphernames[] = {
     { "aes",        CIPHER_AES,             -1, -1 },

@@ -1703,10 +1703,8 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
             shortcuts[nshortcuts++] = ctrl->fileselect.shortcut;
             num_ids = 3;
             if (!ctrl->fileselect.just_button) {
-                char *browse = l10n_dupstr ("Browse...");
                 editbutton(&pos, escaped, base_id, base_id+1,
-                           browse, base_id+2);
-                sfree (browse);
+                           "Browse...", base_id+2);
             } else {
                 button(&pos, escaped, base_id+2, false);
             }
@@ -1718,13 +1716,7 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
                                       ctrl->fontselect.shortcut);
             shortcuts[nshortcuts++] = ctrl->fontselect.shortcut;
             statictext(&pos, escaped, 1, base_id);
-            {
-              char *change;
-
-              change = l10n_dupstr ("Change...");
-            staticbtn(&pos, "", base_id+1, change, base_id+2);
-              sfree (change);
-            }
+            staticbtn(&pos, "", base_id+1, "Change...", base_id+2);
             data = fontspec_new("", false, 0, 0);
             sfree(escaped);
             break;

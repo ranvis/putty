@@ -2147,7 +2147,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
                     }
                     fp = fopen(filename, "w");
                     if (!fp) {
-                        MessageBox(hwnd, "Unable to open key file",
+                        MessageBox(hwnd, "Unable to open key file for writing",
                                    "PuTTYgen Error", MB_OK | MB_ICONERROR);
                     } else {
                         if (state->ssh2) {
@@ -2394,7 +2394,7 @@ static NORETURN void opt_error(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    char *msg = dupvprintf(fmt, ap);
+    char *msg = l10n_dupvprintf(fmt, ap);
     va_end(ap);
 
     MessageBox(NULL, msg, "PuTTYgen command line error", MB_ICONERROR | MB_OK);

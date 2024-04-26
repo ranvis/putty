@@ -34,10 +34,10 @@
 #include <mmsystem.h>
 
 /* > transparent background patch */
-#include <wingdi.h>  /* AlphaBlend */
-/* #include <winbase.h> */  /* OutputDebugString */
 /* #define XTRANS_AVOID_UL_BUG */
 /* < */
+
+#undef sprintf /* no auto translate */
 
 /* From MSDN: In the WM_SYSCOMMAND message, the four low-order bits of
  * wParam are used by Windows, and should be masked off, so we shouldn't
