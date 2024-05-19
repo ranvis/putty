@@ -615,13 +615,18 @@ int l10nMessageBoxA(HWND hWnd, LPCSTR text, LPCSTR caption, UINT type)
     return MessageBoxW(hWnd, textw, captionw, type);
 }
 
+static bool is_ptr_resource_id(void *ptr)
+{
+    return ptr <= (void *)0xffff;
+}
+
 #undef CreateWindowExA
 HWND l10nCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a6,
     int a7, int a8, HWND a9, HMENU a10, HINSTANCE a11, LPVOID a12)
 {
     HWND r;
 
-    if (getEnabled() && IsBadStringPtr(a2, 100) == FALSE) {
+    if (getEnabled() && !is_ptr_resource_id(a2) && !IsBadStringPtr(a2, 100)) {
         if (stricmp(a2, WC_TREEVIEW) == 0) a2 = WC_HOOK(TREEVIEW);
         else if (stricmp(a2, WC_BUTTON) == 0) a2 = WC_HOOK(BUTTON);
         else if (stricmp(a2, WC_STATIC) == 0) a2 = WC_HOOK(STATIC);
@@ -642,7 +647,7 @@ HWND l10nCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowN
 {
     HWND window;
 
-    if (getEnabled() && IsBadStringPtrW(lpClassName, 100) == FALSE) {
+    if (getEnabled() && !is_ptr_resource_id(lpClassName) && !IsBadStringPtrW(lpClassName, 100)) {
         if (_wcsicmp(lpClassName, WC_TREEVIEWW) == 0) lpClassName = WC_HOOKW(TREEVIEW);
         else if (_wcsicmp(lpClassName, WC_BUTTONW) == 0) lpClassName = WC_HOOKW(BUTTON);
         else if (_wcsicmp(lpClassName, WC_STATICW) == 0) lpClassName = WC_HOOKW(STATIC);
