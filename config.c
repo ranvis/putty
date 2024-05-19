@@ -4,6 +4,7 @@
  */
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 
 #include "putty.h"
@@ -143,7 +144,7 @@ void conf_editbox_handler(dlgcontrol *ctrl, dlgparam *dlg,
             if (type->type == EDIT_INT)
                 conf_set_int(conf, key, atoi(str));
             else
-                conf_set_int(conf, key, (int)(type->denominator * atof(str)));
+                conf_set_int(conf, key, (int)round(type->denominator * atof(str)));
             sfree(str);
         }
     }

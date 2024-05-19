@@ -21,6 +21,7 @@
 #include "security-api.h"
 #include "win-gui-seat.h"
 #include "winwallp.h"
+#include "wtrans.h"
 #include "tree234.h"
 
 #ifdef NO_MULTIMON
@@ -2755,6 +2756,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
             SetWindowLong(hwnd, wndExtra - 8, filetime.dwHighDateTime);
             SetWindowLong(hwnd, wndExtra - 4, filetime.dwLowDateTime);
         }
+        wtrans_set(conf, hwnd);
         break;
       case WM_CLOSE: {
         char *title, *msg, *additional = NULL;
@@ -2778,6 +2780,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
       }
       case WM_DESTROY:
         show_mouseptr(true);
+        wtrans_destroy(hwnd);
         PostQuitMessage(0);
         return 0;
       case WM_INITMENUPOPUP:
@@ -2916,8 +2919,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
             term_pre_reconfig(term, conf);
             prev_conf = conf_copy(conf);
 
+            wtrans_begin_preview(hwnd);
             reconfig_result = do_reconfig(
                 hwnd, conf, backend ? backend_cfg_info(backend) : 0);
+            wtrans_end_preview(conf, hwnd);
             reconfiguring = false;
             if (!reconfig_result) {
                 conf_free(prev_conf);
@@ -2957,6 +2962,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                 conf_get_bool(prev_conf, CONF_system_colour))
                 term_notify_palette_changed(term);
 
+            wtrans_set(conf, hwnd);
             /* > transparent background patch */
             xtrans_init();
             /* Avoid Unicode line drawing bug. */
@@ -3451,6 +3457,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
         return 0;
       case WM_SETFOCUS:
         term_set_focus(term, true);
+        wtrans_activate(conf, hwnd, true);
         CreateCaret(hwnd, caretbm, font_width, font_height);
         ShowCaret(hwnd);
         flash_window(0);               /* stop */
@@ -3460,6 +3467,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
       case WM_KILLFOCUS:
         show_mouseptr(true);
         term_set_focus(term, false);
+        wtrans_activate(conf, hwnd, false);
         DestroyCaret();
         caret_x = caret_y = -1;        /* ensure caret is replaced next time */
         term_update(term);
@@ -4892,6 +4900,7 @@ static void init_winfuncs(void)
     GET_WINDOWS_FUNCTION_NO_TYPECHECK(shcore_module, GetDpiForMonitor);
     GET_WINDOWS_FUNCTION_NO_TYPECHECK(user32_module, GetSystemMetricsForDpi);
     GET_WINDOWS_FUNCTION_NO_TYPECHECK(user32_module, AdjustWindowRectExForDpi);
+    wtrans_init(user32_module);
 }
 
 /*

@@ -62,7 +62,7 @@ add_sources_from_current_dir(otherbackends
 add_sources_from_current_dir(agent
   agent-client.c)
 add_sources_from_current_dir(guiterminal
-  winwallp.c
+  winwallp.c wtrans.c
   dialog.c controls.c config.c printing.c jump-list.c sizetip.c)
 add_dependencies(guiterminal generated_licence_h) # dialog.c uses licence.h
 

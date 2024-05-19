@@ -2134,6 +2134,9 @@ NORETURN void cleanup_exit(int);
     X(BOOL, NONE, use_ddb) \
     X(FILENAME, NONE, bgimg_file) \
     X(FILENAME, NONE, iconfile) \
+    X(INT, NONE, win_opacity) \
+    X(INT, NONE, win_opacity_inactive_prod) \
+    X(INT, NONE, win_opacity_inactive_delay) \
     X(BOOL, NONE, ssh_connection_sharing_ask) \
     /* end of list */
 

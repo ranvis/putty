@@ -808,6 +808,9 @@ void save_open_settings(settings_w *sesskey, Conf *conf)
     write_setting_b(sesskey, "SwitchSkipMin", conf_get_bool(conf, CONF_switch_skip_min));
     write_setting_b(sesskey, "RightAltKey", conf_get_bool(conf, CONF_rightaltkey));
     write_setting_filename(sesskey, "IconFile", conf_get_filename(conf, CONF_iconfile));
+    write_setting_i(sesskey, "WindowOpacity", conf_get_int(conf, CONF_win_opacity));
+    write_setting_i(sesskey, "WindowOpacityInactiveProduct", conf_get_int(conf, CONF_win_opacity_inactive_prod));
+    write_setting_i(sesskey, "WindowOpacityInactiveDelayMs", conf_get_int(conf, CONF_win_opacity_inactive_delay));
     write_setting_b(sesskey, "Use5Casis", conf_get_bool(conf, CONF_use_5casis));
     write_setting_i(sesskey, "TermX", conf_get_int(conf, CONF_x));
     write_setting_i(sesskey, "TermY", conf_get_int(conf, CONF_y));
@@ -1316,6 +1319,9 @@ void load_open_settings(settings_r *sesskey, Conf *conf)
     gppb(sesskey, "SwitchSkipMin", 0, conf, CONF_switch_skip_min);
     gppb(sesskey, "RightAltKey", 0, conf, CONF_rightaltkey);
     gppfile(sesskey, "IconFile", conf, CONF_iconfile);
+    gppi(sesskey, "WindowOpacity", 100, conf, CONF_win_opacity);
+    gppi(sesskey, "WindowOpacityInactiveProduct", 100, conf, CONF_win_opacity_inactive_prod);
+    gppi(sesskey, "WindowOpacityInactiveDelayMs", 60000, conf, CONF_win_opacity_inactive_delay);
     gppb(sesskey, "Use5Casis", 0, conf, CONF_use_5casis);
     gppi(sesskey, "TermX", CW_USEDEFAULT, conf, CONF_x);
     gppi(sesskey, "TermY", CW_USEDEFAULT, conf, CONF_y);

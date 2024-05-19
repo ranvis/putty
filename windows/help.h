@@ -85,6 +85,9 @@ typedef const char *HelpCtx;
 #define WINHELP_CTX_wallpaper_backtrans "config-background-transparency"
 #define WINHELP_CTX_wallpaper_backimage "config-background-image"
 #define WINHELP_CTX_icon_titlebar "config-icon-titlebar"
+#define WINHELP_CTX_win_opacity "config-win-opacity"
+#define WINHELP_CTX_win_opacity_inactive_prod "config-win-opacity" /* same */
+#define WINHELP_CTX_win_opacity_inactive_delay "config-win-opacity-inactive-delay"
 #define WINHELP_CTX_connection_termtype "config-termtype"
 #define WINHELP_CTX_connection_termspeed "config-termspeed"
 #define WINHELP_CTX_connection_username "config-username"
