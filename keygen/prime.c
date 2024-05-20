@@ -310,7 +310,7 @@ static double uniform_random_double(void)
 {
     unsigned char randbuf[8];
     random_read(randbuf, 8);
-    return GET_64BIT_MSB_FIRST(randbuf) * 5.421010862427522170037264e-20 /* 0x1.0p-64 */;
+    return GET_64BIT_MSB_FIRST(randbuf) * 0x1.0p-64;
 }
 
 static mp_int *mp_ceil_div(mp_int *n, mp_int *d)
