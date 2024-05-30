@@ -32,10 +32,11 @@ add_sources_from_current_dir(utils
   utils/screenshot.c
   utils/security.c
   utils/shinydialogbox.c
-  utils/sleep_ticks.c
   utils/split_into_argv.c
   utils/version.c
   utils/win_strerror.c
+  utils/app_conf.c
+  utils/sleep_ticks.c
   winl10n.c
 # winl10n must be used for CLI too. nol10n.c cannot query connection sharing with text translation.
   unicode.c)

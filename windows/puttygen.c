@@ -30,6 +30,10 @@
 #undef AppendMenu
 #define AppendMenu(m, f, i, t) l10nAppendMenu(m, f, i, t)
 
+#define APPNAME "PuTTYgen"
+
+const char *const appname = STR(APPNAME);
+
 static char *cmdline_keyfile = NULL;
 static ptrlen cmdline_demo_keystr;
 static const char *demo_screenshot_filename = NULL;

@@ -40,6 +40,8 @@
 
 #define APPNAME "Pageant"
 
+const char *const appname = STR(APPNAME);
+
 /* Titles and class names for invisible windows. IPCWINTITLE and
  * IPCCLASSNAME are critical to backwards compatibility: WM_COPYDATA
  * based Pageant clients will call FindWindow with those parameters
@@ -621,29 +623,6 @@ static void prompt_add_keyfile(bool encrypted)
         pageant_forget_passphrases();
     }
     sfree(filelist);
-}
-
-static int app_conf_get_int(const char *name, int def, int min, int max)
-{
-    int value = def;
-    if (get_use_inifile()) {
-        if (!get_ini_int(APPNAME, name, inifile, &value))
-            value = def;
-    } else {
-        HKEY hkey = open_regkey_ro(HKEY_CURRENT_USER, PUTTY_REG_POS "\\" APPNAME);
-        if (hkey) {
-            DWORD dw;
-            if (get_reg_dword(hkey, name, &dw))
-                value = dw;
-            else
-                value = def;
-            close_regkey(hkey);
-        }
-    }
-    if (value < min || max < value) {
-        value = def;
-    }
-    return value;
 }
 
 struct ConfirmAcceptAgentProcStruct {

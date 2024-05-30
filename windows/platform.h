@@ -606,6 +606,7 @@ void escape_registry_key(const char *in, strbuf *out);
 void escape_ini_section(const char *in, strbuf *out);
 void escape_ini_value_n(const char *in, size_t n, strbuf *out);
 void unescape_registry_key(const char *in, strbuf *out);
+int app_conf_get_int(const char *name, int def, int min, int max);
 
 bool is_console_handle(HANDLE);
 
