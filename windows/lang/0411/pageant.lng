@@ -54,6 +54,7 @@ Accept deletion of all SSH1 identities?=全てのSSH1識別情報の削除を許
 Accept deletion of all SSH2 identities?=全てのSSH2識別情報の削除を許可しますか?
 Add key (encrypted)=鍵の追加 (暗号化状態)
 Remove All Keys=すべての鍵を削除
+Remove all keys from the list?=鍵を一覧からすべて削除しますか?
 Re-encrypt All Keys=すべての鍵を再暗号化
 Add Key (&encrypted)=鍵の追加 (暗号化状態)(&E)
 Re-e&ncrypt=再暗号化(&N)

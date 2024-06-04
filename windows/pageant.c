@@ -67,6 +67,7 @@ static struct {
 } reencrypt_settings;
 static char *putty_path;
 static bool restrict_putty_acl = false;
+static bool cmd_confirm_open;
 
 /* CWD for "add key" file requester. */
 static filereq *keypath = NULL;
@@ -1785,10 +1786,19 @@ static LRESULT CALLBACK TrayWndProc(HWND hwnd, UINT message,
             }
             prompt_add_keyfile(command == IDM_ADDKEY_ENCRYPTED);
             break;
-          case IDM_REMOVE_ALL:
+          case IDM_REMOVE_ALL: {
+            if (cmd_confirm_open)
+                break;
+            cmd_confirm_open = true;
+            int result = MessageBox(hwnd, "Remove all keys from the list?",
+                APPNAME, MB_YESNO | MB_SYSTEMMODAL);
+            cmd_confirm_open = false;
+            if (result != IDYES)
+                break;
             pageant_delete_all();
             keylist_update();
             break;
+          }
           case IDM_REENCRYPT_ALL:
             gui_reencrypt_all();
             break;
