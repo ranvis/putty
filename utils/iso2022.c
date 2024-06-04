@@ -244,10 +244,6 @@ utf8len (unsigned char firstbyte)
     j = 3;
   else if ((c & 0xf8) == 0xf0)
     j = 4;
-  else if ((c & 0xfc) == 0xf8)
-    j = 5;
-  else if ((c & 0xfe) == 0xfc)
-    j = 6;
   return j;
 }
 
