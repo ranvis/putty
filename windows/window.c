@@ -4484,7 +4484,7 @@ static void do_text_internal(
     if (attr & TATTR_COMBINING)
         SetBkMode(wintw_hdc, TRANSPARENT);
         /* > transparent background patch */
-    else if (nbg == 258 && wp_mode) {
+    else if (nbg == 258 && !truecolour.bg.enabled && wp_mode) {
         SetBkMode(wintw_hdc, TRANSPARENT);
         (*xtrans_paint_background)(wintw_hdc, x, y, line_box.right - x, font_height);
     }
@@ -4656,7 +4656,7 @@ static void do_text_internal(
             general_textout2(wintw_hdc, x + xoffset,
                             y - font_height * (lattr==LATTR_BOT) + text_adjust,
                             &line_box, wbuf, len, lpDx,
-                            opaque && !(attr & TATTR_COMBINING) && !(nbg == 258 && wp_mode),
+                            opaque && !(attr & TATTR_COMBINING),
                             !!(attr & ATTR_WIDE), in_utf (term) && term->ucsdata->iso2022);
 
             /* And the shadow bold hack. */
