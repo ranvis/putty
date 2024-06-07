@@ -170,6 +170,9 @@ static Terminal *term;
 static void conf_cache_data(void);
 static int cursor_type;
 static int vtmode;
+static struct {
+    int wp_mode;
+} conf_last;
 
 static struct sesslist sesslist;       /* for saved-session menu */
 
@@ -543,7 +546,7 @@ void wallpaper_cleanup(void)
 
 COLORREF wallpaper_get_bg_color(void)
 {
-    return colours[258];
+    return colours[OSC4_COLOUR_bg];
 }
 
 void wallpaper_fill_bgcolor(HDC hdc, const RECT *rect)
@@ -599,6 +602,12 @@ static int is_path_bmp(const char *path)
     return !ext || !stricmp(ext, ".bmp");
 }
 
+static void wallpaper_set_mode(int mode)
+{
+    conf_last.wp_mode = mode;
+    conf_set_int(conf, CONF_transparent_mode, mode);
+}
+
 static void wallpaper_prepare_dtimg()
 {
     const HWND hwnd = wgs.term_hwnd;
@@ -620,7 +629,7 @@ static void wallpaper_prepare_dtimg()
         }
     }
     if (!img_bmp) {
-        conf_set_int(conf, CONF_transparent_mode, 0);
+        wallpaper_set_mode(0);
         return;
     }
     InvalidateRect(hwnd, NULL, FALSE);
@@ -674,7 +683,7 @@ static void wallpaper_prepare_image()
     }
 
     if (!background_bmp) {
-        conf_set_int(conf, CONF_transparent_mode, 0);
+        wallpaper_set_mode(0);
         return;
     }
 
@@ -727,7 +736,7 @@ static void xtrans_load_bitmap()
         img_bmp = NULL;
     }
     xtrans_free_background();
-    if (conf_get_int(conf, CONF_transparent_mode) == WALLPAPER_MODE_IMAGE && conf_get_filename(conf, CONF_bgimg_file)->path[0] != '\0')
+    if (conf_last.wp_mode == WALLPAPER_MODE_IMAGE && conf_get_filename(conf, CONF_bgimg_file)->path[0] != '\0')
         return;
 
     GetModuleFileName(NULL, pass, MAX_PATH);
@@ -751,7 +760,7 @@ static void xtrans_load_bitmap()
         (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
     bg_has_alpha = FALSE;
     xtrans_bitmap_changed();
-    conf_set_int(conf, CONF_transparent_mode, WALLPAPER_MODE_IMAGE);
+    wallpaper_set_mode(WALLPAPER_MODE_IMAGE);
 
     cp += 5;
     for (i = 0; i < 3 && isdigit(*cp); i++, cp++)
@@ -767,13 +776,13 @@ static void xtrans_load_bitmap()
 
 static void xtrans_init()
 {
-    int wp_mode;
     xtrans_load_bitmap();
 
-    if (conf_get_int(conf, CONF_shading) < 0 || 255 < conf_get_int(conf, CONF_shading)) {
+    int shading = conf_get_int(conf, CONF_shading);
+    if (shading < 0 || 255 < conf_get_int(conf, CONF_shading)) {
         conf_set_int(conf, CONF_shading, 0);
     }
-    wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    int wp_mode = conf_last.wp_mode;
     if (!wp_mode)
         xtrans_free_background();
 
@@ -787,16 +796,16 @@ static void xtrans_init()
         wallpaper_prepare_dtimg();
         xtrans_paint_background = xtrans_paint_bg;
     } else if (wp_mode > 0)
-        conf_set_int(conf, CONF_transparent_mode, 0);
+        wallpaper_set_mode(0);
 }
 
 static void xtrans_refresh()
 {
     const HWND hwnd = wgs.term_hwnd;
-    int wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    int wp_mode = conf_last.wp_mode;
     if (wp_mode < 0) {
         wp_mode = -wp_mode;
-        conf_set_int(conf, CONF_transparent_mode, wp_mode);
+        conf_last.wp_mode = wp_mode;
         xtrans_free_background();
     }
     if (wp_mode == WALLPAPER_MODE_IMAGE) {
@@ -811,7 +820,7 @@ static void xtrans_refresh()
 static void xtrans_move()
 {
     const HWND hwnd = wgs.term_hwnd;
-    int wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    int wp_mode = conf_last.wp_mode;
     if (wp_mode == WALLPAPER_MODE_IMAGE && !conf_get_bool(conf, CONF_stop_when_moving))
         InvalidateRect(hwnd, NULL, FALSE);
 }
@@ -819,9 +828,9 @@ static void xtrans_move()
 static void xtrans_size()
 {
     const HWND hwnd = wgs.term_hwnd;
-    int wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    int wp_mode = conf_last.wp_mode;
     if (wp_mode == WALLPAPER_MODE_DESKTOP || wp_mode == WALLPAPER_MODE_DTIMG)
-        conf_set_int(conf, CONF_transparent_mode, -wp_mode);
+        conf_last.wp_mode = -wp_mode;
     else if (wp_mode == WALLPAPER_MODE_IMAGE)
         InvalidateRect(hwnd, NULL, FALSE);
 }
@@ -1095,8 +1104,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         /* > transparent background patch */
     /* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
-    if (conf_get_int(conf, CONF_vtmode) == VT_UNICODE && conf_get_int(conf, CONF_transparent_mode))
-        conf_set_int(conf, CONF_vtmode, VT_POORMAN);
+    if (vtmode == VT_UNICODE && conf_last.wp_mode)
+        conf_set_int(conf, CONF_vtmode, vtmode = VT_POORMAN);
 #endif
         /* < */
 
@@ -2666,6 +2675,7 @@ static void conf_cache_data(void)
     /* Cache some items from conf to speed lookups in very hot code */
     cursor_type = conf_get_int(conf, CONF_cursor_type);
     vtmode = conf_get_int(conf, CONF_vtmode);
+    conf_last.wp_mode = conf_get_int(conf, CONF_transparent_mode);
 }
 
 static const int clips_system[] = { CLIP_SYSTEM };
@@ -2967,8 +2977,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
             xtrans_init();
             /* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
-            if (conf_get_int(conf, CONF_vtmode) == VT_UNICODE && conf_get_int(conf, CONF_transparent_mode))
-                conf_set_int(conf, CONF_vtmode, VT_POORMAN);
+            if (vtmode == VT_UNICODE && conf_last.wp_mode)
+                conf_set_int(conf, CONF_vtmode, vtmode = VT_POORMAN);
 #endif
             /* < */
 
@@ -3430,7 +3440,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                             offset_height+font_height*term->rows);
 
             /* > transparent background patch */
-            if (conf_get_int(conf, CONF_transparent_mode) > 0)
+            if (conf_last.wp_mode > 0)
                 (*xtrans_paint_background)(hdc, p.rcPaint.left, p.rcPaint.top,
                                            p.rcPaint.right - p.rcPaint.left,
                                            p.rcPaint.bottom - p.rcPaint.top);
@@ -4312,7 +4322,6 @@ static void do_text_internal(
     static size_t lpDx_len = 0;
     int *lpDx_maybe;
     int len2; /* for SURROGATE PAIR */
-    int wp_mode;
 
     lattr &= LATTR_MODE;
 
@@ -4335,9 +4344,9 @@ static void do_text_internal(
         attr &= ~(ATTR_REVERSE|ATTR_BLINK|ATTR_COLOURS|ATTR_DIM);
         /* cursor fg and bg */
         if (ime_mode)
-            attr |= (262 << ATTR_FGSHIFT) | (263 << ATTR_BGSHIFT);
+            attr |= (OSC4_COLOUR_cursor_fg_ime << ATTR_FGSHIFT) | (OSC4_COLOUR_cursor_bg_ime << ATTR_BGSHIFT);
         else
-            attr |= (260 << ATTR_FGSHIFT) | (261 << ATTR_BGSHIFT);
+            attr |= (OSC4_COLOUR_cursor_fg << ATTR_FGSHIFT) | (OSC4_COLOUR_cursor_bg << ATTR_BGSHIFT);
         is_cursor = true;
     }
 
@@ -4480,11 +4489,11 @@ static void do_text_internal(
     if (line_box.right > font_width*term->cols+offset_width)
         line_box.right = font_width*term->cols+offset_width;
 
-    wp_mode = conf_get_int(conf, CONF_transparent_mode);
+    bool wp_flag = conf_last.wp_mode != 0;
     if (attr & TATTR_COMBINING)
         SetBkMode(wintw_hdc, TRANSPARENT);
         /* > transparent background patch */
-    else if (nbg == 258 && !truecolour.bg.enabled && wp_mode) {
+    else if (nbg == OSC4_COLOUR_bg && !truecolour.bg.enabled && wp_flag) {
         SetBkMode(wintw_hdc, TRANSPARENT);
         (*xtrans_paint_background)(wintw_hdc, x, y, line_box.right - x, font_height);
     }
@@ -4515,7 +4524,7 @@ static void do_text_internal(
         maxlen = len;
     }
 
-    opaque = !wp_mode; /* start by erasing the rectangle if no wallpaper */
+    opaque = !wp_flag; /* start by erasing the rectangle if no wallpaper */
     for (remaining = len; remaining > 0;
          text += len, remaining -= len, x += char_width * len2) {
         len = (maxlen < remaining ? maxlen : remaining);
@@ -4737,7 +4746,7 @@ static void wintw_draw_cursor(
     int fnt_width;
     int char_width;
     int ctype = cursor_type;
-    COLORREF colour = ime_mode ? colours[263] : colours[261];
+    COLORREF colour = ime_mode ? colours[OSC4_COLOUR_cursor_bg_ime] : colours[OSC4_COLOUR_cursor_bg];
 
     lattr &= LATTR_MODE;
 
