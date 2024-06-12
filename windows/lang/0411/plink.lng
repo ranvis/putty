@@ -1,0 +1,8 @@
+[Default]
+Language=Japanese
+
+[Japanese]
+SSH connection sharing=SSH 接続の共有
+Permit sharing an existing SSH connection %25s?=既存の SSH 接続 %s を共有しますか?
+Yes=はい
+No=いいえ
