@@ -112,7 +112,7 @@ int platform_ssh_share_ask(const char *name)
 {
     /* blocking UI */
     char *text = dupprintf("Permit sharing an existing SSH connection %s?", name);
-    int id = MessageBox(NULL, text,
+    int id = MessageBox(GetForegroundWindow(), text,
         "SSH connection sharing",
         MB_YESNO | MB_DEFBUTTON2 | MB_SETFOREGROUND | MB_TOPMOST | MB_SYSTEMMODAL);
     sfree(text);
