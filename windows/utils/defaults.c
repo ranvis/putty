@@ -108,7 +108,7 @@ FontSpec *platform_default_fontspec(const char *name)
         ret->height = 10;
         return ret;
     } else {
-        return fontspec_new("", false, 0, 0);
+        return fontspec_new_default();
     }
 }
 

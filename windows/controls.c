@@ -393,13 +393,11 @@ char *staticwrap(struct ctlpos *cp, HWND hwnd, const char *text, int *lines)
     INT *pwidths, nfit;
     SIZE size;
     const char *p;
-    char *ret, *q;
     RECT r;
     HFONT oldfont, newfont;
 
-    ret = snewn(1+strlen(text), char);
+    strbuf *sb = strbuf_new();
     p = text;
-    q = ret;
     pwidths = snewn(1+strlen(text), INT);
 
     /*
@@ -432,7 +430,7 @@ char *staticwrap(struct ctlpos *cp, HWND hwnd, const char *text, int *lines)
              * Either way, we stop wrapping, copy the remainder of
              * the input string unchanged to the output, and leave.
              */
-            strcpy(q, p);
+            put_datapl(sb, ptrlen_from_asciz(p));
             break;
         }
 
@@ -449,9 +447,8 @@ char *staticwrap(struct ctlpos *cp, HWND hwnd, const char *text, int *lines)
             }
         }
 
-        strncpy(q, p, nfit);
-        q[nfit] = '\n';
-        q += nfit+1;
+        put_data(sb, p, nfit);
+        put_byte(sb, '\n');
 
         p += nfit;
         while (*p && isspace((unsigned char)*p))
@@ -467,7 +464,7 @@ char *staticwrap(struct ctlpos *cp, HWND hwnd, const char *text, int *lines)
 
     sfree(pwidths);
 
-    return ret;
+    return strbuf_to_str(sb);
 }
 
 /*
@@ -1181,55 +1178,50 @@ void progressbar(struct ctlpos *cp, int id)
  */
 static char *shortcut_escape(const char *text, char shortcut)
 {
-    char *ret;
-    char const *p;
-    char *q;
-
     if (!text)
         return NULL;                   /* sfree won't choke on this */
 
     int text_len = strlen(text);
-    ret = snewn(text_len > 4 ? 2 * text_len+1 : text_len+5, char); /* size potentially doubles! */
+    strbuf *sb = strbuf_new();
     shortcut = tolower((unsigned char)shortcut);
 
-    char *r, lastchar = '\0';
-    p = text;
+    const char *p = text;
+    char *next_char, last_char = '\0';
     bool search = true;
     while (*p) {
-        r = CharNext(p);
-        if (r - p > 1) {
+        next_char = CharNext(p);
+        if (next_char - p > 1) { /* was multibyte */
             search = false;
             break;
         }
-        p = r;
+        p = next_char;
     }
     p = text;
-    q = ret;
+
     while (*p) {
         if (search && shortcut != NO_SHORTCUT &&
             tolower((unsigned char)*p) == shortcut) {
-            *q++ = '&';
+            put_byte(sb, '&');
             shortcut = NO_SHORTCUT;    /* stop it happening twice */
         } else if (*p == '&') {
-            *q++ = '&';
+            put_byte(sb, '&');
         }
-        lastchar = *p;
-        r = CharNext(p);
-        while (p != r)
-            *q++ = *p++;
+        last_char = *p;
+        next_char = CharNext(p);
+        while (p != next_char)
+            put_byte(sb, *p++);
     }
     if (shortcut != NO_SHORTCUT) { /* Japanese style shortcut */
-        if (lastchar == ':')
-            q--;
-        *q++ = '(';
-        *q++ = '&';
-        *q++ = toupper(shortcut);
-        *q++ = ')';
-        if (lastchar == ':')
-            *q++ = lastchar;
+        if (last_char == ':')
+            strbuf_shrink_by(sb, 1);
+        put_byte(sb, '(');
+        put_byte(sb, '&');
+        put_byte(sb, toupper(shortcut));
+        put_byte(sb, ')');
+        if (last_char == ':')
+            put_byte(sb, last_char);
     }
-    *q = '\0';
-    return ret;
+    return strbuf_to_str(sb);
 }
 
 void winctrl_add_shortcuts(struct dlgparam *dp, struct winctrl *c)
@@ -1717,7 +1709,7 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
             shortcuts[nshortcuts++] = ctrl->fontselect.shortcut;
             statictext(&pos, escaped, 1, base_id);
             staticbtn(&pos, "", base_id+1, "Change...", base_id+2);
-            data = fontspec_new("", false, 0, 0);
+            data = fontspec_new_default();
             sfree(escaped);
             break;
           default:
@@ -2022,32 +2014,36 @@ bool winctrl_handle_command(struct dlgparam *dp, UINT msg,
             (msg == WM_COMMAND &&
              (HIWORD(wParam) == BN_CLICKED ||
               HIWORD(wParam) == BN_DOUBLECLICKED))) {
-            OPENFILENAME of;
-            char filename[FILENAME_MAX];
+            OPENFILENAMEW of;
+            wchar_t filename[FILENAME_MAX];
+
+            wchar_t *title_to_free = NULL;
 
             memset(&of, 0, sizeof(of));
             of.hwndOwner = dp->hwnd;
             if (ctrl->fileselect.filter)
                 of.lpstrFilter = ctrl->fileselect.filter;
             else
-                of.lpstrFilter = "All Files (*.*)\0*\0\0\0";
+                of.lpstrFilter = L"All Files (*.*)\0*\0\0\0";
             of.lpstrCustomFilter = NULL;
             of.nFilterIndex = 1;
             of.lpstrFile = filename;
             if (!ctrl->fileselect.just_button) {
-                GetDlgItemText(dp->hwnd, c->base_id+1,
-                               filename, lenof(filename));
-                filename[lenof(filename)-1] = '\0';
+                GetDlgItemTextW(dp->hwnd, c->base_id+1,
+                                filename, lenof(filename));
+                filename[lenof(filename)-1] = L'\0';
             } else {
-                *filename = '\0';
+                *filename = L'\0';
             }
             of.nMaxFile = lenof(filename);
             of.lpstrFileTitle = NULL;
-            of.lpstrTitle = ctrl->fileselect.title;
+            of.lpstrTitle = title_to_free = dup_mb_to_wc(
+                DEFAULT_CODEPAGE, ctrl->fileselect.title);
             of.Flags = 0;
-            if (request_file(NULL, &of, false, ctrl->fileselect.for_writing)) {
+            if (request_file_w(NULL, &of, false,
+                               ctrl->fileselect.for_writing)) {
                 if (!ctrl->fileselect.just_button) {
-                    SetDlgItemText(dp->hwnd, c->base_id + 1, filename);
+                    SetDlgItemTextW(dp->hwnd, c->base_id + 1, filename);
                     ctrl->handler(ctrl, dp, dp->data, EVENT_VALCHANGE);
                 } else {
                     assert(!c->data);
@@ -2056,6 +2052,8 @@ bool winctrl_handle_command(struct dlgparam *dp, UINT msg,
                     c->data = NULL;
                 }
             }
+
+            sfree(title_to_free);
         }
         break;
       case CTRL_FONTSELECT:
@@ -2238,11 +2236,30 @@ void dlg_editbox_set(dlgcontrol *ctrl, dlgparam *dp, char const *text)
     SetDlgItemText(dp->hwnd, c->base_id+1, text);
 }
 
+void dlg_editbox_set_utf8(dlgcontrol *ctrl, dlgparam *dp, char const *text)
+{
+    struct winctrl *c = dlg_findbyctrl(dp, ctrl);
+    assert(c && c->ctrl->type == CTRL_EDITBOX);
+    wchar_t *wtext = dup_mb_to_wc(CP_UTF8, text);
+    SetDlgItemTextW(dp->hwnd, c->base_id+1, wtext);
+    sfree(wtext);
+}
+
 char *dlg_editbox_get(dlgcontrol *ctrl, dlgparam *dp)
 {
     struct winctrl *c = dlg_findbyctrl(dp, ctrl);
     assert(c && c->ctrl->type == CTRL_EDITBOX);
     return GetDlgItemText_alloc(dp->hwnd, c->base_id+1);
+}
+
+char *dlg_editbox_get_utf8(dlgcontrol *ctrl, dlgparam *dp)
+{
+    struct winctrl *c = dlg_findbyctrl(dp, ctrl);
+    assert(c && c->ctrl->type == CTRL_EDITBOX);
+    wchar_t *wtext = GetDlgItemTextW_alloc(dp->hwnd, c->base_id+1);
+    char *text = dup_wc_to_mb(CP_UTF8, wtext, "");
+    sfree(wtext);
+    return text;
 }
 
 void dlg_editbox_select_range(dlgcontrol *ctrl, dlgparam *dp,
@@ -2430,19 +2447,17 @@ void dlg_filesel_set(dlgcontrol *ctrl, dlgparam *dp, Filename *fn)
     assert(c);
     assert(c->ctrl->type == CTRL_FILESELECT);
     assert(!c->ctrl->fileselect.just_button);
-    SetDlgItemText(dp->hwnd, c->base_id+1, fn->path);
+    SetDlgItemTextW(dp->hwnd, c->base_id+1, fn->wpath);
 }
 
 Filename *dlg_filesel_get(dlgcontrol *ctrl, dlgparam *dp)
 {
     struct winctrl *c = dlg_findbyctrl(dp, ctrl);
-    char *tmp;
-    Filename *ret;
     assert(c);
     assert(c->ctrl->type == CTRL_FILESELECT);
     if (!c->ctrl->fileselect.just_button) {
-        tmp = GetDlgItemText_alloc(dp->hwnd, c->base_id+1);
-        ret = filename_from_str(tmp);
+        wchar_t *tmp = GetDlgItemTextW_alloc(dp->hwnd, c->base_id+1);
+        Filename *ret = filename_from_wstr(tmp);
         sfree(tmp);
         return ret;
     } else {

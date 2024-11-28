@@ -75,18 +75,23 @@ char *change_ini_path(const char *new_path)
     return NULL;
 }
 
-void process_ini_option(int *argc, char ***argv, int offset, sprintf_void_fp error_cb)
+void cmdline_arg_process_ini_option(CmdlineArgList *arglist, size_t *arglistpos, sprintf_void_fp error_cb)
 {
-    int count = *argc;
-    char **vec = *argv;
-    if (count > offset && !strcmp(vec[offset], "-ini")) {
-        char *error_msg = change_ini_path(count > offset + 1 ? vec[offset + 1] : NULL);
-        if (error_msg) {
-            error_cb(error_msg);
-            exit(1);
-        }
-        *argc -= 2;
-        *argv += 2;
+    CmdlineArg *arg = arglist->args[*arglistpos];
+    const char *p = cmdline_arg_to_str(arg);
+    if (!p || strcmp(p, "-ini")) {
+        return;
+    }
+    (*arglistpos)++;
+    CmdlineArg *nextarg = arglist->args[*arglistpos];
+    if (nextarg) {
+        (*arglistpos)++;
+    }
+    const char *value = cmdline_arg_to_str(nextarg);
+    char *error_msg = change_ini_path(value);
+    if (error_msg) {
+        error_cb(error_msg);
+        exit(1);
     }
 }
 

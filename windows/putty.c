@@ -3,9 +3,9 @@
 #include "ini.h"
 
 extern bool sesslist_demo_mode;
-extern const char *dialog_box_demo_screenshot_filename;
+extern Filename *dialog_box_demo_screenshot_filename;
 static strbuf *demo_terminal_data = NULL;
-static const char *terminal_demo_screenshot_filename;
+static Filename *terminal_demo_screenshot_filename;
 
 #if defined(_DEBUG) && defined(PUTTY_WITH_SSH)
 #define DOC_DIALOG
@@ -56,23 +56,18 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
          * Otherwise, break up the command line and deal with
          * it sensibly.
          */
-        int argc, i;
-        char **argv;
-
-        split_into_argv(cmdline, &argc, &argv, NULL);
-
-        process_ini_option(&argc, &argv, 0, cmdline_error);
-
-        for (i = 0; i < argc; i++) {
-            char *p = argv[i];
-            int ret;
-
-            ret = cmdline_process_param(p, i+1<argc?argv[i+1]:NULL,
-                                        1, conf);
+        CmdlineArgList *arglist = cmdline_arg_list_from_GetCommandLineW();
+        size_t arglistpos = 0;
+        cmdline_arg_process_ini_option(arglist, &arglistpos, cmdline_error);
+        while (arglist->args[arglistpos]) {
+            CmdlineArg *arg = arglist->args[arglistpos++];
+            CmdlineArg *nextarg = arglist->args[arglistpos];
+            const char *p = cmdline_arg_to_str(arg);
+            int ret = cmdline_process_param(arg, nextarg, 1, conf);
             if (ret == -2) {
                 cmdline_error("option \"%s\" requires an argument", p);
             } else if (ret == 2) {
-                i++;               /* skip next argument */
+                arglistpos++;          /* skip next argument */
             } else if (ret == 1) {
                 continue;          /* nothing further needs doing */
             } else if (!strcmp(p, "-cleanup")) {
@@ -93,7 +88,7 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
                 s2 = dupprintf("%s Warning", appname);
                 if (message_box(NULL, s1, s2,
                                 MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2,
-                                HELPCTXID(option_cleanup)) == IDYES) {
+                                false, HELPCTXID(option_cleanup)) == IDYES) {
                     cleanup_all();
                 }
                 sfree(s1);
@@ -101,25 +96,29 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
                 exit(0);
             } else if (!strcmp(p, "-pgpfp")) {
                 pgp_fingerprints_msgbox(NULL);
-                exit(1);
+                exit(0);
             } else if (has_ca_config_box &&
                        (!strcmp(p, "-host-ca") || !strcmp(p, "--host-ca") ||
                         !strcmp(p, "-host_ca") || !strcmp(p, "--host_ca"))) {
                 show_ca_config_box(NULL);
                 exit(0);
             } else if (!strcmp(p, "-demo-config-box")) {
-                if (i+1 >= argc) {
+                if (!arglist->args[arglistpos]) {
                     cmdline_error("%s expects an output filename", p);
                 } else {
                     demo_config_box = true;
-                    dialog_box_demo_screenshot_filename = argv[++i];
+                    dialog_box_demo_screenshot_filename =
+                        cmdline_arg_to_filename(arglist->args[arglistpos++]);
                 }
             } else if (!strcmp(p, "-demo-terminal")) {
-                if (i+2 >= argc) {
+                if (!arglist->args[arglistpos] ||
+                    !arglist->args[arglistpos+1]) {
                     cmdline_error("%s expects input and output filenames", p);
                 } else {
-                    const char *infile = argv[++i];
-                    terminal_demo_screenshot_filename = argv[++i];
+                    const char *infile =
+                        cmdline_arg_to_str(arglist->args[arglistpos++]);
+                    terminal_demo_screenshot_filename =
+                        cmdline_arg_to_filename(arglist->args[arglistpos++]);
                     FILE *fp = fopen(infile, "rb");
                     if (!fp)
                         cmdline_error("can't open input file '%s'", infile);
@@ -234,8 +233,8 @@ void doc_dialog(Conf *conf)
     conf_set_str(conf, CONF_host, "demo-server.example.com");
     do_config(conf);
 
-    extern WinGuiSeat wgs;
-    InteractionReadySeat iseat = {.seat = &wgs.seat};
+    extern WinGuiSeat *g_wgs;
+    InteractionReadySeat iseat = {.seat = &g_wgs->seat};
     const char *host = "ssh.example.com";
     ssh_key key;
     key.vt = &ssh_ecdsa_ed25519;
