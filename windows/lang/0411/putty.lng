@@ -156,6 +156,7 @@ Ignore ctrl char=制御文字を無視
 Disable remote-controlled character set configuration=遠隔操作の文字セット設定を無効にする
 Disable Arabic text shaping=アラビア文字の変形を無効にする
 Disable bidirectional text display=双方向テキスト (bidi) の表示を無効にする
+Disable bracketed paste mode=矩形選択モードを無効化する
 
 Window=ウィンドウ
 Options controlling %25s's window=%25s のウィンドウの設定
