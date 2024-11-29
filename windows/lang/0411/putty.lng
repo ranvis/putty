@@ -156,7 +156,7 @@ Ignore ctrl char=制御文字を無視
 Disable remote-controlled character set configuration=遠隔操作の文字セット設定を無効にする
 Disable Arabic text shaping=アラビア文字の変形を無効にする
 Disable bidirectional text display=双方向テキスト (bidi) の表示を無効にする
-Disable bracketed paste mode=矩形選択モードを無効化する
+Disable bracketed paste mode=ブラケット貼り付けモードを無効にする
 
 Window=ウィンドウ
 Options controlling %25s's window=%25s のウィンドウの設定
@@ -278,7 +278,7 @@ Select a colour to adjust:=変更する色を選択:
 Red=赤
 Green=緑
 Blue=青
-Modify=変更
+Modify=変更...
 
 Default Foreground=標準の文字
 Default Bold Foreground=標準の強調文字
