@@ -495,6 +495,7 @@ struct prefslist {
  */
 struct dlgparam {
     HWND hwnd;                         /* the hwnd of the dialog box */
+    HWND term_hwnd;                    /* terminal hwnd */
     struct winctrls *controltrees[8];  /* can have several of these */
     int nctrltrees;
     char *wintitle;                    /* title of actual window */

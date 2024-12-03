@@ -141,22 +141,22 @@ static struct {
 } conf_last;
 
 /* > transparent background patch */
-static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height);
-static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height);
+static void xtrans_paint_bg(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, int height);
+static void xtrans_paint_bg_fwp(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, int height);
 static void xtrans_free_background();
 extern void wallpaper_cleanup(void);
 static int is_path_bmp(const char *path);
-static void wallpaper_prepare_desktop();
+static void wallpaper_prepare_desktop(WinGuiSeat *wgs);
 static void wallpaper_prepare_dtimg();
-static void wallpaper_prepare_image();
+static void wallpaper_prepare_image(WinGuiSeat *wgs);
 static void xtrans_bitmap_changed(void);
-static void xtrans_load_bitmap();
-static void xtrans_init();
-static void xtrans_refresh();
-static void xtrans_move();
-static void xtrans_size();
+static void xtrans_load_bitmap(WinGuiSeat *wgs);
+static void xtrans_init(WinGuiSeat *wgs);
+static void xtrans_refresh(WinGuiSeat *wgs);
+static void xtrans_move(WinGuiSeat *wgs);
+static void xtrans_size(WinGuiSeat *wgs);
 
-static void (*xtrans_paint_background)(HDC, int, int, int, int) = xtrans_paint_bg;
+static void (*xtrans_paint_background)(WinGuiSeat *wgs, HDC, int, int, int, int) = xtrans_paint_bg;
 /* < */
 
 enum MONITOR_DPI_TYPE { MDT_EFFECTIVE_DPI, MDT_ANGULAR_DPI, MDT_RAW_DPI, MDT_DEFAULT };
@@ -249,10 +249,6 @@ static HICON trust_icon = INVALID_HANDLE_VALUE;
 const bool share_can_be_downstream = true;
 const bool share_can_be_upstream = true;
 
-/* makeshift for 0.82 refactoring */
-WinGuiSeat *g_wgs;
-Conf *conf;
-
 static bool is_utf8(WinGuiSeat *wgs)
 {
     return wgs->ucsdata.line_codepage == CP_UTF8;
@@ -291,7 +287,7 @@ static bool win_seat_can_set_trust_status(Seat *seat);
 static bool win_seat_get_cursor_position(Seat *seat, int *x, int *y);
 static bool win_seat_get_window_pixel_size(Seat *seat, int *x, int *y);
 
-static const SeatVtable win_seat_vt = {
+const SeatVtable win_seat_vt = {
     .output = win_seat_output,
     .eof = win_seat_eof,
     .sent = nullseat_sent,
@@ -418,7 +414,7 @@ static void close_session(void *vctx)
 }
 
 /* > transparent background patch */
-static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
+static void xtrans_paint_bg(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, int height)
 {
     HDC memhdc;
     HBITMAP defbmp;
@@ -432,15 +428,15 @@ static void xtrans_paint_bg(HDC hdc, int x, int y, int width, int height)
     DeleteDC(memhdc);
 }
 
-static void xtrans_paint_bg_fwp(HDC hdc, int x, int y, int width, int height)
+static void xtrans_paint_bg_fwp(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, int height)
 {
     RECT rect;
     wallpaper_paint_mode mode;
     SetRect(&rect, x, y, x + width, y + height);
-    mode.place = conf_get_int(g_wgs->conf, CONF_wallpaper_place);
-    mode.align = conf_get_int(g_wgs->conf, CONF_wallpaper_align);
+    mode.place = conf_get_int(wgs->conf, CONF_wallpaper_place);
+    mode.align = conf_get_int(wgs->conf, CONF_wallpaper_align);
     mode.opaque = TRUE;
-    wallpaper_paint(hdc, &rect, background_bmp, &mode);
+    wallpaper_paint(wgs, hdc, &rect, background_bmp, &mode);
 }
 
 static void xtrans_free_background()
@@ -461,19 +457,19 @@ void wallpaper_cleanup(void)
     gdip_terminate();
 }
 
-COLORREF wallpaper_get_bg_color(void)
+COLORREF wallpaper_get_bg_color(WinGuiSeat *wgs)
 {
-    return g_wgs->colours[OSC4_COLOUR_bg];
+    return wgs->colours[OSC4_COLOUR_bg];
 }
 
-void wallpaper_fill_bgcolor(HDC hdc, const RECT *rect)
+void wallpaper_fill_bgcolor(WinGuiSeat *wgs, HDC hdc, const RECT *rect)
 {
     HPEN pen, defpen;
     HBRUSH brush, defbrush;
 
-    pen = CreatePen(PS_SOLID, 0, wallpaper_get_bg_color());
+    pen = CreatePen(PS_SOLID, 0, wallpaper_get_bg_color(wgs));
     defpen = SelectObject(hdc, pen);
-    brush = CreateSolidBrush(wallpaper_get_bg_color());
+    brush = CreateSolidBrush(wallpaper_get_bg_color(wgs));
     defbrush = SelectObject(hdc, brush);
 
     Rectangle(hdc, rect->left, rect->top, rect->right, rect->bottom);
@@ -484,23 +480,23 @@ void wallpaper_fill_bgcolor(HDC hdc, const RECT *rect)
     DeleteObject(brush);
 }
 
-static void wallpaper_prepare_desktop()
+static void wallpaper_prepare_desktop(WinGuiSeat *wgs)
 {
     HDC hdc, bg_dc;
     HBITMAP prev_bmp;
     BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, 0 };
     RECT rect;
-    int shading = conf_get_int(conf, CONF_shading);
-    const HWND hwnd = g_wgs->term_hwnd;
+    int shading = conf_get_int(wgs->conf, CONF_shading);
+    const HWND hwnd = wgs->term_hwnd;
     InvalidateRect(hwnd, NULL, FALSE);
     GetClientRect(hwnd, &rect);
     hdc = GetDC(hwnd);
     if (background_bmp == NULL)
-        background_bmp = create_large_bitmap(hdc, rect.right, rect.bottom);
+        background_bmp = create_large_bitmap(hdc, rect.right, rect.bottom, wgs->conf);
     bg_dc = CreateCompatibleDC(hdc);
     prev_bmp = SelectObject(bg_dc, background_bmp);
     if (shading != 255)
-        wallpaper_fill_bgcolor(bg_dc, &rect);
+        wallpaper_fill_bgcolor(wgs, bg_dc, &rect);
     /* PaintDesktop() call causes screen update, resulting flicker
     (or worse, wallpaper itself is kept drawn until the event loop resumes) */
     if (shading != 0)
@@ -519,20 +515,21 @@ static int is_path_bmp(const char *path)
     return !ext || !stricmp(ext, ".bmp");
 }
 
-static void wallpaper_set_mode(int mode)
+static void wallpaper_set_mode(Conf *conf, int mode)
 {
     conf_last.wp_mode = mode;
     conf_set_int(conf, CONF_transparent_mode, mode);
 }
 
-static void wallpaper_prepare_dtimg()
+static void wallpaper_prepare_dtimg(WinGuiSeat *wgs)
 {
-    const HWND hwnd = g_wgs->term_hwnd;
+    const HWND hwnd = wgs->term_hwnd;
     HDC hdc, bg_dc, img_dc;
     HBITMAP prev_bmp, prev_img_bmp, px_bmp;
     wallpaper_paint_mode mode;
     BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0, 0 };
     RECT rect, px_rect;
+    Conf *conf = wgs->conf;
     int shading = conf_get_int(conf, CONF_shading);
     const char *path = conf_get_filename(conf, CONF_bgimg_file)->cpath;
     if (img_bmp == NULL && path[0] != '\0') {
@@ -546,14 +543,14 @@ static void wallpaper_prepare_dtimg()
         }
     }
     if (!img_bmp) {
-        wallpaper_set_mode(0);
+        wallpaper_set_mode(conf, 0);
         return;
     }
     InvalidateRect(hwnd, NULL, FALSE);
     GetClientRect(hwnd, &rect);
     hdc = GetDC(hwnd);
     if (background_bmp == NULL)
-        background_bmp = create_large_bitmap(hdc, rect.right, rect.bottom);
+        background_bmp = create_large_bitmap(hdc, rect.right, rect.bottom, conf);
     bg_dc = CreateCompatibleDC(hdc);
     prev_bmp = SelectObject(bg_dc, background_bmp);
     PaintDesktop(hdc);
@@ -564,14 +561,14 @@ static void wallpaper_prepare_dtimg()
     mode.bf = bf;
     mode.bf.SourceConstantAlpha = 255;
     mode.bf.AlphaFormat = (img_has_alpha && conf_get_bool(conf, CONF_use_alphablend)) ? AC_SRC_ALPHA : 0;
-    wallpaper_paint(bg_dc, &rect, img_bmp, &mode);
+    wallpaper_paint(wgs, bg_dc, &rect, img_bmp, &mode);
     if (shading != 0) {
         bf.SourceConstantAlpha = 255 - (BYTE)shading;
         px_bmp = CreateCompatibleBitmap(hdc, 1, 1);
         img_dc = CreateCompatibleDC(hdc);
         prev_img_bmp = SelectObject(img_dc, px_bmp);
         SetRect(&px_rect, 0, 0, 1, 1);
-        wallpaper_fill_bgcolor(img_dc, &px_rect);
+        wallpaper_fill_bgcolor(wgs, img_dc, &px_rect);
         msimg_alphablend(bg_dc, 0, 0, rect.right, rect.bottom,
             img_dc, 0, 0, 1, 1, bf);
         SelectObject(img_dc, prev_img_bmp);
@@ -582,9 +579,10 @@ static void wallpaper_prepare_dtimg()
     ReleaseDC(hwnd, hdc);
 }
 
-static void wallpaper_prepare_image()
+static void wallpaper_prepare_image(WinGuiSeat *wgs)
 {
-    const HWND hwnd = g_wgs->term_hwnd;
+    const HWND hwnd = wgs->term_hwnd;
+    Conf *conf = wgs->conf;
     const char *path = conf_get_filename(conf, CONF_bgimg_file)->cpath;
     if (path[0] != '\0') {
         xtrans_free_background();
@@ -600,7 +598,7 @@ static void wallpaper_prepare_image()
     }
 
     if (!background_bmp) {
-        wallpaper_set_mode(0);
+        wallpaper_set_mode(conf, 0);
         return;
     }
 
@@ -616,12 +614,12 @@ static void wallpaper_prepare_image()
         memhdc = CreateCompatibleDC(hdc);
         memhdc_mask = CreateCompatibleDC(hdc);
         defbmp = SelectObject(memhdc, background_bmp);
-        bmp_mask = create_large_bitmap(hdc, bg_width, bg_height);
+        bmp_mask = create_large_bitmap(hdc, bg_width, bg_height, conf);
         ReleaseDC(hwnd, hdc);
         defbmp_mask = SelectObject(memhdc_mask, bmp_mask);
 
         SetRect(&rect, 0, 0, bg_width, bg_height);
-        wallpaper_fill_bgcolor(memhdc_mask, &rect);
+        wallpaper_fill_bgcolor(wgs, memhdc_mask, &rect);
         msimg_alphablend(memhdc_mask, 0, 0, bg_width, bg_height,
             memhdc, 0, 0, bg_width, bg_height, bf);
 
@@ -639,11 +637,11 @@ static void xtrans_bitmap_changed(void)
 {
 }
 
-static void xtrans_load_bitmap()
+static void xtrans_load_bitmap(WinGuiSeat *wgs)
 {
     HANDLE find_handle;
     WIN32_FIND_DATA find_data;
-
+    Conf *conf = wgs->conf;
     char pass[MAX_PATH], shading[4];
     char *cp;
     int i;
@@ -677,7 +675,7 @@ static void xtrans_load_bitmap()
         (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
     bg_has_alpha = FALSE;
     xtrans_bitmap_changed();
-    wallpaper_set_mode(WALLPAPER_MODE_IMAGE);
+    wallpaper_set_mode(conf, WALLPAPER_MODE_IMAGE);
 
     cp += 5;
     for (i = 0; i < 3 && isdigit(*cp); i++, cp++)
@@ -690,11 +688,11 @@ static void xtrans_load_bitmap()
     }
 }
 
-
-static void xtrans_init()
+static void xtrans_init(WinGuiSeat *wgs)
 {
-    xtrans_load_bitmap();
+    xtrans_load_bitmap(wgs);
 
+    Conf *conf = wgs->conf;
     int shading = conf_get_int(conf, CONF_shading);
     if (shading < 0 || 255 < conf_get_int(conf, CONF_shading)) {
         conf_set_int(conf, CONF_shading, 0);
@@ -704,21 +702,21 @@ static void xtrans_init()
         xtrans_free_background();
 
     if (wp_mode == WALLPAPER_MODE_DESKTOP) {
-        wallpaper_prepare_desktop();
+        wallpaper_prepare_desktop(wgs);
         xtrans_paint_background = xtrans_paint_bg;
     } else if (wp_mode == WALLPAPER_MODE_IMAGE) {
-        wallpaper_prepare_image();
+        wallpaper_prepare_image(wgs);
         xtrans_paint_background = xtrans_paint_bg_fwp;
     } else if (wp_mode == WALLPAPER_MODE_DTIMG) {
-        wallpaper_prepare_dtimg();
+        wallpaper_prepare_dtimg(wgs);
         xtrans_paint_background = xtrans_paint_bg;
     } else if (wp_mode > 0)
-        wallpaper_set_mode(0);
+        wallpaper_set_mode(conf, 0);
 }
 
-static void xtrans_refresh()
+static void xtrans_refresh(WinGuiSeat *wgs)
 {
-    const HWND hwnd = g_wgs->term_hwnd;
+    const HWND hwnd = wgs->term_hwnd;
     int wp_mode = conf_last.wp_mode;
     if (wp_mode < 0) {
         wp_mode = -wp_mode;
@@ -726,25 +724,25 @@ static void xtrans_refresh()
         xtrans_free_background();
     }
     if (wp_mode == WALLPAPER_MODE_IMAGE) {
-        if (conf_get_bool(conf, CONF_stop_when_moving))
+        if (conf_get_bool(wgs->conf, CONF_stop_when_moving))
             InvalidateRect(hwnd, NULL, FALSE);
     } else if (wp_mode == WALLPAPER_MODE_DESKTOP)
-        wallpaper_prepare_desktop();
+        wallpaper_prepare_desktop(wgs);
     else if (wp_mode == WALLPAPER_MODE_DTIMG)
-        wallpaper_prepare_dtimg();
+        wallpaper_prepare_dtimg(wgs);
 }
 
-static void xtrans_move()
+static void xtrans_move(WinGuiSeat *wgs)
 {
-    const HWND hwnd = g_wgs->term_hwnd;
+    const HWND hwnd = wgs->term_hwnd;
     int wp_mode = conf_last.wp_mode;
-    if (wp_mode == WALLPAPER_MODE_IMAGE && !conf_get_bool(conf, CONF_stop_when_moving))
+    if (wp_mode == WALLPAPER_MODE_IMAGE && !conf_get_bool(wgs->conf, CONF_stop_when_moving))
         InvalidateRect(hwnd, NULL, FALSE);
 }
 
-static void xtrans_size()
+static void xtrans_size(WinGuiSeat *wgs)
 {
-    const HWND hwnd = g_wgs->term_hwnd;
+    const HWND hwnd = wgs->term_hwnd;
     int wp_mode = conf_last.wp_mode;
     if (wp_mode == WALLPAPER_MODE_DESKTOP || wp_mode == WALLPAPER_MODE_DTIMG)
         conf_last.wp_mode = -wp_mode;
@@ -780,7 +778,7 @@ static void sw_SetWindowText(HWND hwnd, wchar_t *text)
 
 static HINSTANCE hprev;
 
-static HICON load_main_icon(HINSTANCE inst)
+static HICON load_main_icon(Conf *conf, HINSTANCE inst)
 {
     HICON icon = NULL;
     Filename *icon_file = conf_get_filename(conf, CONF_iconfile);
@@ -814,13 +812,13 @@ static HICON load_main_icon(HINSTANCE inst)
         if (conf_get_bool(conf, CONF_ctrl_tab_switch))                  \
             wndclass.cbWndExtra += 8;                                   \
         wndclass.hInstance = hinst;                                     \
-        wndclass.hIcon = load_main_icon(inst);                          \
+        wndclass.hIcon = load_main_icon(conf, inst);                    \
         wndclass.hCursor = LoadCursor(NULL, IDC_IBEAM);                 \
         wndclass.hbrBackground = NULL;                                  \
         wndclass.lpszMenuName = NULL;                                   \
         wndclass.lpszClassName = classname;                             \
     } while (0)
-static wchar_t *terminal_window_class_w(HINSTANCE inst)
+static wchar_t *terminal_window_class_w(Conf *conf, HINSTANCE inst)
 {
     static wchar_t *classname = NULL;
     if (!classname)
@@ -832,7 +830,7 @@ static wchar_t *terminal_window_class_w(HINSTANCE inst)
     }
     return classname;
 }
-static char *terminal_window_class_a(HINSTANCE inst)
+static char *terminal_window_class_a(Conf *conf, HINSTANCE inst)
 {
     static char *classname = NULL;
     if (!classname)
@@ -900,9 +898,6 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     wgs->busy_status = BUSY_NOT;
 
     wgs->conf = conf_new();
-
-    g_wgs = wgs;
-    conf = wgs->conf;
 
     /*
      * Initialize COM.
@@ -983,9 +978,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         sw_DispatchMessage = DispatchMessageW;
         sw_DefWindowProc = DefWindowProcW;
         wgs->term_hwnd = CreateWindowExW(
-            exwinmode, terminal_window_class_w(inst), uappname,
-            winmode, conf_get_int(conf, CONF_x), conf_get_int(conf, CONF_y),
-            guess_width, guess_height, NULL, NULL, inst, NULL);
+            exwinmode, terminal_window_class_w(wgs->conf, inst), uappname,
+            winmode, conf_get_int(wgs->conf, CONF_x), conf_get_int(wgs->conf, CONF_y),
+            guess_width, guess_height, NULL, NULL, inst, wgs);
 #endif
 
 #if defined LEGACY_WINDOWS || defined TEST_ANSI_WINDOW
@@ -997,9 +992,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             sw_DispatchMessage = DispatchMessageA;
             sw_DefWindowProc = DefWindowProcA;
             wgs->term_hwnd = CreateWindowExA(
-                exwinmode, terminal_window_class_a(inst), appname,
+                exwinmode, terminal_window_class_a(wgs->conf, inst), appname,
                 winmode, CW_USEDEFAULT, CW_USEDEFAULT,
-                guess_width, guess_height, NULL, NULL, inst, NULL);
+                guess_width, guess_height, NULL, NULL, inst, wgs);
         }
 #endif
 
@@ -1043,7 +1038,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     /* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
     if (vtmode == VT_UNICODE && conf_last.wp_mode)
-        conf_set_int(conf, CONF_vtmode, vtmode = VT_POORMAN);
+        conf_set_int(wgs->conf, CONF_vtmode, vtmode = VT_POORMAN);
 #endif
         /* < */
 
@@ -1424,6 +1419,10 @@ void cleanup_exit(int code)
     while (wgslisthead.next != &wgslisthead) {
         WinGuiSeat *wgs = container_of(
             wgslisthead.next, WinGuiSeat, wgslistnode);
+#ifdef DEBUG
+        if (wgs->conf)
+            conf_free(wgs->conf), conf = NULL;
+#endif
         wgs_cleanup(wgs);
     }
     sk_cleanup();
@@ -1431,9 +1430,7 @@ void cleanup_exit(int code)
     random_save_seed();
     shutdown_help();
 
-        /* > transparent background patch */
     wallpaper_cleanup();
-        /* < */
 
     /* Clean up COM. */
     CoUninitialize();
@@ -1443,8 +1440,6 @@ void cleanup_exit(int code)
         log_free(logctx), logctx = NULL;
     if (term)
         term_free(term), term = NULL;
-    if (conf)
-        conf_free(conf), conf = NULL;
 #endif
 
     exit(code);
@@ -2313,9 +2308,7 @@ static void reset_window(WinGuiSeat *wgs, int reinit)
     win_width  = cr.right - cr.left;
     win_height = cr.bottom - cr.top;
 
-    /* > transparent background patch */
-    xtrans_refresh();
-    /* < */
+    xtrans_refresh(wgs);
 
     resize_action = conf_get_int(wgs->conf, CONF_resize_action);
     window_border = conf_get_int(wgs->conf, CONF_window_border);
@@ -2792,14 +2785,15 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 
     switch (message) {
       case WM_CREATE:
-        if (conf_get_bool(conf, CONF_ctrl_tab_switch)) {
+        wgs = (WinGuiSeat *)((CREATESTRUCT *)lParam)->lpCreateParams;
+        if (conf_get_bool(wgs->conf, CONF_ctrl_tab_switch)) {
             int wndExtra = GetClassLong(hwnd, GCL_CBWNDEXTRA);
             FILETIME filetime;
             GetSystemTimeAsFileTime(&filetime);
             SetWindowLong(hwnd, wndExtra - 8, filetime.dwHighDateTime);
             SetWindowLong(hwnd, wndExtra - 4, filetime.dwLowDateTime);
         }
-        wtrans_set(conf, hwnd);
+        wtrans_set(wgs->conf, hwnd);
         break;
       case WM_CLOSE: {
         char *title, *msg, *additional = NULL;
@@ -2967,7 +2961,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
             reconfig_result = do_reconfig(
                 hwnd, wgs->conf,
                 wgs->backend ? backend_cfg_info(wgs->backend) : 0);
-            wtrans_end_preview(conf, hwnd);
+            wtrans_end_preview(wgs->conf, hwnd);
             wgs->reconfiguring = false;
             if (!reconfig_result) {
                 conf_free(prev_conf);
@@ -3007,13 +3001,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                 conf_get_bool(prev_conf, CONF_system_colour))
                 term_notify_palette_changed(wgs->term);
 
-            wtrans_set(conf, hwnd);
+            wtrans_set(wgs->conf, hwnd);
             /* > transparent background patch */
-            xtrans_init();
+            xtrans_init(wgs);
             /* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
             if (vtmode == VT_UNICODE && conf_last.wp_mode)
-                conf_set_int(conf, CONF_vtmode, vtmode = VT_POORMAN);
+                conf_set_int(wgs->conf, CONF_vtmode, vtmode = VT_POORMAN);
 #endif
             /* < */
 
@@ -3477,7 +3471,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 
             /* > transparent background patch */
             if (conf_last.wp_mode > 0)
-                (*xtrans_paint_background)(hdc, p.rcPaint.left, p.rcPaint.top,
+                (*xtrans_paint_background)(wgs, hdc, p.rcPaint.left, p.rcPaint.top,
                                            p.rcPaint.right - p.rcPaint.left,
                                            p.rcPaint.bottom - p.rcPaint.top);
             else
@@ -3503,7 +3497,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
         return 0;
       case WM_SETFOCUS:
         term_set_focus(wgs->term, true);
-        wtrans_activate(conf, hwnd, true);
+        wtrans_activate(wgs->conf, hwnd, true);
         CreateCaret(hwnd, wgs->caretbm, wgs->font_width, wgs->font_height);
         ShowCaret(hwnd);
         flash_window(wgs, 0);               /* stop */
@@ -3513,7 +3507,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
       case WM_KILLFOCUS:
         show_mouseptr(wgs, true);
         term_set_focus(wgs->term, false);
-        wtrans_activate(conf, hwnd, false);
+        wtrans_activate(wgs->conf, hwnd, false);
         DestroyCaret();
         wgs->caret_x = wgs->caret_y = -1; /* ensure caret replaced next time */
         term_update(wgs->term);
@@ -3532,9 +3526,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 #ifdef RDB_DEBUG_PATCH
         debug("WM_EXITSIZEMOVE\n");
 #endif
-        /* > transparent background patch */
-        xtrans_refresh();
-        /* < */
+        xtrans_refresh(wgs);
         if (wgs->need_backend_resize) {
             term_size(wgs->term, conf_get_int(wgs->conf, CONF_height),
                       conf_get_int(wgs->conf, CONF_width),
@@ -3646,12 +3638,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
         {
             RECT rc;
             GetWindowRect(hwnd, &rc);
-            conf_set_int(conf, CONF_x, rc.left);
-            conf_set_int(conf, CONF_y, rc.top);
+            conf_set_int(wgs->conf, CONF_x, rc.left);
+            conf_set_int(wgs->conf, CONF_y, rc.top);
         }
-        /* > transparent background patch */
-        xtrans_move();
-        /* < */
+        xtrans_move(wgs);
         sys_cursor_update(wgs);
         break;
       case WM_SIZE:
@@ -3666,9 +3656,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
               LOWORD(lParam), HIWORD(lParam));
 #endif
         term_notify_minimised(wgs->term, wParam == SIZE_MINIMIZED);
-        /* > transparent background patch */
-        xtrans_size();
-        /* < */
+        xtrans_size(wgs);
         {
             /*
              * WM_SIZE's lParam tells us the size of the client area.
@@ -3878,11 +3866,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
         return false;
       case WM_KEYDOWN:
       case WM_SYSKEYDOWN:
-        if (wParam == VK_TAB && conf_get_bool(conf, CONF_ctrl_tab_switch) && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0) {
+        if (wParam == VK_TAB && conf_get_bool(wgs->conf, CONF_ctrl_tab_switch) && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0) {
             struct ctrl_tab_info info = {
                 GetKeyState(VK_SHIFT) < 0 ? 1 : -1,
                 hwnd,
-                conf,
+                wgs->conf,
             };
             info.next_hi_date_time = info.self_hi_date_time = GetWindowLong(hwnd, 0);
             info.next_lo_date_time = info.self_lo_date_time = GetWindowLong(hwnd, 4);
@@ -4099,7 +4087,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 
             /* process events when the threshold is reached */
             if (wgs->send_raw_mouse &&
-                !(conf_get_bool(conf, CONF_mouse_override) && shift_pressed)) {
+                !(conf_get_bool(wgs->conf, CONF_mouse_override) && shift_pressed)) {
                 while (abs(wgs->wheel_accumulator) >= WHEEL_DELTA) {
                     POINT p;
                     int b;
@@ -4149,12 +4137,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 #define IS_SPACE_CHR(chr) \
         ((chr) == 0x20 || (DIRECT_CHAR(chr) && ((chr) & 0xFF) == 0x20))
 
-static int get_terminal_text(const pos *start, const pos *end, WCHAR *str, int str_max)
+static int get_terminal_text(Terminal *term, const pos *start, const pos *end, WCHAR *str, int str_max)
 {
     int len = 0;
     int x = start->x, y = start->y;
     while (y < end->y || (y == end->y && x <= end->x)) {
-        const termline *ldata = index234(g_wgs->term->screen, y);
+        const termline *ldata = index234(term->screen, y);
         int x_end = ldata->cols - 1;
         if (!(ldata->lattr & LATTR_WRAPPED)) {
             while (x_end) {
@@ -4175,13 +4163,13 @@ static int get_terminal_text(const pos *start, const pos *end, WCHAR *str, int s
             if (type == CSET_LINEDRW || type == CSET_SCOACS)
                 uc = ' ';
             else if (type == CSET_ASCII) {
-                uc = g_wgs->term->ucsdata->unitab_line[uc & 0xFF];
+                uc = term->ucsdata->unitab_line[uc & 0xFF];
                 type = uc & CSET_MASK;
             }
             if (type == CSET_ACP)
-                uc = g_wgs->term->ucsdata->unitab_font[uc & 0xFF];
+                uc = term->ucsdata->unitab_font[uc & 0xFF];
             else if (type == CSET_OEMCP)
-                uc = g_wgs->term->ucsdata->unitab_oemcp[uc & 0xFF];
+                uc = term->ucsdata->unitab_oemcp[uc & 0xFF];
             if (uc < ' ')
                 continue;
             if (uc >= 0x10000 && uc < 0x110000) {
@@ -4209,21 +4197,22 @@ LRESULT wndproc_document_feed(WinGuiSeat *wgs, RECONVERTSTRING *rs)
     pos curs, start, end;
     int len, len_b, pos, pos_b, comp_b;
     size_t size;
+    Terminal *term = wgs->term;
     const HWND hwnd = wgs->term_hwnd;
     HIMC himc;
     int ctx_len = lenof(str) / 3;
-    ctx_len = min(ctx_len, wgs->term->cols);
-    curs.x = wgs->term->dispcursx, curs.y = wgs->term->dispcursy;
+    ctx_len = min(ctx_len, term->cols);
+    curs.x = term->dispcursx, curs.y = term->dispcursy;
     start = end = curs;
     if (!start.x && start.y)
-        start.x = wgs->term->cols - ctx_len, start.y--;
+        start.x = term->cols - ctx_len, start.y--;
     else
         start.x -= ctx_len;
     start.x = max(0, start.x);
     end.x += ctx_len;
-    end.x = min(wgs->term->cols, end.x);
-    pos = get_terminal_text(&start, &curs, str, lenof(str));
-    len = pos + get_terminal_text(&curs, &end, &str[pos], lenof(str) - pos);
+    end.x = min(term->cols, end.x);
+    pos = get_terminal_text(term, &start, &curs, str, lenof(str));
+    len = pos + get_terminal_text(term, &curs, &end, &str[pos], lenof(str) - pos);
     himc = ImmGetContext(hwnd);
     comp_b = ImmGetCompositionStringW(himc, GCS_COMPSTR, NULL, 0);
     if (comp_b < 0) {
@@ -4537,7 +4526,7 @@ static void do_text_internal(
         /* > transparent background patch */
     else if (nbg == OSC4_COLOUR_bg && !truecolour.bg.enabled && wp_flag) {
         SetBkMode(wgs->wintw_hdc, TRANSPARENT);
-        (*xtrans_paint_background)(wgs->wintw_hdc, x, y, line_box.right - x, wgs->font_height);
+        (*xtrans_paint_background)(wgs, wgs->wintw_hdc, x, y, line_box.right - x, wgs->font_height);
     }
         /* < */
     else
@@ -5083,7 +5072,7 @@ static int TranslateKey(WinGuiSeat *wgs, UINT message, WPARAM wParam,
         (HIWORD(lParam) & (KF_UP | KF_REPEAT)) == KF_REPEAT)
         return 0;
 
-    if ((HIWORD(lParam) & KF_ALTDOWN) && (conf_get_bool(conf, CONF_rightaltkey) || (keystate[VK_RMENU] & 0x80) == 0))
+    if ((HIWORD(lParam) & KF_ALTDOWN) && (conf_get_bool(wgs->conf, CONF_rightaltkey) || (keystate[VK_RMENU] & 0x80) == 0))
         left_alt = true;
 
     key_down = ((HIWORD(lParam) & KF_UP) == 0);
@@ -5177,7 +5166,7 @@ static int TranslateKey(WinGuiSeat *wgs, UINT message, WPARAM wParam,
     }
 
     /* If a key is pressed and AltGr is not active */
-    if (key_down && (conf_get_bool(conf, CONF_rightaltkey) || (keystate[VK_RMENU] & 0x80) == 0) && !wgs->compose_state) {
+    if (key_down && (conf_get_bool(wgs->conf, CONF_rightaltkey) || (keystate[VK_RMENU] & 0x80) == 0) && !wgs->compose_state) {
         /* Okay, prepare for most alts then ... */
         if (left_alt)
             *p++ = '\033';
@@ -5781,7 +5770,7 @@ static void wintw_palette_set(TermWin *tw, unsigned start,
     if (start <= OSC4_COLOUR_bg && OSC4_COLOUR_bg < start + ncolours) {
         /* If Default Background changes, we need to ensure any space between
          * the text area and the window border is redrawn. */
-        xtrans_init();
+        xtrans_init(wgs);
         InvalidateRect(wgs->term_hwnd, NULL, true);
     }
 }

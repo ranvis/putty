@@ -233,8 +233,10 @@ void doc_dialog(Conf *conf)
     conf_set_str(conf, CONF_host, "demo-server.example.com");
     do_config(conf);
 
-    extern WinGuiSeat *g_wgs;
-    InteractionReadySeat iseat = {.seat = &g_wgs->seat};
+    extern const SeatVtable win_seat_vt;
+    assert(sizeof(Seat) == sizeof(struct SeatVtable));
+    Seat win_seat = {.vt = &win_seat_vt};
+    InteractionReadySeat iseat = {.seat = &win_seat};
     const char *host = "ssh.example.com";
     ssh_key key;
     key.vt = &ssh_ecdsa_ed25519;

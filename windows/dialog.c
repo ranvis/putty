@@ -756,6 +756,7 @@ bool do_reconfig(HWND hwnd, Conf *conf, int protcfginfo)
 
     pds->dp->wintitle = dupprintf("%s Reconfiguration", appname);
     pds->dp->data = conf;
+    pds->dp->term_hwnd = hwnd;
 
     dlg_auto_set_fixed_pitch_flag(pds->dp);
 

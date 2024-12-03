@@ -27,6 +27,8 @@ enum {
     WALLPAPER_PLACE_DEFAULT = WALLPAPER_PLACE_TILE_X | WALLPAPER_PLACE_TILE_Y,
 };
 
+typedef struct WinGuiSeat WinGuiSeat;
+
 typedef struct wallpaper_paint_mode_tag {
     int place, align;
     BOOL opaque;
@@ -39,11 +41,11 @@ extern BOOL bg_has_alpha;
 extern BOOL img_has_alpha;
 
 extern BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn);
-extern void wallpaper_paint(HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);
-extern void wallpaper_fill_bgcolor(HDC hdc, const RECT *rect);
-extern HBITMAP create_large_bitmap(HDC hdc, int width, int height);
+extern void wallpaper_paint(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);
+extern void wallpaper_fill_bgcolor(WinGuiSeat *wgs, HDC hdc, const RECT *rect);
+extern HBITMAP create_large_bitmap(HDC hdc, int width, int height, Conf *conf);
 extern void get_bitmap_size(HBITMAP hbmp, int *width, int *height);
-extern COLORREF wallpaper_get_bg_color(void);
+extern COLORREF wallpaper_get_bg_color(WinGuiSeat *wgs);
 
 /* gdiplus */
 

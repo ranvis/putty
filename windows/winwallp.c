@@ -2,9 +2,6 @@
 #include "winwallp.h"
 #include "win-gui-seat.h"
 
-extern WinGuiSeat *g_wgs;
-extern Conf *conf;
-
 HBITMAP background_bmp = NULL;
 HBITMAP img_bmp;
 BOOL bg_has_alpha;
@@ -22,28 +19,28 @@ BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, 
     return p_AlphaBlend(hdcDest, xoriginDest, yoriginDest, wDest, hDest, hdcSrc, xoriginSrc, yoriginSrc, wSrc, hSrc, ftn);
 }
 
-static void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
-static void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
-static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect);
+static void wallpaper_paint_zoom(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
+static void wallpaper_paint_tile(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode);
+static void paint_bg_remaining(WinGuiSeat *wgs, HDC hdc, const RECT *rect, const RECT *excl_rect);
 static void wallpaper_get_offset(const RECT *rect, int wp_width, int wp_height, const wallpaper_paint_mode *mode, int *x, int *y);
 
-void wallpaper_paint(HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode)
+void wallpaper_paint(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode)
 {
     HDC bg_hdc = CreateCompatibleDC(hdc);
     HBITMAP prev_bmp = SelectObject(bg_hdc, hbmp);
     int bg_w, bg_h;
     get_bitmap_size(hbmp, &bg_w, &bg_h);
     if (mode->place & WALLPAPER_PLACE_SHRINK)
-        wallpaper_paint_zoom(hdc, rect, bg_hdc, bg_w, bg_h, mode);
+        wallpaper_paint_zoom(wgs, hdc, rect, bg_hdc, bg_w, bg_h, mode);
     else
-        wallpaper_paint_tile(hdc, rect, bg_hdc, bg_w, bg_h, mode);
+        wallpaper_paint_tile(wgs, hdc, rect, bg_hdc, bg_w, bg_h, mode);
     SelectObject(bg_hdc, prev_bmp);
     DeleteDC(bg_hdc);
 }
 
-void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
+void wallpaper_paint_zoom(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
 {
-    const HWND hwnd = g_wgs->term_hwnd;
+    const HWND hwnd = wgs->term_hwnd;
     RECT term_rect;
     int is_win_ratio_larger;
     int blit_x, blit_y, blit_width, blit_height;
@@ -82,7 +79,7 @@ void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
             if (!is_mode_fit) {
                 RECT update_rect;
                 SetRect(&update_rect, blit_x, blit_y, blit_x + blit_width, blit_y + blit_height);
-                paint_bg_remaining(hdc, rect, &update_rect);
+                paint_bg_remaining(wgs, hdc, rect, &update_rect);
             }
         } else {
             msimg_alphablend(hdc, blit_x, blit_y, blit_width, blit_height,
@@ -90,13 +87,13 @@ void wallpaper_paint_zoom(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
         }
         SelectClipRgn(hdc, has_clip ? old_clip : NULL);
     } else if (mode->opaque)
-        wallpaper_fill_bgcolor(hdc, rect);
+        wallpaper_fill_bgcolor(wgs, hdc, rect);
     DeleteObject(old_clip);
 }
 
-void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
+void wallpaper_paint_tile(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int bg_h, const wallpaper_paint_mode *mode)
 {
-    const HWND hwnd = g_wgs->term_hwnd;
+    const HWND hwnd = wgs->term_hwnd;
     POINT dest_pos;
     int rem_w, rem_h;
     int shift_x, shift_y;
@@ -132,7 +129,7 @@ void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
             } else if (mode->opaque) {
                 RECT tile_rect;
                 SetRect(&tile_rect, dest_pos.x, dest_pos.y, dest_pos.x + min(rem_w, src_w), dest_pos.y + min(rem_h, src_h));
-                wallpaper_fill_bgcolor(hdc, &tile_rect);
+                wallpaper_fill_bgcolor(wgs, hdc, &tile_rect);
             }
             dest_pos.x += src_w;
             rem_w -= src_w;
@@ -142,12 +139,12 @@ void wallpaper_paint_tile(HDC hdc, const RECT *rect, HDC bg_hdc, int bg_w, int b
     }
 }
 
-static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect)
+static void paint_bg_remaining(WinGuiSeat *wgs, HDC hdc, const RECT *rect, const RECT *excl_rect)
 {
     HPEN pen, saved_pen;
     HBRUSH brush, saved_brush;
-    pen = CreatePen(PS_SOLID, 0, wallpaper_get_bg_color());
-    brush = CreateSolidBrush(wallpaper_get_bg_color());
+    pen = CreatePen(PS_SOLID, 0, wallpaper_get_bg_color(wgs));
+    brush = CreateSolidBrush(wallpaper_get_bg_color(wgs));
     saved_pen = SelectObject(hdc, pen);
     saved_brush = SelectObject(hdc, brush);
     if (rect->top < excl_rect->top)
@@ -164,7 +161,7 @@ static void paint_bg_remaining(HDC hdc, const RECT *rect, const RECT *excl_rect)
     DeleteObject(brush);
 }
 
-HBITMAP create_large_bitmap(HDC hdc, int width, int height)
+HBITMAP create_large_bitmap(HDC hdc, int width, int height, Conf *conf)
 {
     HBITMAP bmp = conf_get_bool(conf, CONF_use_ddb) ? CreateCompatibleBitmap(hdc, width, height) : NULL;
     if (bmp == NULL) {

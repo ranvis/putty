@@ -548,8 +548,7 @@ static void conf_win_opacity_handler(dlgcontrol *ctrl, dlgparam *dlg, void *data
     conf_editbox_handler(ctrl, dlg, data, event);
     int key = ctrl->context.i;
     if (event == EVENT_VALCHANGE) {
-        extern WinGuiSeat *g_wgs;
-        const HWND hwnd = g_wgs->term_hwnd;
+        const HWND hwnd = dlg->term_hwnd;
         if (hwnd) {
             Conf *conf = (Conf *)data;
             int opacity = conf_get_int(conf, key);
