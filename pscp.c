@@ -25,6 +25,9 @@
 #include "ssh/sftp.h"
 #include "ssh/xferlimit.h"
 #include "storage.h"
+#ifdef _WINDOWS
+#include "windows/ini.h"
+#endif
 
 static bool list = false;
 static bool verbose = false;
@@ -2282,6 +2285,9 @@ int psftp_main(CmdlineArgList *arglist)
     do_defaults(NULL, conf);
 
     size_t arglistpos = 0;
+#ifdef _WINDOWS
+    cmdline_arg_process_ini_option(arglist, &arglistpos, cmdline_error);
+#endif
     while (arglist->args[arglistpos]) {
         CmdlineArg *arg = arglist->args[arglistpos++];
         CmdlineArg *nextarg = arglist->args[arglistpos];

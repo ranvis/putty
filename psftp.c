@@ -14,7 +14,9 @@
 #include "ssh.h"
 #include "ssh/sftp.h"
 #include "ssh/xferlimit.h"
+#ifdef _WINDOWS
 #include "windows/ini.h"
+#endif
 
 /*
  * Since SFTP is a request-response oriented protocol, it requires
@@ -2814,7 +2816,9 @@ int psftp_main(CmdlineArgList *arglist)
     do_defaults(NULL, conf);
 
     size_t arglistpos = 0;
+#ifdef _WINDOWS
     cmdline_arg_process_ini_option(arglist, &arglistpos, cmdline_error);
+#endif
     while (arglist->args[arglistpos]) {
         CmdlineArg *arg = arglist->args[arglistpos++];
         CmdlineArg *nextarg = arglist->args[arglistpos];
