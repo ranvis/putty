@@ -3886,7 +3886,6 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
         }
       case WM_KEYUP:
       case WM_SYSKEYUP:
-        if (lParam & 0x80000000) break;
         /*
          * Add the scan code and keypress timing to the random
          * number noise.
