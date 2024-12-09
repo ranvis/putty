@@ -1,7 +1,9 @@
 #ifndef PUTTY_WINWALLP_H
 #define PUTTY_WINWALLP_H
 
+#ifdef _WINDOWS
 #include <wingdi.h>
+#endif
 
 enum {
     WALLPAPER_MODE_DESKTOP = 1,
@@ -26,6 +28,8 @@ enum {
     WALLPAPER_PLACE_FIT = 1 << 4,
     WALLPAPER_PLACE_DEFAULT = WALLPAPER_PLACE_TILE_X | WALLPAPER_PLACE_TILE_Y,
 };
+
+#ifdef _WINDOWS
 
 typedef struct WinGuiSeat WinGuiSeat;
 
@@ -58,5 +62,7 @@ HBITMAP gdip_load_image(const char *path);
 
 #define FILTER_IMAGE_FILES_GDIP_C ("Image Files\0*.bmp;*.jpg;*.jpeg;*.png;*.tiff;*.wmf;*.gif\0" \
                                  "All Files (*.*)\0*\0")
+
+#endif // _WINDOWS
 
 #endif
