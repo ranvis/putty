@@ -21,12 +21,11 @@ bool get_use_inifile(void)
         char buf[10];
         GetModuleFileName(NULL, inifile, sizeof inifile - 10);
         char *p = strrchr(inifile, '\\');
-        if (!p) {
-            p = inifile;
+        if (p) {
+            strcpy(p, "\\putty.ini");
+            GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
+            use_inifile = buf[0] == '1';
         }
-        strcpy(p, "\\putty.ini");
-        GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
-        use_inifile = buf[0] == '1';
         if (!use_inifile) {
             HMODULE module;
             DECL_WINDOWS_FUNCTION(LOCAL_SCOPE, HRESULT, SHGetFolderPathA, (HWND, int, HANDLE, DWORD, LPSTR));
@@ -43,6 +42,10 @@ bool get_use_inifile(void)
                 use_inifile = buf[0] == '1';
             }
             FreeLibrary(module);
+        }
+        if (!use_inifile) {
+            inifile[0] = '-';
+            inifile[1] = '\0';
         }
     }
     return use_inifile;
