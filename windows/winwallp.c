@@ -2,19 +2,22 @@
 #include "winwallp.h"
 #include "win-gui-seat.h"
 
-HBITMAP background_bmp = NULL;
+// per window globals
+HBITMAP background_bmp;
 HBITMAP img_bmp;
-BOOL bg_has_alpha;
-BOOL img_has_alpha;
+bool bg_has_alpha;
+bool img_has_alpha;
 
 DECL_WINDOWS_FUNCTION(static, BOOL, AlphaBlend, (HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn));
 
 BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn)
 {
-    static HMODULE module;
-    if (!module)
-        module = load_system32_dll("msimg32.dll");
-    if (!module || !p_AlphaBlend && !GET_WINDOWS_FUNCTION(module, AlphaBlend))
+    static bool loaded;
+    if (!loaded) {
+        GET_WINDOWS_FUNCTION(load_system32_dll("msimg32.dll"), AlphaBlend);
+        loaded = true;
+    }
+    if (!p_AlphaBlend)
         return FALSE;
     return p_AlphaBlend(hdcDest, xoriginDest, yoriginDest, wDest, hDest, hdcSrc, xoriginSrc, yoriginSrc, wSrc, hSrc, ftn);
 }

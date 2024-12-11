@@ -41,8 +41,8 @@ typedef struct wallpaper_paint_mode_tag {
 
 extern HBITMAP background_bmp;
 extern HBITMAP img_bmp;
-extern BOOL bg_has_alpha;
-extern BOOL img_has_alpha;
+extern bool bg_has_alpha;
+extern bool img_has_alpha;
 
 extern BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn);
 extern void wallpaper_paint(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);

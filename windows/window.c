@@ -536,10 +536,10 @@ static void wallpaper_prepare_dtimg(WinGuiSeat *wgs)
         if (is_path_bmp(fn->cpath)) {
             img_bmp = LoadImage(0, fn->cpath, IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
-            img_has_alpha = FALSE;
+            img_has_alpha = false;
         } else {
             img_bmp = gdip_load_image(fn->wpath);
-            img_has_alpha = TRUE;
+            img_has_alpha = true;
         }
     }
     if (!img_bmp) {
@@ -589,10 +589,10 @@ static void wallpaper_prepare_image(WinGuiSeat *wgs)
         if (is_path_bmp(fn->cpath)) {
             background_bmp = LoadImage(0, fn->cpath, IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
-            bg_has_alpha = FALSE;
+            bg_has_alpha = false;
         } else {
             background_bmp = gdip_load_image(fn->wpath);
-            bg_has_alpha = TRUE;
+            bg_has_alpha = true;
         }
         xtrans_bitmap_changed();
     }
@@ -673,7 +673,7 @@ static void xtrans_load_bitmap(WinGuiSeat *wgs)
     xtrans_free_background();
     background_bmp = LoadImage(0, pass, IMAGE_BITMAP, 0, 0,
         (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
-    bg_has_alpha = FALSE;
+    bg_has_alpha = false;
     xtrans_bitmap_changed();
     wallpaper_set_mode(conf, WALLPAPER_MODE_IMAGE);
 
