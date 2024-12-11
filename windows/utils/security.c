@@ -338,3 +338,13 @@ void restrict_process_acl(void)
     if (!ret)
         modalfatalbox("Could not restrict process ACL: %s", error);
 }
+
+void disable_timer_ex_suppression(HMODULE user32_module)
+{
+    DECL_WINDOWS_FUNCTION(, BOOL, SetUserObjectInformationA, (_In_ HANDLE hObj, _In_ int nIndex, _In_reads_bytes_(nLength) PVOID pvInfo, _In_ DWORD nLength));
+    GET_WINDOWS_FUNCTION(user32_module, SetUserObjectInformationA);
+    if (p_SetUserObjectInformationA) {
+        BOOL timer_ex_mute = FALSE;
+        p_SetUserObjectInformationA(GetCurrentProcess(), UOI_TIMERPROC_EXCEPTION_SUPPRESSION, &timer_ex_mute, sizeof timer_ex_mute);
+    }
+}

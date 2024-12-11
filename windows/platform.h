@@ -675,6 +675,7 @@ const char *win_strerror(int error);
 bool should_have_security(void);
 void restrict_process_acl(void);
 bool restricted_acl(void);
+void disable_timer_ex_suppression(HMODULE user32_module);
 void escape_registry_key(const char *in, strbuf *out);
 void escape_ini_section(const char *in, strbuf *out);
 void escape_ini_value_n(const char *in, size_t n, strbuf *out);

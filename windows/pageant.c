@@ -2055,6 +2055,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             return 1;
         }
     }
+    disable_timer_ex_suppression(load_system32_dll("user32.dll"));
 
     /*
      * See if we can find our Help file.

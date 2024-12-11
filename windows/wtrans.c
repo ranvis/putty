@@ -34,12 +34,6 @@ static void set_window_alpha(HWND hwnd, BYTE alpha)
 void wtrans_init(HMODULE user32_module)
 {
     GET_WINDOWS_FUNCTION(user32_module, SetLayeredWindowAttributes);
-    DECL_WINDOWS_FUNCTION(, BOOL, SetUserObjectInformationA, (_In_ HANDLE hObj, _In_ int nIndex, _In_reads_bytes_(nLength) PVOID pvInfo, _In_ DWORD nLength));
-    GET_WINDOWS_FUNCTION(user32_module, SetUserObjectInformationA);
-    if (p_SetUserObjectInformationA) {
-        BOOL timer_ex_mute = false;
-        p_SetUserObjectInformationA(GetCurrentProcess(), UOI_TIMERPROC_EXCEPTION_SUPPRESSION, &timer_ex_mute, sizeof timer_ex_mute);
-    }
 }
 
 int conf_clamp_int(Conf *conf, int pk, int min, int max)
