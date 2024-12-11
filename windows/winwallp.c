@@ -266,16 +266,13 @@ void gdip_terminate(void)
     }
 }
 
-HBITMAP gdip_load_image(const char *path)
+HBITMAP gdip_load_image(const WCHAR *path)
 {
-    WCHAR u_path[MAX_PATH];
     GpBitmap *image;
     HBITMAP bitmap;
     if (!gdip_init())
         return NULL;
-    if (!MultiByteToWideChar(CP_ACP, 0, path, -1, u_path, lenof(u_path)))
-        return NULL;
-    if (p_GdipCreateBitmapFromFile(u_path, &image) != GDIP_STATUS_OK)
+    if (p_GdipCreateBitmapFromFile(path, &image) != GDIP_STATUS_OK)
         return NULL;
     if (p_GdipCreateHBITMAPFromBitmap(image, &bitmap, 0) != GDIP_STATUS_OK)
         bitmap = NULL;

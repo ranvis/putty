@@ -531,14 +531,14 @@ static void wallpaper_prepare_dtimg(WinGuiSeat *wgs)
     RECT rect, px_rect;
     Conf *conf = wgs->conf;
     int shading = conf_get_int(conf, CONF_shading);
-    const char *path = conf_get_filename(conf, CONF_bgimg_file)->cpath;
-    if (img_bmp == NULL && path[0] != '\0') {
-        if (is_path_bmp(path)) {
-            img_bmp = LoadImage(0, path, IMAGE_BITMAP, 0, 0,
+    const Filename *fn = conf_get_filename(conf, CONF_bgimg_file);
+    if (img_bmp == NULL && fn->cpath[0] != '\0') {
+        if (is_path_bmp(fn->cpath)) {
+            img_bmp = LoadImage(0, fn->cpath, IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
             img_has_alpha = FALSE;
         } else {
-            img_bmp = gdip_load_image(path);
+            img_bmp = gdip_load_image(fn->wpath);
             img_has_alpha = TRUE;
         }
     }
@@ -583,15 +583,15 @@ static void wallpaper_prepare_image(WinGuiSeat *wgs)
 {
     const HWND hwnd = wgs->term_hwnd;
     Conf *conf = wgs->conf;
-    const char *path = conf_get_filename(conf, CONF_bgimg_file)->cpath;
-    if (path[0] != '\0') {
+    const Filename *fn = conf_get_filename(conf, CONF_bgimg_file);
+    if (fn->cpath[0] != '\0') {
         xtrans_free_background();
-        if (is_path_bmp(path)) {
-            background_bmp = LoadImage(0, path, IMAGE_BITMAP, 0, 0,
+        if (is_path_bmp(fn->cpath)) {
+            background_bmp = LoadImage(0, fn->cpath, IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
             bg_has_alpha = FALSE;
         } else {
-            background_bmp = gdip_load_image(path);
+            background_bmp = gdip_load_image(fn->wpath);
             bg_has_alpha = TRUE;
         }
         xtrans_bitmap_changed();
