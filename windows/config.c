@@ -550,9 +550,10 @@ static void conf_win_opacity_handler(dlgcontrol *ctrl, dlgparam *dlg, void *data
     if (event == EVENT_VALCHANGE) {
         const HWND hwnd = dlg->term_hwnd;
         if (hwnd) {
+            WinGuiSeat *wgs = (WinGuiSeat *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
             Conf *conf = (Conf *)data;
             int opacity = conf_get_int(conf, key);
-            wtrans_preview(hwnd, opacity);
+            wtrans_preview(wgs, opacity);
         }
     }
 }

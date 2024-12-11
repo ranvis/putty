@@ -50,6 +50,25 @@ struct WinGuiSeatListNode {
 };
 extern struct WinGuiSeatListNode wgslisthead; /* static end pointer */
 
+typedef struct {
+    HBITMAP bg_bmp;
+    HBITMAP img_bmp;
+    bool bg_has_alpha;
+    bool img_has_alpha;
+} WgsWallpaper;
+
+typedef struct {
+    bool is_trans_active;
+    bool is_preview_mode;
+    bool last_active_state;
+    BYTE cur_alpha;
+    BYTE target_alpha;
+    BYTE start_alpha;
+    uint16_t duration;
+    DWORD start_time;
+    DWORD delay;
+} WgsWinTransparency;
+
 struct WinGuiSeat {
     struct WinGuiSeatListNode wgslistnode;
 
@@ -146,6 +165,10 @@ struct WinGuiSeat {
     WPARAM last_wm_mousemove_wParam, last_wm_ncmousemove_wParam;
     LPARAM last_wm_mousemove_lParam, last_wm_ncmousemove_lParam;
     wchar_t pending_surrogate;
+
+    bool ime_mode;
+    WgsWallpaper wall;
+    WgsWinTransparency wtrans;
 };
 
 extern const LogPolicyVtable win_gui_logpolicy_vt; /* in dialog.c */

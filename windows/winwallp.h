@@ -44,12 +44,12 @@ extern HBITMAP img_bmp;
 extern bool bg_has_alpha;
 extern bool img_has_alpha;
 
-extern BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn);
-extern void wallpaper_paint(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);
-extern void wallpaper_fill_bgcolor(WinGuiSeat *wgs, HDC hdc, const RECT *rect);
-extern HBITMAP create_large_bitmap(HDC hdc, int width, int height, Conf *conf);
-extern void get_bitmap_size(HBITMAP hbmp, int *width, int *height);
-extern COLORREF wallpaper_get_bg_color(WinGuiSeat *wgs);
+BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn);
+void wallpaper_paint(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);
+void wallpaper_fill_bgcolor(WinGuiSeat *wgs, HDC hdc, const RECT *rect);
+HBITMAP create_large_bitmap(HDC hdc, int width, int height, Conf *conf);
+void get_bitmap_size(HBITMAP hbmp, int *width, int *height);
+COLORREF wallpaper_get_bg_color(WinGuiSeat *wgs);
 
 /* gdiplus */
 
