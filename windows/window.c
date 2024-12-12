@@ -987,7 +987,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         wgs->term_hwnd = CreateWindowExW(
             exwinmode, terminal_window_class_w(wgs->conf, inst), uappname,
             winmode, conf_get_int(wgs->conf, CONF_x), conf_get_int(wgs->conf, CONF_y),
-            guess_width, guess_height, NULL, NULL, inst, wgs);
+            guess_width, guess_height, NULL, NULL, inst, NULL);
 #endif
 
 #if defined LEGACY_WINDOWS || defined TEST_ANSI_WINDOW
@@ -1001,7 +1001,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             wgs->term_hwnd = CreateWindowExA(
                 exwinmode, terminal_window_class_a(wgs->conf, inst), appname,
                 winmode, CW_USEDEFAULT, CW_USEDEFAULT,
-                guess_width, guess_height, NULL, NULL, inst, wgs);
+                guess_width, guess_height, NULL, NULL, inst, NULL);
         }
 #endif
 
@@ -1048,6 +1048,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         conf_set_int(wgs->conf, CONF_vtmode, vtmode = VT_POORMAN);
 #endif
         /* < */
+
+    if (conf_get_bool(wgs->conf, CONF_ctrl_tab_switch)) {
+        DWORD wnd_extra = GetClassLong(wgs->term_hwnd, GCL_CBWNDEXTRA);
+        FILETIME filetime;
+        GetSystemTimeAsFileTime(&filetime);
+        SetWindowLong(wgs->term_hwnd, wnd_extra - 8, filetime.dwHighDateTime);
+        SetWindowLong(wgs->term_hwnd, wnd_extra - 4, filetime.dwLowDateTime);
+    }
+    wtrans_set(wgs);
 
     /*
      * Correct the guesses for extra_{width,height}.
@@ -2800,16 +2809,6 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 
     switch (message) {
       case WM_CREATE:
-        wgs = (WinGuiSeat *)((CREATESTRUCT *)lParam)->lpCreateParams;
-        wgs->term_hwnd = hwnd;
-        if (conf_get_bool(wgs->conf, CONF_ctrl_tab_switch)) {
-            int wndExtra = GetClassLong(hwnd, GCL_CBWNDEXTRA);
-            FILETIME filetime;
-            GetSystemTimeAsFileTime(&filetime);
-            SetWindowLong(hwnd, wndExtra - 8, filetime.dwHighDateTime);
-            SetWindowLong(hwnd, wndExtra - 4, filetime.dwLowDateTime);
-        }
-        wtrans_set(wgs);
         break;
       case WM_CLOSE: {
         char *title, *msg, *additional = NULL;
