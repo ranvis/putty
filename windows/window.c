@@ -90,6 +90,11 @@
 #endif
 #define WHEEL_DELTA_PER_LINE (WHEEL_DELTA / 6)
 
+/* Ctrl-Tab */
+#define CTRL_TAB_WNDEXTRA 12
+#define CTRL_TAB_SIGNATURE 0x0ad95369 // 0ad95369b4a2: base64 'CtlTabSi'
+static void ctrl_tab_init(WinGuiSeat *wgs);
+
 /* DPI awareness support */
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
@@ -815,7 +820,7 @@ static HICON load_main_icon(Conf *conf, HINSTANCE inst)
         wndclass.cbClsExtra = 0;                                        \
         wndclass.cbWndExtra = 0;                                        \
         if (conf_get_bool(conf, CONF_ctrl_tab_switch))                  \
-            wndclass.cbWndExtra += 8;                                   \
+            wndclass.cbWndExtra += CTRL_TAB_WNDEXTRA;                   \
         wndclass.hInstance = hinst;                                     \
         wndclass.hIcon = load_main_icon(conf, inst);                    \
         wndclass.hCursor = LoadCursor(NULL, IDC_IBEAM);                 \
@@ -1049,13 +1054,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 #endif
         /* < */
 
-    if (conf_get_bool(wgs->conf, CONF_ctrl_tab_switch)) {
-        DWORD wnd_extra = GetClassLong(wgs->term_hwnd, GCL_CBWNDEXTRA);
-        FILETIME filetime;
-        GetSystemTimeAsFileTime(&filetime);
-        SetWindowLong(wgs->term_hwnd, wnd_extra - 8, filetime.dwHighDateTime);
-        SetWindowLong(wgs->term_hwnd, wnd_extra - 4, filetime.dwLowDateTime);
-    }
+    ctrl_tab_init(wgs);
     wtrans_set(wgs);
 
     /*
@@ -2656,9 +2655,9 @@ static bool is_alt_pressed(void)
 }
 
 struct ctrl_tab_info {
-    int direction;
+    int8_t direction;
+    bool skip_minimized;
     HWND  self;
-    Conf  *conf;
     DWORD self_hi_date_time;
     DWORD self_lo_date_time;
     HWND  next;
@@ -2667,13 +2666,29 @@ struct ctrl_tab_info {
     int   next_self;
 };
 
-static BOOL CALLBACK CtrlTabWindowProc(HWND hwnd, LPARAM lParam) {
+static void ctrl_tab_init(WinGuiSeat *wgs)
+{
+    if (!conf_get_bool(wgs->conf, CONF_ctrl_tab_switch)) {
+        return;
+    }
+    FILETIME filetime;
+    GetSystemTimeAsFileTime(&filetime);
+    SetWindowLong(wgs->term_hwnd, 0, CTRL_TAB_SIGNATURE);
+    SetWindowLong(wgs->term_hwnd, 4, filetime.dwHighDateTime);
+    SetWindowLong(wgs->term_hwnd, 8, filetime.dwLowDateTime);
+}
+
+static BOOL CALLBACK CtrlTabWindowProc(HWND hwnd, LPARAM lParam)
+{
     struct ctrl_tab_info* info = (struct ctrl_tab_info*) lParam;
     char class_name[16];
-    int wndExtra;
-    if (info->self != hwnd && (wndExtra = GetClassLong(hwnd, GCL_CBWNDEXTRA)) >= 8 && GetClassName(hwnd, class_name, sizeof class_name) >= 5 && strncmp(class_name, appname, sizeof class_name) == 0) {
-        DWORD hwnd_hi_date_time = GetWindowLong(hwnd, wndExtra - 8);
-        DWORD hwnd_lo_date_time = GetWindowLong(hwnd, wndExtra - 4);
+    DWORD wnd_extra;
+    if (info->self != hwnd && (wnd_extra = GetClassLong(hwnd, GCL_CBWNDEXTRA)) >= CTRL_TAB_WNDEXTRA
+        // FIXME: this may not support ".ansi" appended window class
+        && GetClassName(hwnd, class_name, sizeof class_name) >= 5 && strncmp(class_name, appname, sizeof class_name) == 0
+        && GetWindowLong(hwnd, wnd_extra - 12) == CTRL_TAB_SIGNATURE) {
+        DWORD hwnd_hi_date_time = GetWindowLong(hwnd, wnd_extra - 8);
+        DWORD hwnd_lo_date_time = GetWindowLong(hwnd, wnd_extra - 4);
         int hwnd_self, hwnd_next;
         hwnd_self = hwnd_hi_date_time - info->self_hi_date_time;
         if (hwnd_self == 0)
@@ -2684,7 +2699,7 @@ static BOOL CALLBACK CtrlTabWindowProc(HWND hwnd, LPARAM lParam) {
             hwnd_next = hwnd_lo_date_time - info->next_lo_date_time;
         hwnd_next *= info->direction;
         if ((hwnd_self > 0 && hwnd_next < 0 || (hwnd_self > 0 || hwnd_next < 0) && info->next_self <= 0)
-                && (!conf_get_bool(info->conf, CONF_switch_skip_min) || !IsIconic(hwnd))) {
+                && (!info->skip_minimized || !IsIconic(hwnd))) {
             info->next              = hwnd;
             info->next_hi_date_time = hwnd_hi_date_time;
             info->next_lo_date_time = hwnd_lo_date_time;
@@ -2692,6 +2707,26 @@ static BOOL CALLBACK CtrlTabWindowProc(HWND hwnd, LPARAM lParam) {
         }
     }
     return TRUE;
+}
+
+static void ctrl_tab_exec(WinGuiSeat *wgs, char direction)
+{
+    HWND hwnd = wgs->term_hwnd;
+    struct ctrl_tab_info info = {
+        .direction = direction,
+        .skip_minimized = conf_get_bool(wgs->conf, CONF_switch_skip_min),
+        .self = hwnd,
+    };
+    info.next_hi_date_time = info.self_hi_date_time = GetWindowLong(hwnd, 4);
+    info.next_lo_date_time = info.self_lo_date_time = GetWindowLong(hwnd, 8);
+    EnumWindows(CtrlTabWindowProc, (LPARAM) &info);
+    if (info.next != NULL) {
+        HWND next_win = info.next;
+        SetForegroundWindow(next_win);
+        if (IsIconic(next_win)) {
+            ShowWindowAsync(next_win, IsZoomed(next_win) ? SW_SHOWMAXIMIZED : SW_RESTORE);
+        }
+    }
 }
 
 static void ime_mode_update(WinGuiSeat *wgs)
@@ -3882,21 +3917,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
       case WM_KEYDOWN:
       case WM_SYSKEYDOWN:
         if (wParam == VK_TAB && conf_get_bool(wgs->conf, CONF_ctrl_tab_switch) && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0) {
-            struct ctrl_tab_info info = {
-                GetKeyState(VK_SHIFT) < 0 ? 1 : -1,
-                hwnd,
-                wgs->conf,
-            };
-            info.next_hi_date_time = info.self_hi_date_time = GetWindowLong(hwnd, 0);
-            info.next_lo_date_time = info.self_lo_date_time = GetWindowLong(hwnd, 4);
-            EnumWindows(CtrlTabWindowProc, (LPARAM) &info);
-            if (info.next != NULL) {
-                HWND next_win = info.next;
-                SetForegroundWindow(next_win);
-                if (IsIconic(next_win)) {
-                    ShowWindowAsync(next_win, IsZoomed(next_win) ? SW_SHOWMAXIMIZED : SW_RESTORE);
-                }
-            }
+            ctrl_tab_exec(wgs, GetKeyState(VK_SHIFT) < 0 ? 1 : -1);
             return 0;
         }
       case WM_KEYUP:
