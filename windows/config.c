@@ -379,7 +379,6 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, bool has_help,
                   conf_checkbox_handler, I(CONF_switch_skip_min));
     }
 
-        /* > transparent background patch */
     /*
      * The Window/Wallpaper panel.
      */
@@ -424,12 +423,11 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, bool has_help,
         /* GDI+ is available by default on Windows XP+ */
         int has_gdip = (osMajorVersion > 5 || (osMajorVersion == 5 && osMinorVersion >= 1));
         ctrl_filesel( s, "Bitmap file to use for background:", NO_SHORTCUT,
-                                  has_gdip ? FILTER_IMAGE_FILES_GDIP : FILTER_IMAGE_FILES,
+                                  has_gdip ? FILTER_IMAGE_EX_FILES : FILTER_IMAGE_FILES,
                                   FALSE, has_gdip ? "Select image file for background" : "Select bitmap file for background",
                                   HELPCTX(wallpaper_backimage),
                                   conf_filesel_handler, I(CONF_bgimg_file) );
     }
-        /* < */
 
     /*
      * Icon for window title bar, window transparency; "window" appearance panel

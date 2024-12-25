@@ -615,7 +615,7 @@ int l10nMessageBoxA(HWND hWnd, LPCSTR text, LPCSTR caption, UINT type)
     return MessageBoxW(hWnd, textw, captionw, type);
 }
 
-static bool is_ptr_resource_id(void *ptr)
+static bool is_atom(void *ptr)
 {
     return ptr <= (void *)0xffff;
 }
@@ -626,7 +626,7 @@ HWND l10nCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a
 {
     HWND r;
 
-    if (getEnabled() && !is_ptr_resource_id(a2) && !IsBadStringPtr(a2, 100)) {
+    if (getEnabled() && !is_atom(a2)) {
         if (stricmp(a2, WC_TREEVIEW) == 0) a2 = WC_HOOK(TREEVIEW);
         else if (stricmp(a2, WC_BUTTON) == 0) a2 = WC_HOOK(BUTTON);
         else if (stricmp(a2, WC_STATIC) == 0) a2 = WC_HOOK(STATIC);
@@ -647,7 +647,7 @@ HWND l10nCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowN
 {
     HWND window;
 
-    if (getEnabled() && !is_ptr_resource_id(lpClassName) && !IsBadStringPtrW(lpClassName, 100)) {
+    if (getEnabled() && !is_atom(lpClassName)) {
         if (_wcsicmp(lpClassName, WC_TREEVIEWW) == 0) lpClassName = WC_HOOKW(TREEVIEW);
         else if (_wcsicmp(lpClassName, WC_BUTTONW) == 0) lpClassName = WC_HOOKW(BUTTON);
         else if (_wcsicmp(lpClassName, WC_STATICW) == 0) lpClassName = WC_HOOKW(STATIC);
@@ -772,32 +772,106 @@ char *l10n_dupprintf(const char *format, ...)
     return r;
 }
 
-static int getOpenSaveFilename(OPENFILENAME *ofn, int (WINAPI *f)(OPENFILENAME *))
+static char *translate_ofn_filter(char *filter)
+{
+    char tmp_str[256];
+    strbuf *sb = strbuf_new();
+    while (*filter) {
+        size_t src_size = strlen(filter) + 1;
+        int len = ccstrtranslate(filter, tmp_str, lenof(tmp_str));
+        if (len)
+            put_data(sb, tmp_str, len + 1);
+        else
+            put_data(sb, filter, src_size);
+        filter += src_size;
+        src_size = strlen(filter) + 1;
+        put_data(sb, filter, src_size);
+        filter += src_size;
+    }
+    put_uint16(sb, 0);
+    return strbuf_to_str(sb);
+}
+
+static WCHAR *translate_ofn_filter_w(WCHAR *filter)
+{
+    WCHAR tmp_str[256];
+    strbuf *sb = strbuf_new();
+    while (*filter) {
+        size_t src_size = wcslen(filter) + 1;
+        int len = strtranslate(filter, tmp_str, lenof(tmp_str));
+        if (len)
+            put_data(sb, tmp_str, (len + 1) * sizeof(WCHAR));
+        else
+            put_data(sb, filter, src_size * sizeof(WCHAR));
+        filter += src_size;
+        src_size = wcslen(filter) + 1;
+        put_data(sb, filter, src_size * sizeof(WCHAR));
+        filter += src_size;
+    }
+    put_uint32(sb, 0);
+    return (WCHAR *)strbuf_to_str(sb);
+}
+
+static BOOL getOpenSaveFilename(OPENFILENAME *ofn, int (WINAPI *proc)(OPENFILENAME *))
 {
     char title[SHORT_STR_MAX];
-    char file_title[SHORT_STR_MAX];
-    char filter[SHORT_STR_MAX];
+    char *filter = NULL;
+    char *orig_title = ofn->lpstrTitle;
+    char *orig_filter = ofn->lpstrFilter;
     if (getEnabled()) {
         if (ofn->lpstrTitle != NULL && ccstrtranslate(ofn->lpstrTitle, title, lenof(title)))
             ofn->lpstrTitle = title;
-        if (ofn->lpstrFileTitle != NULL && ccstrtranslate(ofn->lpstrFileTitle, file_title, lenof(file_title)))
-            ofn->lpstrFileTitle = file_title;
-        if (ofn->lpstrFilter != NULL && ccstrtranslate(ofn->lpstrFilter, filter, lenof(filter)))
-            ofn->lpstrFilter = filter;
+        if (ofn->lpstrFilter != NULL)
+            ofn->lpstrFilter = filter = translate_ofn_filter(ofn->lpstrFilter);
     }
-    return f(ofn);
+    BOOL is_ok = proc(ofn);
+    ofn->lpstrTitle = orig_title;
+    ofn->lpstrFilter = orig_filter;
+    sfree(filter);
+    return is_ok;
+}
+
+static BOOL getOpenSaveFilenameW(OPENFILENAMEW *ofn, int (WINAPI *proc)(OPENFILENAMEW *))
+{
+    WCHAR title[SHORT_STR_MAX];
+    WCHAR *filter = NULL;
+    WCHAR *orig_title = ofn->lpstrTitle;
+    WCHAR *orig_filter = ofn->lpstrFilter;
+    if (getEnabled()) {
+        if (ofn->lpstrTitle != NULL && strtranslate(ofn->lpstrTitle, title, lenof(title)))
+            ofn->lpstrTitle = title;
+        if (ofn->lpstrFilter != NULL)
+            ofn->lpstrFilter = filter = translate_ofn_filter_w(ofn->lpstrFilter);
+    }
+    BOOL is_ok = proc(ofn);
+    ofn->lpstrTitle = orig_title;
+    ofn->lpstrFilter = orig_filter;
+    sfree(filter);
+    return is_ok;
 }
 
 #undef GetOpenFileNameA
-int l10nGetOpenFileNameA(OPENFILENAMEA *ofn)
+BOOL l10nGetOpenFileNameA(OPENFILENAMEA *ofn)
 {
     return getOpenSaveFilename(ofn, GetOpenFileNameA);
 }
 
+#undef GetOpenFileNameW
+BOOL l10nGetOpenFileNameW(OPENFILENAMEW *ofn)
+{
+    return getOpenSaveFilenameW(ofn, GetOpenFileNameW);
+}
+
 #undef GetSaveFileNameA
-int l10nGetSaveFileNameA(OPENFILENAMEA *ofn)
+BOOL l10nGetSaveFileNameA(OPENFILENAMEA *ofn)
 {
     return getOpenSaveFilename(ofn, GetSaveFileNameA);
+}
+
+#undef GetSaveFileNameW
+BOOL l10nGetSaveFileNameW(OPENFILENAMEW *ofn)
+{
+    return getOpenSaveFilenameW(ofn, GetSaveFileNameW);
 }
 
 BOOL l10nSetDlgItemText(HWND dialog, int id, LPCSTR text)

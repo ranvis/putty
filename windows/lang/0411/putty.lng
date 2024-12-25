@@ -18,7 +18,6 @@ Cate&gory:=カテゴリ(&G):
 Open=開く
 Cancel=キャンセル
 &Cancel=キャンセル(&C)
-
 &Copy=コピー(&C)
 &Paste=貼り付け(&P)
 &Event Log=イベントログ(&E)
@@ -43,6 +42,15 @@ View &Licence=ライセンスを表示(&L)
 %25s Configuration=%25s 設定
 %25s Reconfiguration=%25s 設定変更
 S&pecial Command=特殊コマンド(&P)
+
+All Files (*.*)=全てのファイル (*.*)
+PuTTY Private Key Files (*.ppk)=PuTTY 秘密鍵ファイル (*.ppk)
+Dynamic Library Files (*.dll)=アプリケーション拡張 (*.dll)
+Wave Files (*.wav)=Waveファイル (*.wav)
+Bitmap Files (*.bmp)=ビットマップファイル (*.bmp)
+Image Files (*.bmp;*.jpg;*.png;...)=画像ファイル (*.bmp;*.jpg;*.png;...)
+Icon Files (*.ico)=アイコンファイル (*.ico)
+Module Files (*.exe;*.dll)=モジュールファイル (*.exe;*.dll)
 
 Session=セッション
 Basic options for your %25s session=%25s セッションの基本設定
@@ -338,14 +346,10 @@ Use System Res=システムリソース
 Bitmap file to use for background:=背景に使用するビットマップファイル
 Select bitmap file for background=背景用ビットマップファイルの選択
 Select image file for background=背景用画像ファイルの選択
-Bitmap Files (*.bmp)=ビットマップファイル (*.bmp)%00*.BMP%00全てのファイル (*.*)%00*%00
-Image Files=画像ファイル%00*.bmp;*.jpg;*.jpeg;*.png;*.tiff;*.wmf;*.gif%00全てのファイル (*.*)%00*%00
-
 Options for extra window appearance=ウインドウの外観の追加オプション
 Icon and Transparency=アイコンと透過
 Icon on title bar=タイトルバーのアイコン
 Select icon file=アイコンファイルの選択
-Icon Files (*.ico)=アイコンファイル(*.ico)%00*.ICO%00モジュールファイル(*.exe;*.dll)%00*.EXE;*.DLL%00全てのファイル (*.*)%00*%00
 Opacity of window=ウインドウの透過
 Opacity ratio of window (30-100%25):=ウインドウの不透明度 (30-100%):
 Cumulative opacity ratio if unfocused (10-100%25):=非アクティブ時の累積不透明度 (10-100%):
@@ -431,6 +435,8 @@ Key exchange algorithm options=鍵交換アルゴリズムオプション
 Algorithm selection policy:=アルゴリズム選択ポリシー:
 -- warn below here --=-- ここから下は警告する --
 NTRU Prime / Curve25519 hybrid kex=NTRU Prime / Curve25519 混合鍵交換
+ML-KEM / Curve25519 hybrid kex=ML-KEM / Curve25519 混合鍵交換
+ML-KEM / NIST ECDH hybrid kex=ML-KEM / NIST ECDH 混合鍵交換
 ECDH key exchange=ECDH 鍵交換
 Diffie-Hellman group exchange=Diffie-Hellman グループ交換
 Diffie-Hellman group 16 (4096-bit)=Diffie-Hellman グループ 16 (4096-bit)
@@ -640,7 +646,7 @@ Unsupported protocol number found=対応していないプロトコル番号で�
 %25s Error=%25s エラー
 Unable to open terminal:%0A%25s=端末を開けません。:%0A%25s
 Unable to open connection to%0A%25s%0A%25s=%25s%0Aに接続できません。%0A%25s
-;;%25.70s (inactive)
+%25s (inactive)=%25s (停止)
 %25s Fatal Error=%25s 重大なエラー
 ;Windows refuses to report a version
 ;Failed to initialize COM subsystem
@@ -661,6 +667,7 @@ Remote side unexpectedly closed network connection=リモート側が突然に�
 %25s Exit Confirmation=%25s 終了確認
 Are you sure you want to close this session?=このセッションを閉じますか?
 Are you sure you want to close this session?%25s%25s=このセッションを閉じますか? %25s%25s
+This will also close %25d downstream connection%25s.=%d 本の下り接続も同時に閉じます。
 ;%25.70s Error
 ;;Unable to play sound file%0A%25s%0AUsing default sound instead
 ;%25.70s Sound Error
@@ -770,9 +777,7 @@ All session output=全セッション出力
 SSH packets=SSH パケット
 SSH packets and raw data=SSH パケットと生データ
 Select private key file=秘密鍵ファイルの選択
-PuTTY Private Key Files (*.ppk)=PuTTY 秘密鍵ファイル (*.ppk)%00*.PPK%00全てのファイル (*.*)%00*%00
 Select bell sound file=ベル用サウンドファイルを選択
-Wave Files (*.wav)=Waveファイル (*.wav)%00*.WAV%00全てのファイル (*.*)%00*%00
 Select a serial line=シリアルポートの選択
 Port=ポート
 Serial line=シリアルポート

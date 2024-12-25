@@ -112,6 +112,22 @@ static bool do_filereq_a(
             "All Files (*.*)\0*\0\0\0";
         of.lpstrDefExt = ".wav";
         break;
+      case FILTER_IMAGE_FILES:
+        of.lpstrFilter = "Bitmap Files (*.bmp)\0*.bmp\0"
+            "All Files (*.*)\0*\0\0\0";
+        of.lpstrDefExt = ".bmp";
+        break;
+      case FILTER_IMAGE_EX_FILES:
+        of.lpstrFilter = "Image Files (*.bmp;*.jpg;*.png;...)\0*.bmp;*.jpg;*.jpeg;*.png;*.tiff;*.wmf;*.gif\0"
+            "All Files (*.*)\0*\0\0\0";
+        of.lpstrDefExt = ".bmp";
+        break;
+      case FILTER_ICON_FILES:
+        of.lpstrFilter = "Icon Files (*.ico)\0*.ico\0"
+            "Module Files (*.exe;*.dll)\0*.exe;*.dll\0" \
+            "All Files (*.*)\0*\0\0\0";
+        of.lpstrDefExt = ".ico";
+        break;
     }
     of.nFilterIndex = 1;
 
@@ -182,6 +198,22 @@ static bool do_filereq_w(
         of.lpstrFilter = L"Wave Files (*.wav)\0*.WAV\0"
             "All Files (*.*)\0*\0\0\0";
         of.lpstrDefExt = L".wav";
+        break;
+      case FILTER_IMAGE_FILES:
+        of.lpstrFilter = L"Bitmap Files (*.bmp)\0*.bmp\0"
+            "All Files (*.*)\0*\0\0\0";
+        of.lpstrDefExt = L".bmp";
+        break;
+      case FILTER_IMAGE_EX_FILES:
+        of.lpstrFilter = L"Image Files (*.bmp;*.jpg;*.png;...)\0*.bmp;*.jpg;*.jpeg;*.png;*.tiff;*.wmf;*.gif\0"
+            "All Files (*.*)\0*\0\0\0";
+        of.lpstrDefExt = L".bmp";
+        break;
+      case FILTER_ICON_FILES:
+        of.lpstrFilter = L"Icon Files (*.ico)\0*.ico\0"
+            "Module Files (*.exe;*.dll)\0*.exe;*.dll\0" \
+            "All Files (*.*)\0*\0\0\0";
+        of.lpstrDefExt = L".ico";
         break;
     }
     of.nFilterIndex = 1;
