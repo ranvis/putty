@@ -2,7 +2,7 @@
 #include "win-gui-seat.h"
 #include "wtrans.h"
 
-static const UINT WTRANS_TIMER_ID = 500;
+static UINT next_timer_id = 1500;
 static const uint16_t TRANSITION_MS_ACTIVATE = 100;
 static const uint16_t TRANSITION_MS_INACTIVATE_MAX = 1000;
 static const uint16_t TRANSITION_MS_INACTIVATE_PER_STEP = 20;
@@ -33,6 +33,7 @@ void wtrans_new(WinGuiSeat *wgs)
     tr->target_alpha = 255;
     tr->start_alpha = 255;
     tr->last_active_state = true;
+    tr->timer_id = next_timer_id++;
 }
 
 int conf_clamp_int(Conf *conf, int pk, int min, int max)
@@ -102,7 +103,7 @@ static void CALLBACK timer_proc(HWND hwnd, UINT msg, UINT_PTR id, DWORD cur_time
     }
     set_window_alpha(wgs, new_alpha);
     if (new_alpha == tr->target_alpha) {
-        KillTimer(hwnd, WTRANS_TIMER_ID);
+        KillTimer(hwnd, tr->timer_id);
     } else if (tr->delay) {
         tr->start_time += tr->delay;
         tr->delay = 0;
@@ -115,7 +116,7 @@ static void set_timer(WinGuiSeat *wgs)
     WgsWinTransparency *tr = &wgs->wtrans;
     int delta = abs((int)tr->cur_alpha - (int)tr->target_alpha);
     DWORD interval = max(10, tr->duration / delta);
-    SetTimer(wgs->term_hwnd, WTRANS_TIMER_ID, tr->delay ? tr->delay : interval, timer_proc);
+    SetTimer(wgs->term_hwnd, tr->timer_id, tr->delay ? tr->delay : interval, timer_proc);
 }
 
 void wtrans_activate(WinGuiSeat *wgs, bool is_active)
@@ -139,7 +140,7 @@ static void change_alpha(WinGuiSeat *wgs, BYTE new_alpha, int delay)
 {
     WgsWinTransparency *tr = &wgs->wtrans;
     if (new_alpha == tr->cur_alpha) {
-        KillTimer(wgs->term_hwnd, WTRANS_TIMER_ID);
+        KillTimer(wgs->term_hwnd, tr->timer_id);
         return;
     }
     tr->target_alpha = new_alpha;
@@ -156,7 +157,7 @@ static void change_alpha(WinGuiSeat *wgs, BYTE new_alpha, int delay)
 
 void wtrans_destroy(WinGuiSeat *wgs)
 {
-    KillTimer(wgs->term_hwnd, WTRANS_TIMER_ID);
+    KillTimer(wgs->term_hwnd, wgs->wtrans.timer_id);
 }
 
 void wtrans_begin_preview(WinGuiSeat *wgs)

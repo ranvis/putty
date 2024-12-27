@@ -141,10 +141,6 @@ static void conf_cache_data(WinGuiSeat *wgs);
 
 static struct sesslist sesslist;       /* for saved-session menu */
 
-static struct {
-    int wp_mode;
-} conf_last;
-
 /* > transparent background patch */
 static void xtrans_paint_bg(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, int height);
 static void xtrans_paint_bg_fwp(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, int height);
@@ -522,9 +518,9 @@ static int is_path_bmp(const char *path)
     return !ext || !stricmp(ext, ".bmp");
 }
 
-static void wallpaper_set_mode(Conf *conf, int mode)
+static void wallpaper_set_mode(WgsWallpaper *wall, Conf *conf, int mode)
 {
-    conf_last.wp_mode = mode;
+    wall->mode = mode;
     conf_set_int(conf, CONF_transparent_mode, mode);
 }
 
@@ -551,7 +547,7 @@ static void wallpaper_prepare_dtimg(WinGuiSeat *wgs)
         }
     }
     if (!wall->img_bmp) {
-        wallpaper_set_mode(conf, 0);
+        wallpaper_set_mode(wall, conf, 0);
         return;
     }
     InvalidateRect(hwnd, NULL, FALSE);
@@ -607,7 +603,7 @@ static void wallpaper_prepare_image(WinGuiSeat *wgs)
     }
 
     if (!wall->bg_bmp) {
-        wallpaper_set_mode(conf, 0);
+        wallpaper_set_mode(wall, conf, 0);
         return;
     }
 
@@ -661,7 +657,7 @@ static void xtrans_load_bitmap(WinGuiSeat *wgs)
         wall->img_bmp = NULL;
     }
     xtrans_free_background(wgs);
-    if (conf_last.wp_mode == WALLPAPER_MODE_IMAGE && conf_get_filename(conf, CONF_bgimg_file)->cpath[0] != '\0')
+    if (wall->mode == WALLPAPER_MODE_IMAGE && conf_get_filename(conf, CONF_bgimg_file)->cpath[0] != '\0')
         return;
 
     GetModuleFileName(NULL, pass, MAX_PATH);
@@ -685,7 +681,7 @@ static void xtrans_load_bitmap(WinGuiSeat *wgs)
         (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
     wall->bg_has_alpha = false;
     xtrans_bitmap_changed();
-    wallpaper_set_mode(conf, WALLPAPER_MODE_IMAGE);
+    wallpaper_set_mode(wall, conf, WALLPAPER_MODE_IMAGE);
 
     cp += 5;
     for (i = 0; i < 3 && isdigit(*cp); i++, cp++)
@@ -707,7 +703,7 @@ static void xtrans_init(WinGuiSeat *wgs)
     if (shading < 0 || 255 < conf_get_int(conf, CONF_shading)) {
         conf_set_int(conf, CONF_shading, 0);
     }
-    int wp_mode = conf_last.wp_mode;
+    int wp_mode = wgs->wall.mode;
     if (!wp_mode)
         xtrans_free_background(wgs);
 
@@ -721,16 +717,16 @@ static void xtrans_init(WinGuiSeat *wgs)
         wallpaper_prepare_dtimg(wgs);
         xtrans_paint_background = xtrans_paint_bg;
     } else if (wp_mode > 0)
-        wallpaper_set_mode(conf, 0);
+        wallpaper_set_mode(&wgs->wall, conf, 0);
 }
 
 static void xtrans_refresh(WinGuiSeat *wgs)
 {
     const HWND hwnd = wgs->term_hwnd;
-    int wp_mode = conf_last.wp_mode;
+    int wp_mode = wgs->wall.mode;
     if (wp_mode < 0) {
         wp_mode = -wp_mode;
-        conf_last.wp_mode = wp_mode;
+        wgs->wall.mode = wp_mode;
         xtrans_free_background(wgs);
     }
     if (wp_mode == WALLPAPER_MODE_IMAGE) {
@@ -745,7 +741,7 @@ static void xtrans_refresh(WinGuiSeat *wgs)
 static void xtrans_move(WinGuiSeat *wgs)
 {
     const HWND hwnd = wgs->term_hwnd;
-    int wp_mode = conf_last.wp_mode;
+    int wp_mode = wgs->wall.mode;
     if (wp_mode == WALLPAPER_MODE_IMAGE && !conf_get_bool(wgs->conf, CONF_stop_when_moving))
         InvalidateRect(hwnd, NULL, FALSE);
 }
@@ -753,9 +749,9 @@ static void xtrans_move(WinGuiSeat *wgs)
 static void xtrans_size(WinGuiSeat *wgs)
 {
     const HWND hwnd = wgs->term_hwnd;
-    int wp_mode = conf_last.wp_mode;
+    int wp_mode = wgs->wall.mode;
     if (wp_mode == WALLPAPER_MODE_DESKTOP || wp_mode == WALLPAPER_MODE_DTIMG)
-        conf_last.wp_mode = -wp_mode;
+        wgs->wall.mode = -wp_mode;
     else if (wp_mode == WALLPAPER_MODE_IMAGE)
         InvalidateRect(hwnd, NULL, FALSE);
 }
@@ -1050,7 +1046,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         /* > transparent background patch */
     /* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
-    if (vtmode == VT_UNICODE && conf_last.wp_mode)
+    if (vtmode == VT_UNICODE && wgs->wall.mode)
         conf_set_int(wgs->conf, CONF_vtmode, vtmode = VT_POORMAN);
 #endif
         /* < */
@@ -2739,7 +2735,7 @@ static void conf_cache_data(WinGuiSeat *wgs)
     /* Cache some items from conf to speed lookups in very hot code */
     wgs->cursor_type = conf_get_int(wgs->conf, CONF_cursor_type);
     wgs->vtmode = conf_get_int(wgs->conf, CONF_vtmode);
-    conf_last.wp_mode = conf_get_int(wgs->conf, CONF_transparent_mode);
+    wgs->wall.mode = conf_get_int(wgs->conf, CONF_transparent_mode);
 }
 
 static const int clips_system[] = { CLIP_SYSTEM };
@@ -3018,7 +3014,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
             xtrans_init(wgs);
             /* Avoid Unicode line drawing bug. */
 #ifdef XTRANS_AVOID_UL_BUG
-            if (vtmode == VT_UNICODE && conf_last.wp_mode)
+            if (vtmode == VT_UNICODE && wgs->wall.mode)
                 conf_set_int(wgs->conf, CONF_vtmode, vtmode = VT_POORMAN);
 #endif
             /* < */
@@ -3482,7 +3478,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                 wgs->offset_height+wgs->font_height*wgs->term->rows);
 
             /* > transparent background patch */
-            if (conf_last.wp_mode > 0)
+            if (wgs->wall.mode > 0)
                 (*xtrans_paint_background)(wgs, hdc, p.rcPaint.left, p.rcPaint.top,
                                            p.rcPaint.right - p.rcPaint.left,
                                            p.rcPaint.bottom - p.rcPaint.top);
@@ -4494,7 +4490,7 @@ static void do_text_internal(
     if (line_box.right > wgs->font_width*wgs->term->cols+wgs->offset_width)
         line_box.right = wgs->font_width*wgs->term->cols+wgs->offset_width;
 
-    bool wp_flag = conf_last.wp_mode != 0;
+    bool wp_flag = wgs->wall.mode != 0;
     if (attr & TATTR_COMBINING)
         SetBkMode(wgs->wintw_hdc, TRANSPARENT);
         /* > transparent background patch */

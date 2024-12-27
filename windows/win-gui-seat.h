@@ -55,6 +55,7 @@ typedef struct {
     HBITMAP img_bmp;
     bool bg_has_alpha;
     bool img_has_alpha;
+    int mode;
 } WgsWallpaper;
 
 typedef struct {
@@ -67,6 +68,7 @@ typedef struct {
     uint16_t duration;
     DWORD start_time;
     DWORD delay;
+    UINT timer_id;
 } WgsWinTransparency;
 
 struct WinGuiSeat {
