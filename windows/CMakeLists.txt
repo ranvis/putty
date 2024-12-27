@@ -15,6 +15,7 @@ add_sources_from_current_dir(utils
   utils/filename.c
   utils/fontspec.c
   utils/getdlgitemtext_alloc.c
+  utils/get_module_filename.c
   utils/get_system_dir.c
   utils/get_username.c
   utils/gui-timing.c

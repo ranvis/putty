@@ -766,17 +766,16 @@ static HANDLE access_random_seed(int action)
         char *seedpath = get_ini_sz("Generic", "RandSeedFile", inifile);
         if (!seedpath) {
             seedpath = snewn(MAX_PATH + 1, char);
-            GetModuleFileName(NULL, seedpath, MAX_PATH + 1);
+            GetModuleFileName(NULL, seedpath, MAX_PATH + 1 - 9);
             char *p = strrchr(seedpath, '\\');
             if (p) {
-                strcpy(p, "\\putty.rnd");
+                strcpy(p + 1, "putty.rnd");
             } else {
                 seedpath[0] = 0;
             }
         }
-        if (*seedpath && try_random_seed(seedpath, action, &rethandle))
+        if (*seedpath && try_random_seed_and_free(seedpath, action, &rethandle))
             return rethandle;
-        sfree(seedpath);
     } else {
         HKEY rkey = open_regkey_ro(HKEY_CURRENT_USER, PUTTY_REG_POS);
         if (rkey) {

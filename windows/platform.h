@@ -802,6 +802,11 @@ int remove_from_jumplist_registry(const char *item);
  * empty one. */
 char *get_jumplist_registry_entries(void);
 
+DWORD safeGetModuleFileNameA(HMODULE module, LPSTR filename, DWORD size);
+DWORD safeGetModuleFileNameW(HMODULE module, LPWSTR filename, DWORD size);
+#define GetModuleFileNameA safeGetModuleFileNameA
+#define GetModuleFileNameW safeGetModuleFileNameW
+
 /*
  * Exports from iso2022.c
  */
