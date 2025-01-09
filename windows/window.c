@@ -175,7 +175,7 @@ struct WinGuiSeatListNode wgslisthead = {
 };
 
 static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT* rc,
-    WCHAR* str, UINT cnt, const int* dx, bool wide);
+    WCHAR* str, UINT cnt, const int* dx, bool wide, bool win95flag);
 
 /* */
 
@@ -536,13 +536,13 @@ static void wallpaper_prepare_dtimg(WinGuiSeat *wgs)
     WgsWallpaper *wall = &wgs->wall;
     int shading = conf_get_int(conf, CONF_shading);
     const Filename *fn = conf_get_filename(conf, CONF_bgimg_file);
-    if (wall->img_bmp == NULL && fn->cpath[0] != '\0') {
-        if (is_path_bmp(fn->cpath)) {
-            wall->img_bmp = LoadImage(0, fn->cpath, IMAGE_BITMAP, 0, 0,
+    if (wall->img_bmp == NULL && !filename_is_null(fn)) {
+        if (is_path_bmp(filename_to_str(fn))) {
+            wall->img_bmp = LoadImage(0, filename_to_str(fn), IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
             wall->img_has_alpha = false;
         } else {
-            wall->img_bmp = gdip_load_image(fn->wpath);
+            wall->img_bmp = gdip_load_image(filename_to_wstr(fn));
             wall->img_has_alpha = true;
         }
     }
@@ -589,14 +589,14 @@ static void wallpaper_prepare_image(WinGuiSeat *wgs)
     Conf *conf = wgs->conf;
     WgsWallpaper *wall = &wgs->wall;
     const Filename *fn = conf_get_filename(conf, CONF_bgimg_file);
-    if (fn->cpath[0] != '\0') {
+    if (!filename_is_null(fn)) {
         xtrans_free_background(wgs);
-        if (is_path_bmp(fn->cpath)) {
-            wall->bg_bmp = LoadImage(0, fn->cpath, IMAGE_BITMAP, 0, 0,
+        if (is_path_bmp(filename_to_str(fn))) {
+            wall->bg_bmp = LoadImage(0, filename_to_str(fn), IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
             wall->bg_has_alpha = false;
         } else {
-            wall->bg_bmp = gdip_load_image(fn->wpath);
+            wall->bg_bmp = gdip_load_image(filename_to_wstr(fn));
             wall->bg_has_alpha = true;
         }
         xtrans_bitmap_changed();
@@ -657,7 +657,7 @@ static void xtrans_load_bitmap(WinGuiSeat *wgs)
         wall->img_bmp = NULL;
     }
     xtrans_free_background(wgs);
-    if (wall->mode == WALLPAPER_MODE_IMAGE && conf_get_filename(conf, CONF_bgimg_file)->cpath[0] != '\0')
+    if (wall->mode == WALLPAPER_MODE_IMAGE && !filename_is_null(conf_get_filename(conf, CONF_bgimg_file)))
         return;
 
     GetModuleFileName(NULL, pass, MAX_PATH);
@@ -788,11 +788,11 @@ static HICON load_main_icon(Conf *conf, HINSTANCE inst)
 {
     HICON icon = NULL;
     Filename *icon_file = conf_get_filename(conf, CONF_iconfile);
-    if (icon_file->cpath[0] != '\0') {
-        char *buffer = snewn(strlen(icon_file->cpath) + 1, char);
+    if (!filename_is_null(icon_file)) {
+        char *buffer = snewn(strlen(filename_to_str(icon_file)) + 1, char);
         char *comma;
         int index = 0;
-        strcpy(buffer, icon_file->cpath);
+        strcpy(buffer, filename_to_str(icon_file));
         comma = strrchr(buffer, ',');
         if (comma != NULL) {
             *comma = '\0';
@@ -1822,9 +1822,9 @@ static int get_font_width(WinGuiSeat *wgs, HDC hdc, const TEXTMETRIC *tm)
     return ret;
 }
 
-static void general_textout2(WinGuiSeat *wgs, HDC hdc, int x, int y, CONST RECT *lprc,
-                            unsigned short *lpString, UINT cbCount,
-                            CONST INT *lpDx, int opaque, int wide, int iso2022)
+static void general_textout2(
+    WinGuiSeat *wgs, HDC hdc, int x, int y, CONST RECT *lprc,
+    unsigned short *lpString, UINT cbCount, CONST INT *lpDx, bool opaque, bool wide, bool win95flag)
 {
     int i, j, xp, xn;
     RECT newrc;
@@ -1883,7 +1883,7 @@ debug(("\n           rect: [%d,%d %d,%d]\n", newrc.left, newrc.top, newrc.right,
             newrc.top = lprc->top;
             newrc.bottom = lprc->bottom;
             ExtTextOutW2(hdc, xp, y, ETO_CLIPPED | (opaque ? ETO_OPAQUE : 0),
-                        &newrc, lpString+i, j-i, lpDx+i, wide);
+                        &newrc, lpString+i, j-i, lpDx+i, wide, win95flag);
         }
 
         i = j;
@@ -2643,7 +2643,7 @@ static BOOL CALLBACK CtrlTabWindowProc(HWND hwnd, LPARAM lParam)
     DWORD wnd_extra;
     if (info->self != hwnd && (wnd_extra = GetClassLong(hwnd, GCL_CBWNDEXTRA)) >= CTRL_TAB_WNDEXTRA
         // FIXME: this may not support ".ansi" appended window class
-        && GetClassName(hwnd, class_name, sizeof class_name) >= 5 && strncmp(class_name, appname, sizeof class_name) == 0
+        && GetClassName(hwnd, class_name, lenof(class_name)) >= 5 && strncmp(class_name, appname, lenof(class_name)) == 0
         && GetWindowLong(hwnd, wnd_extra - 12) == CTRL_TAB_SIGNATURE) {
         DWORD hwnd_hi_date_time = GetWindowLong(hwnd, wnd_extra - 8);
         DWORD hwnd_lo_date_time = GetWindowLong(hwnd, wnd_extra - 4);
@@ -4526,6 +4526,7 @@ static void do_text_internal(
     }
 
     opaque = !wp_flag; /* start by erasing the rectangle if no wallpaper */
+    bool win95flag = wgs->term->ucsdata->iso2022_data.win95flag;
     for (remaining = len; remaining > 0;
          text += len, remaining -= len, x += char_width * len2) {
         len = (maxlen < remaining ? maxlen : remaining);
@@ -4602,14 +4603,14 @@ static void do_text_internal(
                 wgs->wintw_hdc, x + xoffset,
                 y - wgs->font_height * (lattr == LATTR_BOT) + text_adjust,
                 ETO_CLIPPED | (opaque ? ETO_OPAQUE : 0),
-                &line_box, wbuf, nlen, (use_lpDx ? lpDx : NULL), !!(attr & ATTR_WIDE));
+                &line_box, wbuf, nlen, (use_lpDx ? lpDx : NULL), !!(attr & ATTR_WIDE), win95flag);
             if (wgs->bold_font_mode == BOLD_SHADOW && (attr & ATTR_BOLD)) {
                 SetBkMode(wgs->wintw_hdc, TRANSPARENT);
                 ExtTextOutW2(
                     wgs->wintw_hdc, x + xoffset - 1,
                     y - wgs->font_height * (lattr == LATTR_BOT) + text_adjust,
                     ETO_CLIPPED, &line_box, wbuf, nlen,
-                    (use_lpDx ? lpDx : NULL), !!(attr & ATTR_WIDE));
+                    (use_lpDx ? lpDx : NULL), !!(attr & ATTR_WIDE), win95flag);
             }
 
             lpDx[0] = -1;
@@ -4653,7 +4654,7 @@ static void do_text_internal(
                 y - wgs->font_height * (lattr==LATTR_BOT) + text_adjust,
                 &line_box, wbuf, len, lpDx,
                 opaque && !(attr & TATTR_COMBINING),
-                !!(attr & ATTR_WIDE), in_utf(wgs->term) && wgs->term->ucsdata->iso2022);
+                !!(attr & ATTR_WIDE), win95flag);
 
             /* And the shadow bold hack. */
             if (wgs->bold_font_mode == BOLD_SHADOW && (attr & ATTR_BOLD)) {
@@ -4662,7 +4663,7 @@ static void do_text_internal(
                     wgs->wintw_hdc, x + xoffset - 1,
                     y - wgs->font_height * (lattr == LATTR_BOT) + text_adjust,
                     ETO_CLIPPED, &line_box, wbuf, len,
-                    (use_lpDx ? lpDx : NULL), !!(attr & ATTR_WIDE));
+                    (use_lpDx ? lpDx : NULL), !!(attr & ATTR_WIDE), win95flag);
             }
         }
 
@@ -6722,7 +6723,7 @@ static bool win_seat_can_set_trust_status(Seat *seat)
 
 /* (opt & ETO_CLIPPED) must not be zero. */
 static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT *rc,
-                         WCHAR *str, UINT cnt, const int *dx, bool wide)
+                         WCHAR *str, UINT cnt, const int *dx, bool wide, bool w95_flag)
 {
     unsigned int i;
     SIZE s;
@@ -6731,13 +6732,12 @@ static void ExtTextOutW2(HDC hdc, int x, int y, UINT opt, const RECT *rc,
     HDC dc = NULL, dc2;
     HBITMAP oldbm;
     int bk_mode = 0;
-    extern bool iso2022_win95flag;
     if (!dx) {
         ExtTextOutW(hdc, x, y, opt, rc, str, cnt, dx);
         return;
     }
     bool f = false;
-    bool w95 = wide ? iso2022_win95flag : false;
+    bool w95 = wide ? w95_flag : false;
     rc2 = *rc;
     while (cnt) {
         int dxsum = 0;

@@ -4,8 +4,6 @@
 
 #define strlenu(s) strlen ((char *)s)
 
-bool iso2022_win95flag;
-
 #ifdef _WINDOWS
 #define UCS2CHAR WCHAR
 
@@ -1832,7 +1830,6 @@ iso2022_init (struct iso2022_data *this, const char *p, int mode)
       }
     memcpy (init_string, initstring, i);
   }
-  iso2022_win95flag = this->win95flag = tmp_win95flag;
   init (&this->rcv);
   init (&this->trns);
   if (tmp_mskanji)

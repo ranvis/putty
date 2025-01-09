@@ -23,7 +23,7 @@ bool get_use_inifile(void)
         char *p = strrchr(inifile, '\\');
         if (p) {
             strcpy(p, "\\putty.ini");
-            GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
+            GetPrivateProfileString("Generic", "UseIniFile", "", buf, lenof(buf), inifile);
             use_inifile = buf[0] == '1';
         }
         if (!use_inifile) {
@@ -38,7 +38,7 @@ bool get_use_inifile(void)
             }
             if (p_SHGetFolderPathA && SUCCEEDED(p_SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, inifile))) {
                 strcat(inifile, "\\PuTTY\\putty.ini");
-                GetPrivateProfileString("Generic", "UseIniFile", "", buf, sizeof (buf), inifile);
+                GetPrivateProfileString("Generic", "UseIniFile", "", buf, lenof(buf), inifile);
                 use_inifile = buf[0] == '1';
             }
             FreeLibrary(module);
@@ -275,7 +275,7 @@ bool put_ini_int(const char *section, const char *name, int value, const char *i
 bool get_ini_int(const char *section, const char *name, const char *ini_file, int *value)
 {
     char buf[32];
-    GetPrivateProfileString(section, name, "", buf, sizeof buf, ini_file);
+    GetPrivateProfileString(section, name, "", buf, lenof(buf), ini_file);
     if ('0' <= buf[0] && buf[0] <= '9') {
         *value = atoi(buf);
         return true;

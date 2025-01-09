@@ -308,32 +308,32 @@ static void ldisc_input_queue_callback(void *ctx)
 {
     Ldisc *ldisc = (Ldisc *)ctx;
 
-#define ISO2022_OUTPUT(a1,a2,a3,a4) do { \
-        if (!iso2022) a1 (a2, a3, a4); \
+#define ISO2022_OUTPUT(out_fn, ins, obuf, olen) do { \
+        if (!iso2022) out_fn(ins, obuf, olen); \
         else { \
-            char a[100]; \
-            const char *p = a3; \
-            int b = 0; \
-            int l; \
-            l = a4; \
-            while (l) { \
-                if (!iso2022_tbuflen (iso2022)) \
-                    iso2022_transmit (iso2022, *p++), l--; \
-                while (iso2022_tbuflen (iso2022)) { \
-                    a[b++] = iso2022_tgetbuf (iso2022); \
-                    if (b == sizeof a) \
-                        a1 (a2, a, b), b = 0; \
+            char dbuf[100]; \
+            const char *src = obuf; \
+            int dlen = 0; \
+            size_t rem = olen; \
+            while (rem) { \
+                if (!iso2022_tbuflen(iso2022)) \
+                    iso2022_transmit(iso2022, *src++), rem--; \
+                while (iso2022_tbuflen(iso2022)) { \
+                    dbuf[dlen++] = iso2022_tgetbuf(iso2022); \
+                    if (dlen == sizeof dbuf) \
+                        out_fn(ins, dbuf, dlen), dlen = 0; \
                 } \
             } \
-            if (b) \
-                a1 (a2, a, b); \
+            if (dlen) \
+                out_fn(ins, dbuf, dlen); \
         } \
     } while (0)
+
     struct iso2022_data *iso2022 = NULL;
     if (ldisc->term && in_utf(ldisc->term) && ldisc->term->ucsdata->iso2022)
         iso2022 = &ldisc->term->ucsdata->iso2022_data;
     if (iso2022)
-        iso2022_tbufclear (iso2022);
+        iso2022_tbufclear(iso2022);
 
     /*
      * Toplevel callback that is triggered whenever the input queue

@@ -39,11 +39,6 @@ typedef struct wallpaper_paint_mode_tag {
     BLENDFUNCTION bf;
 } wallpaper_paint_mode;
 
-extern HBITMAP background_bmp;
-extern HBITMAP img_bmp;
-extern bool bg_has_alpha;
-extern bool img_has_alpha;
-
 BOOL msimg_alphablend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn);
 void wallpaper_paint(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HBITMAP hbmp, const wallpaper_paint_mode *mode);
 void wallpaper_fill_bgcolor(WinGuiSeat *wgs, HDC hdc, const RECT *rect);

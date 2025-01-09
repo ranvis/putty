@@ -18,7 +18,7 @@ FontSpec *platform_default_fontspec(const char *name)
         {
             int charset;
             char buf[32];
-            if (!get_l10n_setting("_DEFAULTFONTCHARSET_", buf, sizeof (buf)))
+            if (!get_l10n_setting("_DEFAULTFONTCHARSET_", buf, lenof(buf)))
                 charset = ANSI_CHARSET;
             else if (!strcmp(buf, "ANSI_CHARSET"))
                 charset = ANSI_CHARSET;

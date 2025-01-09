@@ -939,7 +939,7 @@ enum Extension { KNOWN_EXTENSIONS(DECL_EXT_ENUM) EXT_UNKNOWN };
 static const ptrlen extension_names[] = { KNOWN_EXTENSIONS(DEF_EXT_NAMES) };
 
 static PageantAsyncOp *pageant_make_op(
-    PageantClient *pc, PageantClientRequestId *reqid, ptrlen msgpl, bool isRemoteCall)
+    PageantClient *pc, PageantClientRequestId *reqid, ptrlen msgpl, bool is_remote_call)
 {
     BinarySource msg[1];
     strbuf *sb = strbuf_new_nm();
@@ -1053,7 +1053,7 @@ static PageantAsyncOp *pageant_make_op(
             fail("key not found");
             goto challenge1_cleanup;
         }
-        if (isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
+        if (is_remote_call && !accept_agent_request_pk_pub(type, pub)) {
             fail("user declined");
             goto challenge1_cleanup;
         }
@@ -1130,7 +1130,7 @@ static PageantAsyncOp *pageant_make_op(
         else
             pageant_client_log(pc, reqid, "no signature flags");
 
-        if (isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
+        if (is_remote_call && !accept_agent_request_pk_pub(type, pub)) {
             fail("user declined");
             goto responded;
         }
@@ -1174,7 +1174,7 @@ static PageantAsyncOp *pageant_make_op(
             fail("key is invalid");
             goto add1_cleanup;
         }
-        if (isRemoteCall && !accept_agent_request(type, key, NULL)) {
+        if (is_remote_call && !accept_agent_request(type, key, NULL)) {
             fail("user declined");
             goto add1_cleanup;
         }
@@ -1238,7 +1238,7 @@ static PageantAsyncOp *pageant_make_op(
             goto add2_cleanup;
         }
 
-        if (isRemoteCall && !accept_agent_request(type, NULL, key)) {
+        if (is_remote_call && !accept_agent_request(type, NULL, key)) {
             fail("user declined");
             goto add2_cleanup;
         }
@@ -1301,7 +1301,7 @@ static PageantAsyncOp *pageant_make_op(
 
         pub = findpubkey1(&reqkey);
         freersakey(&reqkey);
-        if (pub && isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
+        if (pub && is_remote_call && !accept_agent_request_pk_pub(type, pub)) {
             fail("user declined");
         } else if (pub) {
             pageant_client_log(pc, reqid, "found with comment: %s",
@@ -1366,7 +1366,7 @@ static PageantAsyncOp *pageant_make_op(
         pageant_client_log(pc, reqid,
                            "request: SSH1_AGENTC_REMOVE_ALL_RSA_IDENTITIES");
 
-        if (isRemoteCall && !accept_agent_request(type, NULL, NULL)) {
+        if (is_remote_call && !accept_agent_request(type, NULL, NULL)) {
             fail("user declined");
             goto responded;
         }
@@ -1385,7 +1385,7 @@ static PageantAsyncOp *pageant_make_op(
         pageant_client_log(pc, reqid,
                            "request: SSH2_AGENTC_REMOVE_ALL_IDENTITIES");
 
-        if (isRemoteCall && !accept_agent_request(type, NULL, NULL)) {
+        if (is_remote_call && !accept_agent_request(type, NULL, NULL)) {
             fail("user declined");
             goto responded;
         }
@@ -1541,7 +1541,7 @@ static PageantAsyncOp *pageant_make_op(
                 fail("key not found");
                 goto responded;
             }
-            if (isRemoteCall && !accept_agent_request_pk_pub(type, pub)) {
+            if (is_remote_call && !accept_agent_request_pk_pub(type, pub)) {
                 fail("user declined");
                 goto responded;
             }
@@ -1657,7 +1657,7 @@ static PageantAsyncOp *pageant_make_op(
 void pageant_handle_msg(PageantClient *pc, PageantClientRequestId *reqid,
                         ptrlen msgpl)
 {
-    PageantAsyncOp *pao = pageant_make_op(pc, reqid, msgpl, 1);
+    PageantAsyncOp *pao = pageant_make_op(pc, reqid, msgpl, true);
     queue_toplevel_callback(pageant_async_op_callback, pao);
 }
 
@@ -2092,7 +2092,7 @@ static unsigned pageant_client_op_query(PageantClientOp *pco)
 
         assert(pco->buf->len > 4);
         PageantAsyncOp *pao = pageant_make_op(
-            &pic.pc, &reqid, make_ptrlen(pco->buf->s + 4, pco->buf->len - 4), 0);
+            &pic.pc, &reqid, make_ptrlen(pco->buf->s + 4, pco->buf->len - 4), false);
         while (!pic.got_response)
             pageant_async_op_coroutine(pao);
 

@@ -1042,7 +1042,7 @@ void load_open_settings(settings_r *sesskey, Conf *conf)
      */
     {
         char buf[32];
-        get_l10n_setting("_LINECODEPAGE_", buf, sizeof buf);
+        get_l10n_setting("_LINECODEPAGE_", buf, lenof(buf));
         gpps(sesskey, "LineCodePage", buf, conf, CONF_line_codepage);
     }
 

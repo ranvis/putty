@@ -838,9 +838,9 @@ static void defer_reencrypt(bool flag)
 int accept_agent_request(int type, const RSAKey *rsaKey, const ssh2_userkey *ssh2UserKey)
 {
     int result;
-    defer_reencrypt(1);
+    defer_reencrypt(true);
     result = do_accept_agent_request(type, rsaKey, ssh2UserKey);
-    defer_reencrypt(0);
+    defer_reencrypt(false);
     return result;
 }
 

@@ -701,8 +701,8 @@ static void codepage_handler(dlgcontrol *ctrl, dlgparam *dlg,
         const char *cp, *thiscp;
         dlg_update_start(ctrl, dlg);
         thiscp = conf_get_str(conf, CONF_line_codepage);
-        if (decode_codepage (thiscp) != CP_UTF8 || iso2022_init_test (thiscp))
-        thiscp = cp_name(decode_codepage(thiscp));
+        if (decode_codepage(thiscp) != CP_UTF8 || iso2022_init_test(thiscp))
+            thiscp = cp_name(decode_codepage(thiscp));
         dlg_listbox_clear(ctrl, dlg);
         for (i = 0; (cp = cp_enumerate(i)) != NULL; i++)
             dlg_listbox_add(ctrl, dlg, cp);
@@ -712,9 +712,8 @@ static void codepage_handler(dlgcontrol *ctrl, dlgparam *dlg,
     } else if (event == EVENT_VALCHANGE) {
         char *codepage = dlg_editbox_get(ctrl, dlg);
         conf_set_str(conf, CONF_line_codepage, codepage);
-        if (decode_codepage (codepage) != CP_UTF8 || iso2022_init_test (codepage))
-        conf_set_str(conf, CONF_line_codepage,
-                     cp_name(decode_codepage(codepage)));
+        if (decode_codepage(codepage) != CP_UTF8 || iso2022_init_test(codepage))
+            conf_set_str(conf, CONF_line_codepage, cp_name(decode_codepage(codepage)));
         sfree(codepage);
     }
 }

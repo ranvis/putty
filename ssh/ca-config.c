@@ -250,10 +250,10 @@ static void ca_save_handler(dlgcontrol *ctrl, dlgparam *dp,
                             void *data, int event)
 {
     struct ca_state *st = (struct ca_state *)ctrl->context.p;
-    char msg_str_buf[256];
     if (event == EVENT_ACTION) {
         if (!*st->validity) {
-            dlg_error_msg(dp, l10n_translate("No validity expression configured for this key", msg_str_buf));
+            dlg_error_msg(dp, "No validity expression configured "
+                          "for this key");
             return;
         }
 
@@ -272,7 +272,7 @@ static void ca_save_handler(dlgcontrol *ctrl, dlgparam *dp,
         }
 
         if (!st->ca_pubkey_blob) {
-            dlg_error_msg(dp, l10n_translate("No valid CA public key entered", msg_str_buf));
+            dlg_error_msg(dp, "No valid CA public key entered");
             return;
         }
 

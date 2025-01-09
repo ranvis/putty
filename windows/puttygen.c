@@ -1484,9 +1484,6 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
         "Please generate some randomness by moving the mouse over the blank area.";
     struct MainDlgState *state;
 
-/*    if (hwnd == NULL)
-        hwnd = mainwnd;
-#define hwnd mainwnd*/
     switch (msg) {
       case WM_INITDIALOG:
         if (has_help())
