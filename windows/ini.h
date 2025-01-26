@@ -8,9 +8,8 @@ extern char inifile[];
 typedef void (*sprintf_void_fp)(const char *fmt, ...);
 
 bool get_use_inifile(void);
-char *change_ini_path(const char *new_path);
-void cmdline_arg_process_ini_option(CmdlineArgList *arglist, size_t *arglistpos, sprintf_void_fp error_cb);
-void aux_match_process_ini_option(AuxMatchOpt *amo);
+void process_ini_option(sprintf_void_fp error_cb);
+size_t skip_ini_option(size_t index, size_t argc, wchar_t **argv);
 
 char *create_ini_section(const char *name, const char *prefix, const char *ini_file);
 char *open_ini_section(const char *name, const char *prefix, const char *ini_file);

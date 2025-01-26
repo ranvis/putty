@@ -2089,10 +2089,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
      * stored in the 'clkeys' array.
      */
 
+    process_ini_option(opt_error);
     confirm_any_request = (bool)app_conf_get_int("ConfirmAnyRequest", 0, 0, 1);
     bool add_keys_encrypted = false;
     AuxMatchOpt amo = aux_match_opt_init(opt_error);
-    aux_match_process_ini_option(&amo);
     while (!aux_match_done(&amo)) {
         CmdlineArg *valarg;
         #define match_opt(...) aux_match_opt( \

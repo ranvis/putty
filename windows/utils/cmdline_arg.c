@@ -4,6 +4,7 @@
 
 #include <wchar.h>
 #include "putty.h"
+#include "ini.h"
 
 typedef struct CmdlineArgWin CmdlineArgWin;
 struct CmdlineArgWin {
@@ -90,7 +91,8 @@ CmdlineArgList *cmdline_arg_list_from_GetCommandLineW(void)
 
     listp->args = NULL;
     listp->nargs = listp->argssize = 0;
-    for (size_t i = 1; i < list->argc; i++) {
+    size_t i = skip_ini_option(1, list->argc, list->argv);
+    for (; i < list->argc; i++) {
         CmdlineArg *argp = cmdline_arg_from_wide_argv_word(
             listp, list->argv[i]);
         CmdlineArgWin *arg = container_of(argp, CmdlineArgWin, argp);

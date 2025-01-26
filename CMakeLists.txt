@@ -155,6 +155,7 @@ installed_program(psftp)
 add_executable(psocks
   ${platform}/psocks.c
   psocks.c
+  stubs/no-ini.c
   stubs/no-rand.c
   proxy/nocproxy.c
   proxy/nosshproxy.c

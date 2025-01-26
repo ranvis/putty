@@ -36,6 +36,7 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
     }
     conf_set_int(conf, CONF_logtype, LGTYP_NONE);
 
+    process_ini_option(cmdline_error);
     do_defaults(NULL, conf);
 
     p = handle_restrict_acl_cmdline_prefix(cmdline);
@@ -58,7 +59,6 @@ void gui_term_process_cmdline(Conf *conf, char *cmdline)
          */
         CmdlineArgList *arglist = cmdline_arg_list_from_GetCommandLineW();
         size_t arglistpos = 0;
-        cmdline_arg_process_ini_option(arglist, &arglistpos, cmdline_error);
         while (arglist->args[arglistpos]) {
             CmdlineArg *arg = arglist->args[arglistpos++];
             CmdlineArg *nextarg = arglist->args[arglistpos];

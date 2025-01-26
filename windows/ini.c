@@ -64,7 +64,7 @@ static bool change_ini_path_core(const char *new_path)
     return true;
 }
 
-char *change_ini_path(const char *new_path)
+static char *change_ini_path(const char *new_path)
 {
     if (!new_path || !*new_path) {
         return l10n_dupstr("-ini must be followed by a filename");
@@ -75,24 +75,36 @@ char *change_ini_path(const char *new_path)
     return NULL;
 }
 
-void cmdline_arg_process_ini_option(CmdlineArgList *arglist, size_t *arglistpos, sprintf_void_fp error_cb)
+void process_ini_option(sprintf_void_fp error_cb)
 {
-    CmdlineArg *arg = arglist->args[*arglistpos];
-    const char *p = cmdline_arg_to_str(arg);
-    if (!p || strcmp(p, "-ini")) {
-        return;
+    const wchar_t *cmdline = GetCommandLineW();
+    const wchar_t *ini_arg = wcsstr(cmdline, L"-ini");
+    if (!ini_arg || (cmdline != ini_arg && (ini_arg[-1] != ' ' && ini_arg[-1] != '\t' && ini_arg[-1] != '"'))) return;
+    int argc;
+    wchar_t **argv;
+    split_into_argv_w(cmdline, true, &argc, &argv, NULL);
+    if (argc >= 2 && !wcscmp(argv[1], L"-ini")) {
+        char *new_path = argc > 2 ? dup_wc_to_mb(CP_ACP, argv[2], "") : NULL;
+        char *error_msg = change_ini_path(new_path);
+        sfree(new_path);
+        if (error_msg) {
+            error_cb(error_msg);
+            exit(1);
+        }
     }
-    (*arglistpos)++;
-    CmdlineArg *nextarg = arglist->args[*arglistpos];
-    if (nextarg) {
-        (*arglistpos)++;
+    sfree(argv[0]);
+    sfree(argv);
+}
+
+size_t skip_ini_option(size_t index, size_t argc, wchar_t **argv)
+{
+    if (argc > index) {
+        if (!wcscmp(argv[index], L"-ini")) {
+            index++;
+            if (argc > index) index++;
+        }
     }
-    const char *value = cmdline_arg_to_str(nextarg);
-    char *error_msg = change_ini_path(value);
-    if (error_msg) {
-        error_cb(error_msg);
-        exit(1);
-    }
+    return index;
 }
 
 static void put_ini_section(const char *in, strbuf *out, const char *prefix)

@@ -2282,12 +2282,12 @@ int psftp_main(CmdlineArgList *arglist)
 
     /* Load Default Settings before doing anything else. */
     conf = conf_new();
+#ifdef _WINDOWS
+    process_ini_option(cmdline_error);
+#endif
     do_defaults(NULL, conf);
 
     size_t arglistpos = 0;
-#ifdef _WINDOWS
-    cmdline_arg_process_ini_option(arglist, &arglistpos, cmdline_error);
-#endif
     while (arglist->args[arglistpos]) {
         CmdlineArg *arg = arglist->args[arglistpos++];
         CmdlineArg *nextarg = arglist->args[arglistpos];

@@ -309,6 +309,7 @@ int main(int argc, char **argv)
      * Process the command line.
      */
     conf = conf_new();
+    process_ini_option(cmdline_error);
     do_defaults(NULL, conf);
     settings_set_default_protocol(conf_get_int(conf, CONF_protocol));
     settings_set_default_port(conf_get_int(conf, CONF_port));
@@ -330,7 +331,6 @@ int main(int argc, char **argv)
     }
     CmdlineArgList *arglist = cmdline_arg_list_from_GetCommandLineW();
     size_t arglistpos = 0;
-    cmdline_arg_process_ini_option(arglist, &arglistpos, cmdline_error);
     while (arglist->args[arglistpos]) {
         CmdlineArg *arg = arglist->args[arglistpos++];
         CmdlineArg *nextarg = arglist->args[arglistpos];

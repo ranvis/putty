@@ -26,11 +26,6 @@ AuxMatchOpt aux_match_opt_init(aux_opt_error_fn_t opt_error)
     return amo[0];
 }
 
-void aux_match_process_ini_option(AuxMatchOpt *amo)
-{
-    cmdline_arg_process_ini_option(amo->arglist, &amo->index, amo->error);
-}
-
 /*
  * Call this with a NULL-terminated list of synonymous option names.
  * Point 'val' at a char * to receive the option argument, if one is
