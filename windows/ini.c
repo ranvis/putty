@@ -15,16 +15,16 @@ char inifile[2 * MAX_PATH + 10];
 
 #define LOCAL_SCOPE
 
+static bool get_ini_bool(const char *section, const char *name, const char *ini_file, bool fallback);
+
 bool get_use_inifile(void)
 {
     if (inifile[0] == '\0') {
-        char buf[10];
         GetModuleFileName(NULL, inifile, sizeof inifile - 10);
         char *p = strrchr(inifile, '\\');
         if (p) {
             strcpy(p, "\\putty.ini");
-            GetPrivateProfileString("Generic", "UseIniFile", "", buf, lenof(buf), inifile);
-            use_inifile = buf[0] == '1';
+            use_inifile = get_ini_bool("Generic", "UseIniFile", inifile, false);
         }
         if (!use_inifile) {
             HMODULE module;
@@ -38,8 +38,7 @@ bool get_use_inifile(void)
             }
             if (p_SHGetFolderPathA && SUCCEEDED(p_SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, inifile))) {
                 strcat(inifile, "\\PuTTY\\putty.ini");
-                GetPrivateProfileString("Generic", "UseIniFile", "", buf, lenof(buf), inifile);
-                use_inifile = buf[0] == '1';
+                use_inifile = get_ini_bool("Generic", "UseIniFile", inifile, false);
             }
             FreeLibrary(module);
         }
@@ -83,7 +82,7 @@ void process_ini_option(sprintf_void_fp error_cb)
     const wchar_t *cmdline = GetCommandLineW();
     const wchar_t *ini_arg = wcsstr(cmdline, L"-ini");
     if (!ini_arg || (cmdline != ini_arg
-        && (ini_arg[-1] != '-' && ini_arg[-1] != ' ' && ini_arg[-1] != '\t' && ini_arg[-1] != '"'))) return;
+        && (ini_arg[-1] != 'o' && ini_arg[-1] != ' ' && ini_arg[-1] != '\t' && ini_arg[-1] != '"'))) return;
     int argc;
     wchar_t **argv;
     split_into_argv_w(cmdline, true, &argc, &argv, NULL);
@@ -135,10 +134,8 @@ char *create_ini_section(const char *name, const char *prefix, const char *ini_f
 char *open_ini_section(const char *name, const char *prefix, const char *ini_file)
 {
     strbuf *sb = strbuf_new();
-    char temp[3];
     put_ini_section(name, sb, prefix);
-    GetPrivateProfileString(sb->s, "Present", "", temp, sizeof temp, ini_file);
-    if (temp[0] != '1') {
+    if (!get_ini_bool(sb->s, "Present", ini_file, false)) {
         strbuf_free(sb);
         return NULL;
     }
@@ -177,9 +174,7 @@ bool enum_ini_section_next(ini_sections *sects, strbuf *sb, const char *prefix)
     size_t prefix_len = strlen(prefix);
     while (*sects->p != '\0') {
         if (!strncmp((char*)sects->p, prefix, prefix_len)) {
-            char temp[3];
-            GetPrivateProfileString(sects->p, "Present", "", temp, sizeof(temp), sects->ini_path);
-            if (temp[0] == '1') {
+            if (get_ini_bool(sects->p, "Present", sects->ini_path, false)) {
                 unescape_registry_key(sects->p + prefix_len, sb);
                 while (*sects->p++ != '\0')
                     ;
@@ -208,6 +203,13 @@ static size_t strspn_table(char *str, const char *tab)
         p++;
     }
     return (size_t)(p - str);
+}
+
+static bool get_ini_bool(const char *section, const char *name, const char *ini_file, bool fallback)
+{
+    char buf[4];
+    GetPrivateProfileString(section, name, fallback ? "1" : "", buf, lenof(buf), ini_file);
+    return *buf == '1';
 }
 
 /*
