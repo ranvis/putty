@@ -32,7 +32,7 @@
 
 #define APPNAME "PuTTYgen"
 
-const char *const appname = STR(APPNAME);
+const char *const appname = APPNAME;
 
 static Filename *cmdline_keyfile = NULL;
 static ptrlen cmdline_demo_keystr;

@@ -40,7 +40,7 @@
 
 #define APPNAME "Pageant"
 
-const char *const appname = STR(APPNAME);
+const char *const appname = APPNAME;
 
 /* Titles and class names for invisible windows. IPCWINTITLE and
  * IPCCLASSNAME are critical to backwards compatibility: WM_COPYDATA
