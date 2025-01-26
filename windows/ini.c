@@ -82,17 +82,23 @@ void process_ini_option(sprintf_void_fp error_cb)
 {
     const wchar_t *cmdline = GetCommandLineW();
     const wchar_t *ini_arg = wcsstr(cmdline, L"-ini");
-    if (!ini_arg || (cmdline != ini_arg && (ini_arg[-1] != ' ' && ini_arg[-1] != '\t' && ini_arg[-1] != '"'))) return;
+    if (!ini_arg || (cmdline != ini_arg
+        && (ini_arg[-1] != '-' && ini_arg[-1] != ' ' && ini_arg[-1] != '\t' && ini_arg[-1] != '"'))) return;
     int argc;
     wchar_t **argv;
     split_into_argv_w(cmdline, true, &argc, &argv, NULL);
-    if (argc >= 2 && !wcscmp(argv[1], L"-ini")) {
-        char *new_path = argc > 2 ? dup_wc_to_mb(CP_ACP, argv[2], "") : NULL;
-        char *error_msg = change_ini_path(new_path);
-        sfree(new_path);
-        if (error_msg) {
-            error_cb(error_msg);
-            exit(1);
+    if (argc >= 2) {
+        if (!wcscmp(argv[1], L"-ini")) {
+            char *new_path = argc > 2 ? dup_wc_to_mb(CP_ACP, argv[2], "") : NULL;
+            char *error_msg = change_ini_path(new_path);
+            sfree(new_path);
+            if (error_msg) {
+                error_cb(error_msg);
+                exit(1);
+            }
+        } else if (!wcscmp(argv[1], L"-no-ini")) {
+            inifile[0] = '-';
+            inifile[1] = '\0';
         }
     }
     sfree(argv[0]);
@@ -105,6 +111,8 @@ size_t skip_ini_option(size_t index, size_t argc, wchar_t **argv)
         if (!wcscmp(argv[index], L"-ini")) {
             index++;
             if (argc > index) index++;
+        } else if (!wcscmp(argv[index], L"-no-ini")) {
+            index++;
         }
     }
     return index;
