@@ -789,16 +789,22 @@ static HICON load_main_icon(Conf *conf, HINSTANCE inst)
     HICON icon = NULL;
     Filename *icon_file = conf_get_filename(conf, CONF_iconfile);
     if (!filename_is_null(icon_file)) {
-        char *buffer = snewn(strlen(filename_to_str(icon_file)) + 1, char);
-        char *comma;
+        wchar_t *path = filename_to_wstr(icon_file);
+        wchar_t *comma = wcsrchr(path, L',');
+        wchar_t *buffer = NULL;
         int index = 0;
-        strcpy(buffer, filename_to_str(icon_file));
-        comma = strrchr(buffer, ',');
-        if (comma != NULL) {
-            *comma = '\0';
-            index = atoi(comma + 1);
+        if (comma) {
+            buffer = dupwcs(path);
+            comma = buffer + (comma - path);
+            path = buffer;
+            wchar_t *end_ptr;
+            index = wcstol(comma + 1, &end_ptr, 10);
+            if (*end_ptr == L'\0')
+                *comma = L'\0';
+            else
+                index = 0;
         }
-        icon = ExtractIcon(inst, buffer, index);
+        ExtractIconExW(path, index, &icon, NULL, 1);
         sfree(buffer);
     }
     if (icon == NULL) {
