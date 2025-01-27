@@ -146,7 +146,7 @@ static void xtrans_paint_bg(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, i
 static void xtrans_paint_bg_fwp(WinGuiSeat *wgs, HDC hdc, int x, int y, int width, int height);
 static void xtrans_free_background(WinGuiSeat *wgs);
 static void wallpaper_cleanup(WinGuiSeat *wgs);
-static int is_path_bmp(const char *path);
+static int is_path_bmp(const wchar_t *path);
 static void wallpaper_prepare_desktop(WinGuiSeat *wgs);
 static void wallpaper_prepare_dtimg();
 static void wallpaper_prepare_image(WinGuiSeat *wgs);
@@ -512,10 +512,10 @@ static void wallpaper_prepare_desktop(WinGuiSeat *wgs)
     ReleaseDC(hwnd, hdc);
 }
 
-static int is_path_bmp(const char *path)
+static int is_path_bmp(const wchar_t *path)
 {
-    const char *ext = strrchr(path, '.');
-    return !ext || !stricmp(ext, ".bmp");
+    const wchar_t *ext = wcsrchr(path, L'.');
+    return !ext || !_wcsicmp(ext, L".bmp");
 }
 
 static void wallpaper_set_mode(WgsWallpaper *wall, Conf *conf, int mode)
@@ -537,8 +537,8 @@ static void wallpaper_prepare_dtimg(WinGuiSeat *wgs)
     int shading = conf_get_int(conf, CONF_shading);
     const Filename *fn = conf_get_filename(conf, CONF_bgimg_file);
     if (wall->img_bmp == NULL && !filename_is_null(fn)) {
-        if (is_path_bmp(filename_to_str(fn))) {
-            wall->img_bmp = LoadImage(0, filename_to_str(fn), IMAGE_BITMAP, 0, 0,
+        if (is_path_bmp(filename_to_wstr(fn))) {
+            wall->img_bmp = LoadImageW(0, filename_to_wstr(fn), IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
             wall->img_has_alpha = false;
         } else {
@@ -591,8 +591,8 @@ static void wallpaper_prepare_image(WinGuiSeat *wgs)
     const Filename *fn = conf_get_filename(conf, CONF_bgimg_file);
     if (!filename_is_null(fn)) {
         xtrans_free_background(wgs);
-        if (is_path_bmp(filename_to_str(fn))) {
-            wall->bg_bmp = LoadImage(0, filename_to_str(fn), IMAGE_BITMAP, 0, 0,
+        if (is_path_bmp(filename_to_wstr(fn))) {
+            wall->bg_bmp = LoadImageW(0, filename_to_wstr(fn), IMAGE_BITMAP, 0, 0,
                 (conf_get_bool(conf, CONF_use_ddb) ? 0 : LR_CREATEDIBSECTION) | LR_LOADFROMFILE | LR_SHARED);
             wall->bg_has_alpha = false;
         } else {
