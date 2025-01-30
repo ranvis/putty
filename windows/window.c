@@ -1171,8 +1171,6 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         for (j = 0; j < lenof(wgs->popup_menus); j++) {
             m = wgs->popup_menus[j].menu;
 
-            AppendMenu(m, MF_ENABLED, IDM_COPY, "&Copy");
-            AppendMenu(m, MF_ENABLED, IDM_PASTE, "&Paste");
             AppendMenu(m, MF_SEPARATOR, 0, 0);
             AppendMenu(m, MF_ENABLED, IDM_SHOWLOG, "&Event Log");
             AppendMenu(m, MF_SEPARATOR, 0, 0);
