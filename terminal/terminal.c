@@ -3323,13 +3323,12 @@ static void term_display_graphic_char(Terminal *term, unsigned long c)
         incpos(cursplus);
         check_selection(term, term->curs, cursplus);
     }
-    if (conf_get_int(term->conf, CONF_logtype) == LGTYP_ASCII && iso2022
-            && term->utf8.chr == (int) c
-            && 0x7f < c && c < 0x80000000
-            && term->logctx) {
-        // output non ASCII characters by UTF-8 encoding
+    if (term->logtype == LGTYP_ASCII && iso2022 && term->logctx
+            && 0x9f < c && c <= 0x10ffff
+            && term->utf8.chr == (int)c) {
+        // output non-ASCII characters in UTF-8 encoding
         int i;
-        for (i = 5; i > 1 && (c & (0x1f << (i * 5 + 1))) == 0; i--)
+        for (i = 3; i > 1 && (c & (0x1f << (i * 5 + 1))) == 0; i--)
             ;
         {
             int shifts = i * 6;
