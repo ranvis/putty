@@ -7,7 +7,7 @@ static const uint16_t TRANSITION_MS_INACTIVATE_MAX = 1000;
 static const uint16_t TRANSITION_MS_INACTIVATE_PER_STEP = 20;
 
 // per window globals
-static BYTE cur_alpha = 255;
+static BYTE cur_alpha = 0;
 static BYTE target_alpha = 255;
 static BYTE transition_start_alpha = 255;
 static DWORD transition_start_time;
@@ -61,6 +61,7 @@ static void enable_alpha(HWND hwnd)
     if (!is_trans_active) {
         is_trans_active = true;
         SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        set_window_alpha(hwnd, 255);
     }
 }
 
