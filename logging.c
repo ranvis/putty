@@ -213,6 +213,33 @@ void logtraffic(LogContext *ctx, unsigned char c, int logmode)
     }
 }
 
+void logtraffic_utf8(LogContext *ctx, uint32_t c)
+{
+    if (ctx->logtype != LGTYP_ASCII) return;
+    int u8len;
+    char u8str[4];
+    unsigned char *p = (unsigned char *)u8str;
+    if (c < 0x800) {
+        //assert(c > 0x7f); // does not accept U+0000-007F
+        *p++ = 0xc0 | (c >> 6);
+        *p++ = 0x80 | (c & 0x3f);
+        u8len = 2;
+    } else if (c < 0x10000) {
+        *p++ = 0xe0 | (c >> 12);
+        *p++ = 0x80 | ((c >> 6) & 0x3f);
+        *p++ = 0x80 | ((c >> 0) & 0x3f);
+        u8len = 3;
+    } else {
+        //assert(c <= 0x10ffff);
+        *p++ = 0xf0 | (c >> 18);
+        *p++ = 0x80 | ((c >> 12) & 0x3f);
+        *p++ = 0x80 | ((c >> 6) & 0x3f);
+        *p++ = 0x80 | ((c >> 0) & 0x3f);
+        u8len = 4;
+    }
+    logwrite(ctx, make_ptrlen(u8str, u8len));
+}
+
 static void logevent_internal(LogContext *ctx, const char *event)
 {
     if (ctx->logtype == LGTYP_PACKETS || ctx->logtype == LGTYP_SSHRAW) {

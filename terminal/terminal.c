@@ -3327,19 +3327,7 @@ static void term_display_graphic_char(Terminal *term, unsigned long c)
             && 0x9f < c && c <= 0x10ffff
             && term->utf8.chr == (int)c) {
         // output non-ASCII characters in UTF-8 encoding
-        int i;
-        for (i = 3; i > 1 && (c & (0x1f << (i * 5 + 1))) == 0; i--)
-            ;
-        {
-            int shifts = i * 6;
-            int mask = (1 << (5 - i + 1)) - 1;
-            int prebits = (0xff & ~((1 << (5 - i + 2)) - 1));
-            logtraffic(term->logctx, (unsigned char) (prebits | ((c >> shifts) & mask)), LGTYP_ASCII);
-            do {
-                shifts -= 6;
-                logtraffic(term->logctx, (unsigned char) (0x80 | ((c >> shifts) & 0x3f)), LGTYP_ASCII);
-            } while (shifts > 0);
-        }
+        logtraffic_utf8(term->logctx, c);
     } else
     if (((c & CSET_MASK) == CSET_ASCII ||
          (c & CSET_MASK) == 0) && term->logctx)

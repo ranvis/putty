@@ -2246,6 +2246,7 @@ void log_reconfig(LogContext *logctx, Conf *conf);
 void logfopen(LogContext *logctx);
 void logfclose(LogContext *logctx);
 void logtraffic(LogContext *logctx, unsigned char c, int logmode);
+void logtraffic_utf8(LogContext *logctx, uint32_t c);
 void logflush(LogContext *logctx);
 LogPolicy *log_get_policy(LogContext *logctx);
 void logevent(LogContext *logctx, const char *event);
