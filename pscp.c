@@ -2279,6 +2279,7 @@ int psftp_main(CmdlineArgList *arglist)
     bool sanitise_stderr = true;
 
     sk_init();
+    enable_dit();
 
     /* Load Default Settings before doing anything else. */
     conf = conf_new();

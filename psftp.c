@@ -2397,7 +2397,7 @@ static void do_sftp_cleanup(void)
     }
 }
 
-int do_sftp(int mode, int modeflags, const char *batchfile)
+int do_sftp(int mode, int modeflags, Filename *batchfile)
 {
     FILE *fp;
     int ret;
@@ -2421,9 +2421,9 @@ int do_sftp(int mode, int modeflags, const char *batchfile)
                 break;
         }
     } else {
-        fp = fopen(batchfile, "r");
+        fp = f_open(batchfile, "r", false);
         if (!fp) {
-            printf("Fatal: unable to open %s\n", batchfile);
+            printf("Fatal: unable to open %s\n", filename_to_str(batchfile));
             return 1;
         }
         ret = 0;
@@ -2805,9 +2805,10 @@ int psftp_main(CmdlineArgList *arglist)
     int mode = 0;
     int modeflags = 0;
     bool sanitise_stderr = true;
-    const char *batchfile = NULL;
+    Filename *batchfile = NULL;
 
     sk_init();
+    enable_dit();
 
     userhost = user = NULL;
 
@@ -2853,7 +2854,7 @@ int psftp_main(CmdlineArgList *arglist)
             version();
         } else if (strcmp(argstr, "-b") == 0 && nextarg) {
             mode = 1;
-            batchfile = cmdline_arg_to_str(nextarg);
+            batchfile = cmdline_arg_to_filename(nextarg);
             arglistpos++;
         } else if (strcmp(argstr, "-bc") == 0) {
             modeflags = modeflags | 1;
