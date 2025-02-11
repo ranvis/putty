@@ -5,6 +5,7 @@ Language=Japanese
 _OFONTNAME_=MS Shell Dlg
 _FONTNAME_=MS UI Gothic
 _FONTSIZE_=12
+Pageant (PuTTY authentication agent)=Pageant (PuTTY 認証エージェント)
 Enter passphrase for key=鍵のパスフレーズを入力してください
 Pageant: Enter Passphrase=Pageant: パスフレーズの入力
 &Cancel=取消(&C)

@@ -1245,7 +1245,10 @@ static BOOL AddTrayIcon(HWND hwnd)
     tnid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     tnid.uCallbackMessage = WM_SYSTRAY;
     tnid.hIcon = hicon = LoadIcon(hinst, MAKEINTRESOURCE(201));
-    strcpy(tnid.szTip, "Pageant (PuTTY authentication agent)");
+    char buf[lenof(tnid.szTip)];
+    const char *tip_str = l10n_translate("Pageant (PuTTY authentication agent)", buf);
+    strncpy(tnid.szTip, tip_str, lenof(tnid.szTip));
+    tnid.szTip[lenof(tnid.szTip) - 1] = '\0';
 
     res = Shell_NotifyIcon(NIM_ADD, &tnid);
     if (!res)

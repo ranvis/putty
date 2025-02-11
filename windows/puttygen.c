@@ -1180,10 +1180,12 @@ void load_key_file(HWND hwnd, struct MainDlgState *state,
     if (comment)
         sfree(comment);
     if (ret == 0) {
+        errmsg = l10n_dupstr(errmsg);
         char *msg = dupprintf("Couldn't load private key (%s)", errmsg);
         message_box(hwnd, msg, "PuTTYgen Error", MB_OK | MB_ICONERROR,
                     false, HELPCTXID(errors_cantloadkey));
         sfree(msg);
+        sfree(errmsg);
     } else if (ret == 1) {
         /*
          * Now update the key controls with all the
