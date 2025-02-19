@@ -1312,6 +1312,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
 static void wgs_cleanup(WinGuiSeat *wgs)
 {
+    wallpaper_cleanup(wgs);
+#ifdef DEBUG
+    if (wgs->conf)
+        conf_free(wgs->conf), conf = NULL;
+#endif
     deinit_fonts(wgs);
     sfree(wgs->logpal);
     if (wgs->pal)
@@ -1437,11 +1442,6 @@ void cleanup_exit(int code)
     while (wgslisthead.next != &wgslisthead) {
         WinGuiSeat *wgs = container_of(
             wgslisthead.next, WinGuiSeat, wgslistnode);
-        wallpaper_cleanup(wgs);
-#ifdef DEBUG
-        if (wgs->conf)
-            conf_free(wgs->conf), conf = NULL;
-#endif
         wgs_cleanup(wgs);
     }
     sk_cleanup();

@@ -710,7 +710,6 @@ void defuse_showwindow(void)
         HWND hwnd;
         hwnd = CreateDialog(hinst, MAKEINTRESOURCE(IDD_ABOUTBOX),
                             NULL, NullDlgProc);
-        l10n_created_window(hwnd);
         ShowWindow(hwnd, SW_HIDE);
         SetActiveWindow(hwnd);
         DestroyWindow(hwnd);

@@ -39,14 +39,13 @@ void wallpaper_paint_zoom(WinGuiSeat *wgs, HDC hdc, const RECT *rect, HDC bg_hdc
 {
     const HWND hwnd = wgs->term_hwnd;
     RECT term_rect;
-    int is_win_ratio_larger;
     int blit_x, blit_y, blit_width, blit_height;
     HRGN old_clip;
     int has_clip;
     int placement = mode->place;
-    int is_mode_fit = !!(placement & WALLPAPER_PLACE_FIT);
     GetClientRect(hwnd, &term_rect);
-    is_win_ratio_larger = bg_w < bg_h * term_rect.right / term_rect.bottom;
+    bool is_mode_fit = placement & WALLPAPER_PLACE_FIT;
+    bool is_win_ratio_larger = bg_w < bg_h * term_rect.right / term_rect.bottom;
     if (is_win_ratio_larger == is_mode_fit) {
         blit_width = term_rect.right;
         blit_height = term_rect.right * bg_h / bg_w;

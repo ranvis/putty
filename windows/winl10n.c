@@ -627,12 +627,12 @@ HWND l10nCreateWindowExA(DWORD a1, LPCSTR a2, LPCSTR a3, DWORD a4, int a5, int a
     HWND r;
 
     if (getEnabled() && !is_atom(a2)) {
-        if (stricmp(a2, WC_TREEVIEW) == 0) a2 = WC_HOOK(TREEVIEW);
-        else if (stricmp(a2, WC_BUTTON) == 0) a2 = WC_HOOK(BUTTON);
+        if (stricmp(a2, WC_BUTTON) == 0) a2 = WC_HOOK(BUTTON);
         else if (stricmp(a2, WC_STATIC) == 0) a2 = WC_HOOK(STATIC);
         else if (stricmp(a2, WC_EDIT) == 0) a2 = WC_HOOK(EDIT);
-        else if (stricmp(a2, WC_LISTBOX) == 0) a2 = WC_HOOK(LISTBOX);
         else if (stricmp(a2, WC_COMBOBOX) == 0) a2 = WC_HOOK(COMBOBOX);
+        else if (stricmp(a2, WC_LISTBOX) == 0) a2 = WC_HOOK(LISTBOX);
+        else if (stricmp(a2, WC_TREEVIEW) == 0) a2 = WC_HOOK(TREEVIEW);
     }
     r = CreateWindowExA(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
     if (!getEnabled())
@@ -648,12 +648,12 @@ HWND l10nCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowN
     HWND window;
 
     if (getEnabled() && !is_atom(lpClassName)) {
-        if (_wcsicmp(lpClassName, WC_TREEVIEWW) == 0) lpClassName = WC_HOOKW(TREEVIEW);
-        else if (_wcsicmp(lpClassName, WC_BUTTONW) == 0) lpClassName = WC_HOOKW(BUTTON);
+        if (_wcsicmp(lpClassName, WC_BUTTONW) == 0) lpClassName = WC_HOOKW(BUTTON);
         else if (_wcsicmp(lpClassName, WC_STATICW) == 0) lpClassName = WC_HOOKW(STATIC);
         else if (_wcsicmp(lpClassName, WC_EDITW) == 0) lpClassName = WC_HOOKW(EDIT);
-        else if (_wcsicmp(lpClassName, WC_LISTBOXW) == 0) lpClassName = WC_HOOKW(LISTBOX);
         else if (_wcsicmp(lpClassName, WC_COMBOBOXW) == 0) lpClassName = WC_HOOKW(COMBOBOX);
+        else if (_wcsicmp(lpClassName, WC_LISTBOXW) == 0) lpClassName = WC_HOOKW(LISTBOX);
+        else if (_wcsicmp(lpClassName, WC_TREEVIEWW) == 0) lpClassName = WC_HOOKW(TREEVIEW);
     }
     window = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight,
         hWndParent, hMenu, hInstance, lpParam);
