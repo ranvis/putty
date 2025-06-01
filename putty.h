@@ -574,6 +574,11 @@ enum {
 };
 
 enum {
+    /* Reaction for Windows' query session end message */
+    QUERY_END_NO = 0, QUERY_END_YES, QUERY_END_INACTIVE,
+};
+
+enum {
     /* Mouse-button assignments */
     MOUSE_COMPROMISE, /* xterm-ish but with paste on RB in case no MB exists */
     MOUSE_XTERM, /* xterm-style: MB pastes, RB extends selection */

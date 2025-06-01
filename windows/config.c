@@ -357,6 +357,13 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, bool has_help,
     ctrl_checkbox(s, "Window closes on ALT-F4", '4',
                   HELPCTX(behaviour_altf4),
                   conf_checkbox_handler, I(CONF_alt_f4));
+    ctrl_radiobuttons(s, "When Windows session ends:", 'd', 1,
+                      HELPCTX(behaviour_queryend),
+                      conf_radiobutton_handler,
+                      I(CONF_query_end),
+                      "Always close (even if session is active)", I(QUERY_END_YES),
+                      "Close only if session is inactive", I(QUERY_END_INACTIVE),
+                      "Always block (if terminal window exists)", I(QUERY_END_NO));
     ctrl_checkbox(s, "System menu appears on ALT-Space", 'y',
                   HELPCTX(behaviour_altspace),
                   conf_checkbox_handler, I(CONF_alt_space));

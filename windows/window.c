@@ -2835,6 +2835,19 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
         wtrans_destroy(wgs);
         PostQuitMessage(0);
         return 0;
+      case WM_QUERYENDSESSION: {
+        int query_end = conf_get_int(wgs->conf, CONF_query_end);
+        if (query_end != QUERY_END_INACTIVE)
+            return (query_end == QUERY_END_YES) ? TRUE : FALSE;
+        return wgs->session_closed ? TRUE : FALSE;
+      }
+      case WM_ENDSESSION:
+        if (wParam) {
+            show_mouseptr(wgs, true);
+            if (!wgs->session_closed)
+                close_session(wgs);
+        }
+        return 0;
       case WM_INITMENUPOPUP:
         if ((HMENU)wParam == wgs->savedsess_menu) {
             /* About to pop up Saved Sessions sub-menu.

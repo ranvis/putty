@@ -195,3 +195,9 @@ CONF_ENUM(x11_auth,
     VALUE(X11_MIT, 1),
     VALUE(X11_XDM, 2),
 )
+
+CONF_ENUM(query_end,
+    VALUE(QUERY_END_NO, 0),
+    VALUE(QUERY_END_YES, 1),
+    VALUE(QUERY_END_INACTIVE, 2),
+)

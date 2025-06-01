@@ -797,6 +797,12 @@ CONF_OPTION(resize_action,
     SAVE_KEYWORD("LockSize"),
     STORAGE_ENUM(resize_effect),
 )
+CONF_OPTION(query_end,
+    VALUE_TYPE(INT),
+    DEFAULT_INT(QUERY_END_INACTIVE),
+    SAVE_KEYWORD("QueryEnd"),
+    STORAGE_ENUM(resize_effect),
+)
 CONF_OPTION(bce,
     VALUE_TYPE(BOOL),
     DEFAULT_BOOL(true),
