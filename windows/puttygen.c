@@ -623,6 +623,7 @@ struct InitialParams {
 struct MainDlgState {
     bool generation_thread_exists;
     bool key_exists;
+    bool key_dirty;
     int entropy_got, entropy_required;
     strbuf *entropy;
     ULONG entropy_prev_msgtime;
@@ -1187,6 +1188,7 @@ void load_key_file(HWND hwnd, struct MainDlgState *state,
         sfree(msg);
         sfree(errmsg);
     } else if (ret == 1) {
+        state->key_dirty = false;  // the flag cannot be cleared in update_ui_after_load()
         /*
          * Now update the key controls with all the
          * key data.
@@ -1475,6 +1477,17 @@ static INT_PTR CertInfoProc(HWND hwnd, UINT msg, WPARAM wParam,
     return 0;
 }
 
+static bool confirm_key_discard(HWND hwnd, struct MainDlgState *state, bool on_quit)
+{
+    if (!state->key_dirty)
+        return true;
+    int result = MessageBox(hwnd,
+        on_quit ? "The key you have generated will be discarded.\nAre you sure you want to exit without saving?"
+        : "The key you have generated will be discarded.\nAre you sure you want to continue?",
+        "PuTTYgen Warning", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+    return result == IDYES;
+}
+
 /*
  * Dialog-box function for the main PuTTYgen dialog box.
  */
@@ -1505,6 +1518,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
         state->generation_thread_exists = false;
         state->entropy = NULL;
         state->key_exists = false;
+        state->key_dirty = false;
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) state);
         {
             HMENU menu, menu1;
@@ -1865,6 +1879,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
                 break;
             state =
                 (struct MainDlgState *) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+            if (!confirm_key_discard(hwnd, state, false))
+                break;
             if (!state->generation_thread_exists) {
                 unsigned raw_entropy_required;
                 unsigned char *raw_entropy_buf;
@@ -2089,7 +2105,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
                     if (ret <= 0) {
                         MessageBox(hwnd, "Unable to save key file",
                                    "PuTTYgen Error", MB_OK | MB_ICONERROR);
-                    }
+                    } else
+                        state->key_dirty = false;
                     filename_free(fn);
                 }
                 burnstr(passphrase);
@@ -2155,6 +2172,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
                 break;
             state =
                 (struct MainDlgState *) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+            if (!confirm_key_discard(hwnd, state, false))
+                break;
             if (!state->generation_thread_exists) {
                 Filename *fn = request_file(
                     hwnd, "Load private key:", NULL, false, NULL, false,
@@ -2213,6 +2232,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
         state = (struct MainDlgState *) GetWindowLongPtr(hwnd, GWLP_USERDATA);
         state->generation_thread_exists = false;
         state->key_exists = true;
+        state->key_dirty = true;
         SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETRANGE, 0,
                            MAKELPARAM(0, PROGRESSRANGE));
         SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETPOS, PROGRESSRANGE, 0);
@@ -2350,6 +2370,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
       }
       case WM_CLOSE:
         state = (struct MainDlgState *) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+        if (!confirm_key_discard(hwnd, state, true))
+            break;
         sfree(state);
         quit_help(hwnd);
         EndDialog(hwnd, 1);
