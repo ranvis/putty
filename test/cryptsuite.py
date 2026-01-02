@@ -3148,7 +3148,6 @@ LzN/Ly+uECsga2hoc+P/ZHMULMZkCfrOyWdeXz7BR/acLZJoT579
                     principals = [b"doesn't matter"],
                     valid_after = 1000,
                     valid_before = 2000), ca_key, signflags=ca_signflags)
-            import base64
             self_signed_ca_key = ssh_key_new_pub(
                 alg + '-cert', ca_self_certificate)
             cert_pub = sign_cert_via_testcrypt(
