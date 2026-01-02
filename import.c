@@ -1191,7 +1191,7 @@ static struct openssh_new_key *load_openssh_new_key(BinarySource *filesrc,
     BinarySource_BARE_INIT_PL(src, ptrlen_from_strbuf(key->keyblob));
 
     if (strcmp(get_asciz(src), "openssh-key-v1") != 0) {
-        errmsg = "new-style OpenSSH magic number missing\n";
+        errmsg = "new-style OpenSSH magic number missing";
         goto error;
     }
 
@@ -1205,7 +1205,7 @@ static struct openssh_new_key *load_openssh_new_key(BinarySource *filesrc,
         key->cipher = ON_E_AES256CTR;
     } else {
         errmsg = get_err(src) ? "no cipher name found" :
-            "unrecognised cipher name\n";
+            "unrecognised cipher name";
         goto error;
     }
 
@@ -1217,7 +1217,7 @@ static struct openssh_new_key *load_openssh_new_key(BinarySource *filesrc,
         key->kdf = ON_K_BCRYPT;
     } else {
         errmsg = get_err(src) ? "no kdf name found" :
-            "unrecognised kdf name\n";
+            "unrecognised kdf name";
         goto error;
     }
 
@@ -1260,7 +1260,7 @@ static struct openssh_new_key *load_openssh_new_key(BinarySource *filesrc,
     key->nkeys = toint(get_uint32(src));
     if (key->nkeys != 1) {
         errmsg = get_err(src) ? "no key count found" :
-            "multiple keys in new-style OpenSSH key file not supported\n";
+            "multiple keys in new-style OpenSSH key file not supported";
         goto error;
     }
     key->key_wanted = 0;
@@ -1275,7 +1275,7 @@ static struct openssh_new_key *load_openssh_new_key(BinarySource *filesrc,
      */
     key->private = get_string(src);
     if (get_err(src)) {
-        errmsg = "no private key container string found\n";
+        errmsg = "no private key container string found";
         goto error;
     }
 
@@ -1371,7 +1371,7 @@ static ssh2_userkey *openssh_new_read(
           case ON_E_AES256CTR:
             if (key->private.len % 16 != 0) {
                 errmsg = "private key container length is not a"
-                    " multiple of AES block size\n";
+                    " multiple of AES block size";
                 goto error;
             }
             {
@@ -1416,7 +1416,7 @@ static ssh2_userkey *openssh_new_read(
          */
         alg = find_pubkey_alg_len(get_string(src));
         if (!alg) {
-            errmsg = "private key type not recognised\n";
+            errmsg = "private key type not recognised";
             goto error;
         }
 
