@@ -1092,7 +1092,7 @@ static bool openssh_pem_write(
  */
 
 typedef enum {
-    ON_E_NONE, ON_E_AES256CBC, ON_E_AES256CTR
+    ON_E_NONE, ON_E_AES256CBC, ON_E_AES256CTR, ON_E_AES256GCM
 } openssh_new_cipher;
 typedef enum {
     ON_K_NONE, ON_K_BCRYPT
@@ -1203,6 +1203,8 @@ static struct openssh_new_key *load_openssh_new_key(BinarySource *filesrc,
         key->cipher = ON_E_AES256CBC;
     } else if (ptrlen_eq_string(str, "aes256-ctr")) {
         key->cipher = ON_E_AES256CTR;
+    } else if (ptrlen_eq_string(str, "aes256-gcm@openssh.com")) {
+        key->cipher = ON_E_AES256GCM;
     } else {
         errmsg = get_err(src) ? "no cipher name found" :
             "unrecognised cipher name";
@@ -1345,6 +1347,7 @@ static ssh2_userkey *openssh_new_read(
             break;
           case ON_E_AES256CBC:
           case ON_E_AES256CTR:
+          case ON_E_AES256GCM:
             keysize = 48;              /* 32 byte key + 16 byte IV */
             break;
           default:
@@ -1369,6 +1372,7 @@ static ssh2_userkey *openssh_new_read(
             break;
           case ON_E_AES256CBC:
           case ON_E_AES256CTR:
+          case ON_E_AES256GCM:
             if (key->private.len % 16 != 0) {
                 errmsg = "private key container length is not a"
                     " multiple of AES block size";
@@ -1376,10 +1380,39 @@ static ssh2_userkey *openssh_new_read(
             }
             {
                 ssh_cipher *cipher = ssh_cipher_new(
-                    key->cipher == ON_E_AES256CBC ?
-                    &ssh_aes256_cbc : &ssh_aes256_sdctr);
+                    key->cipher == ON_E_AES256CBC ? &ssh_aes256_cbc :
+                    key->cipher == ON_E_AES256GCM ? &ssh_aes256_gcm :
+                    &ssh_aes256_sdctr);
                 ssh_cipher_setkey(cipher, keybuf);
                 ssh_cipher_setiv(cipher, keybuf + 32);
+                if (key->cipher == ON_E_AES256GCM) {
+                    /*
+                     * In AES-GCM, the first output cipher block for a
+                     * block of encrypted data (with counter value 1)
+                     * is used as part of setting up the key for the
+                     * MAC on that block. In PuTTY's code architecture
+                     * this cipher block is generated as part of the
+                     * default cipher stream, and consumed by the MAC
+                     * setup function.
+                     *
+                     * But in this application we're not _using_ the
+                     * GCM MAC. So that setup function never runs.
+                     * Therefore we must consume a cipher block by
+                     * hand, or else our cipher stream will be offset
+                     * by 16 bytes from where it should be.
+                     *
+                     * (This makes the choice of AES-GCM for
+                     * encrypting key files rather strange, since
+                     * without the associated MAC, it's just a variant
+                     * of counter mode with a less general IV! But it
+                     * does occur in the wild - apparently it's the
+                     * default choice of 1Password.)
+                     */
+                    unsigned char buf[16];
+                    memset(buf, 0, 16);
+                    ssh_cipher_encrypt(cipher, buf, 16);
+                    smemclr(buf, sizeof(buf));
+                }
                 /* Decrypt the private section in place, casting away
                  * the const from key->private being a ptrlen */
                 ssh_cipher_decrypt(cipher, (char *)key->private.ptr,
