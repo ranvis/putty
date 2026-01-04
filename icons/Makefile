@@ -1,7 +1,7 @@
 # Makefile for the PuTTY icon suite.
 
 ICONS = putty puttycfg puttygen pscp pageant pterm ptermcfg puttyins
-ICOSIZES = 16 32 48
+ICOSIZES = 16 32 48 64
 SIZES = $(ICOSIZES) 128
 ICOSUFFIXES = $(ICOSIZES) $(patsubst %,%-mono,$(ICOSIZES))
 
