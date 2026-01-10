@@ -214,9 +214,9 @@ static bool get_ini_bool(const char *section, const char *name, const char *ini_
 
 /*
 # the following table is generated with this Perl script:
-use 5.030;
+use v5.40;
 use warnings;
-my $bareChars = ',-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+my $bareChars = '!&*+,-./0123456789?@ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz~';
 my @tab = (0) x 256;
 $tab[ord($_)] = 1 foreach (split(//, $bareChars));
 say '    ', join(', ', splice(@tab, 0, 16)), ',' while (@tab);
@@ -224,12 +224,12 @@ say '    ', join(', ', splice(@tab, 0, 16)), ',' while (@tab);
 static const char ini_nq_table[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1,
-    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -247,7 +247,7 @@ bool put_ini_sz(const char *section, const char *name, const char *value, const 
         result = WritePrivateProfileString(section, name, value, ini_file);
     } else {
         // quote so that Windows will not strip surrounding quotes or spaces on retrieval
-        // outmost quotes will be stripped on retrieval
+        // outmost pair of quotes ("..."/'...') will be stripped on retrieval
         int length = strlen(value);
         char *buf = snewn(length + 3, char);
         memcpy(buf + 1, value, length);
