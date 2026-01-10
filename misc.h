@@ -574,4 +574,8 @@ char *format_connection_setup_command(
     const char *fmt, SockAddr *addr, int port, Conf *conf,
     unsigned *flags_out);
 
+/* Execute a command hook (synchronous execution with logging) */
+void execute_command_hook(LogContext *logctx, const char *command,
+                          SockAddr *addr, int port, Conf *conf);
+
 #endif
