@@ -507,10 +507,6 @@ available for local-to-remote forwarded ports; SSH-1 is unable to
 support it for remote-to-local ports, while SSH-2 can support it in
 theory but servers will not necessarily cooperate.
 
-(Note that if you're using Windows XP Service Pack 2, you may need
-to obtain a fix from Microsoft in order to use addresses like
-\cw{127.0.0.5} - see \k{faq-alternate-localhost}.)
-
 For more options relating to port forwarding, see
 \k{config-ssh-portfwd}.
 
