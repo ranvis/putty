@@ -1012,6 +1012,18 @@ struct colour_data {
     dlgcontrol *listbox, *redit, *gedit, *bedit, *button;
 };
 
+bool colour_control_override(dlgcontrol *listbox, dlgcontrol *target_ctrl, dlgcontrol *new_ctrl)
+{
+    struct colour_data *cd = (struct colour_data *)listbox->context.p;
+    if (cd->listbox == target_ctrl) cd->listbox = new_ctrl;
+    else if (cd->redit == target_ctrl) cd->redit = new_ctrl;
+    else if (cd->gedit == target_ctrl) cd->gedit = new_ctrl;
+    else if (cd->bedit == target_ctrl) cd->bedit = new_ctrl;
+    else if (cd->button == target_ctrl) cd->button = new_ctrl;
+    else return false;
+    return true;
+}
+
 /* Array of the user-visible colour names defined in the list macro in
  * putty.h */
 static const char *const colours[] = {

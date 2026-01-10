@@ -16,6 +16,8 @@
 static void wallpaper_dropdown_handler(dlgcontrol *ctrl, void *dlg, void *data, int event);
 static void conf_win_opacity_handler(dlgcontrol *ctrl, dlgparam *dlg, void *data, int event);
 
+#include "config-sample-text.h"
+
 static void about_handler(dlgcontrol *ctrl, dlgparam *dlg,
                           void *data, int event)
 {
@@ -328,6 +330,7 @@ void win_setup_config_box(struct controlbox *b, HWND *hwndp, bool has_help,
                   HELPCTX(colours_system),
                   conf_checkbox_handler, I(CONF_system_colour));
 
+    sample_text_setup(b, hwndp, has_help, midsession, protocol);
 
     /*
      * Resize-by-changing-font is a Windows insanity.

@@ -421,9 +421,13 @@ char *staticwrap(struct ctlpos *cp, HWND hwnd, const char *text, int *lines)
     oldfont = SelectObject(hdc, newfont);
 
     while (*p) {
-        if (!GetTextExtentExPoint(hdc, p, strlen(p), width,
+        // break at newline if found
+        const char *nl_pos = strchr(p, '\n');
+        size_t rest = strlen(p);
+        size_t limit = nl_pos ? nl_pos - p : rest;
+        if (!GetTextExtentExPoint(hdc, p, limit, width,
                                   &nfit, pwidths, &size) ||
-            (size_t)nfit >= strlen(p)) {
+            (!nl_pos && (size_t)nfit >= rest)) {
             /*
              * Either GetTextExtentExPoint returned failure, or the
              * whole of the rest of the text fits on this line.
@@ -1562,6 +1566,8 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
                 SetDlgItemText(pos.hwnd, base_id, ctrl->label);
                 MakeDlgItemBorderless(pos.hwnd, base_id);
             }
+            if (ctrl->handler)
+                ctrl->handler(ctrl, dp, GetDlgItem(pos.hwnd, base_id), EVENT_CALLBACK);
             break;
           case CTRL_EDITBOX:
             num_ids = 2;               /* static, edit */
@@ -2480,6 +2486,17 @@ FontSpec *dlg_fontsel_get(dlgcontrol *ctrl, dlgparam *dp)
     struct winctrl *c = dlg_findbyctrl(dp, ctrl);
     assert(c && c->ctrl->type == CTRL_FONTSELECT);
     return fontspec_copy((FontSpec *)c->data);
+}
+
+void dlg_invalidate(dlgcontrol *ctrl, dlgparam *dp, bool erase)
+{
+    struct winctrl *c = dlg_findbyctrl(dp, ctrl);
+    if (!c) return;
+    for (int i = 0; i < c->num_ids; i++) {
+        HWND hw = GetDlgItem(dp->hwnd, c->base_id + i);
+        if (!hw) continue;
+        InvalidateRect(hw, NULL, erase);
+    }
 }
 
 /*
