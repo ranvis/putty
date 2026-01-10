@@ -1679,9 +1679,9 @@ S.A; we share no code at all with OpenSSL.
 intelligence (AI) or large language model (LLM)?
 
 No, it does not. PuTTY does not use any AI or LLM during its
-operation. No AI or LLM code is included in PuTTY itself, and also, no
-AI or LLM system elsewhere on the Internet is consulted by PuTTY when
-it runs.
+operation. No code implementing an AI or LLM system is included in
+PuTTY itself, and also, no AI or LLM system elsewhere on the Internet
+is consulted by PuTTY when it runs.
 
 PuTTY aims to be reliable, predictable and efficient in its operation.
 The 2020s style of AI is bad at all of these things, \e{especially}
