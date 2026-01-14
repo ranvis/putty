@@ -1010,6 +1010,8 @@ static void charclass_handler(dlgcontrol *ctrl, dlgparam *dlg,
 
 struct colour_data {
     dlgcontrol *listbox, *redit, *gedit, *bedit, *button;
+    int8_t colourspace;
+    int8_t no_update;
 };
 
 bool colour_control_override(dlgcontrol *listbox, dlgcontrol *target_ctrl, dlgcontrol *new_ctrl)
@@ -1032,6 +1034,94 @@ static const char *const colours[] = {
     #undef CONF_COLOUR_NAME_DECL
 };
 
+enum {
+    COLOURSPACE_RGB = 0,
+    COLOURSPACE_HSL,
+};
+
+typedef union {
+    struct {
+        int r, g, b;
+    } rgb;
+    struct {
+        float h, s, l;
+    } hsl;
+} any_colour_value;
+
+#include "utils/colourspace.h"
+
+static void format_float_trim(char *str, float value)
+{
+    int len = sprintf(str, "%.1f", value);
+    if (len < 2) return;
+    if (str[len - 2] == '.' && str[len - 1] == '0') str[len - 2] = '\0';
+}
+
+static void apply_colour_to_dialog(dlgparam *dp, struct colour_data *cd, any_colour_value *ac)
+{
+    char buf[40];
+    cd->no_update++;
+    if (ac == NULL) {
+        dlg_editbox_set(cd->redit, dp, "");
+        dlg_editbox_set(cd->gedit, dp, "");
+        dlg_editbox_set(cd->bedit, dp, "");
+    } else if (cd->colourspace == COLOURSPACE_RGB) {
+        sprintf(buf, "%d", ac->rgb.r); dlg_editbox_set(cd->redit, dp, buf);
+        sprintf(buf, "%d", ac->rgb.g); dlg_editbox_set(cd->gedit, dp, buf);
+        sprintf(buf, "%d", ac->rgb.b); dlg_editbox_set(cd->bedit, dp, buf);
+    } else {
+        // clamp, just in case
+        format_float_trim(buf, fmodf(ac->hsl.h, 360.0f)); dlg_editbox_set(cd->redit, dp, buf);
+        format_float_trim(buf, fclampf(ac->hsl.s, 0, 1.0f) * 100.0f); dlg_editbox_set(cd->gedit, dp, buf);
+        format_float_trim(buf, fclampf(ac->hsl.l, 0, 1.0f) * 100.0f); dlg_editbox_set(cd->bedit, dp, buf);
+    }
+    cd->no_update--;
+}
+
+static void load_conf_colour(int colourspace, any_colour_value *ac, Conf *conf, int base)
+{
+    int r = conf_get_int_int(conf, CONF_colours, base*3+0);
+    int g = conf_get_int_int(conf, CONF_colours, base*3+1);
+    int b = conf_get_int_int(conf, CONF_colours, base*3+2);
+    if (colourspace == COLOURSPACE_RGB) {
+        ac->rgb.r = r;
+        ac->rgb.g = g;
+        ac->rgb.b = b;
+    } else
+        rgb8_to_hsl(r, g, b, &ac->hsl.h, &ac->hsl.s, &ac->hsl.l);
+}
+
+static void colourspace_handler(dlgcontrol *ctrl, dlgparam *dp, void *data, int event)
+{
+    struct colour_data *cd = (struct colour_data *)ctrl->context.p;
+    int button;
+    Conf *conf = (Conf *)data;
+    bool update = false;
+    if (event == EVENT_REFRESH) {
+        for (button = 0; button < ctrl->radio.nbuttons; button++)
+            if (cd->colourspace == ctrl->radio.buttondata[button].i)
+                break;
+        if (button >= ctrl->radio.nbuttons) button = COLOURSPACE_RGB;
+        dlg_radiobutton_set(ctrl, dp, button);
+        update = true;
+    } else if (event == EVENT_VALCHANGE) {
+        cd->colourspace = dlg_radiobutton_get(ctrl, dp);
+        update = true;
+    }
+    if (update) {
+        bool is_rgb = cd->colourspace == COLOURSPACE_RGB;
+        dlg_label_change(cd->redit, dp, is_rgb ? "Red" : "Hue");
+        dlg_label_change(cd->gedit, dp, is_rgb ? "Green" : "Satul.");
+        dlg_label_change(cd->bedit, dp, is_rgb ? "Blue" : "Light.");
+        int i = dlg_listbox_index(cd->listbox, dp);
+        if (i >= 0) {
+            any_colour_value ac;
+            load_conf_colour(cd->colourspace, &ac, conf, i);
+            apply_colour_to_dialog(dp, cd, &ac);
+        }
+    }
+}
+
 static void colour_handler(dlgcontrol *ctrl, dlgparam *dlg,
                             void *data, int event)
 {
@@ -1039,7 +1129,7 @@ static void colour_handler(dlgcontrol *ctrl, dlgparam *dlg,
     struct colour_data *cd =
         (struct colour_data *)ctrl->context.p;
     bool update = false, clear = false;
-    int r, g, b;
+    any_colour_value ac;
 
     if (event == EVENT_REFRESH) {
         if (ctrl == cd->listbox) {
@@ -1049,7 +1139,7 @@ static void colour_handler(dlgcontrol *ctrl, dlgparam *dlg,
             for (i = 0; i < lenof(colours); i++)
                 dlg_listbox_add(ctrl, dlg, colours[i]);
             dlg_update_done(ctrl, dlg);
-            clear = true;
+            dlg_listbox_select(ctrl, dlg, 0);
             update = true;
         }
     } else if (event == EVENT_SELCHANGE) {
@@ -1060,32 +1150,42 @@ static void colour_handler(dlgcontrol *ctrl, dlgparam *dlg,
                 clear = true;
             } else {
                 clear = false;
-                r = conf_get_int_int(conf, CONF_colours, i*3+0);
-                g = conf_get_int_int(conf, CONF_colours, i*3+1);
-                b = conf_get_int_int(conf, CONF_colours, i*3+2);
+                load_conf_colour(cd->colourspace, &ac, conf, i);
             }
             update = true;
         }
     } else if (event == EVENT_VALCHANGE) {
-        if (ctrl == cd->redit || ctrl == cd->gedit || ctrl == cd->bedit) {
+        if (!cd->no_update && (ctrl == cd->redit || ctrl == cd->gedit || ctrl == cd->bedit)) {
             /* The user has changed the colour using the edit boxes. */
-            char *str;
-            int i, cval;
-
-            str = dlg_editbox_get(ctrl, dlg);
-            cval = atoi(str);
-            sfree(str);
-            if (cval > 255) cval = 255;
-            if (cval < 0)   cval = 0;
-
-            i = dlg_listbox_index(cd->listbox, dlg);
+            int i = dlg_listbox_index(cd->listbox, dlg);
             if (i >= 0) {
-                if (ctrl == cd->redit)
-                    conf_set_int_int(conf, CONF_colours, i*3+0, cval);
-                else if (ctrl == cd->gedit)
-                    conf_set_int_int(conf, CONF_colours, i*3+1, cval);
-                else if (ctrl == cd->bedit)
-                    conf_set_int_int(conf, CONF_colours, i*3+2, cval);
+                char *str;
+                if (cd->colourspace == COLOURSPACE_RGB) {
+                    int cval;
+
+                    str = dlg_editbox_get(ctrl, dlg);
+                    cval = atoi(str);
+                    sfree(str);
+                    if (cval > 255) cval = 255;
+                    if (cval < 0)   cval = 0;
+
+                    if (ctrl == cd->redit)
+                        conf_set_int_int(conf, CONF_colours, i*3+0, cval);
+                    else if (ctrl == cd->gedit)
+                        conf_set_int_int(conf, CONF_colours, i*3+1, cval);
+                    else if (ctrl == cd->bedit)
+                        conf_set_int_int(conf, CONF_colours, i*3+2, cval);
+                } else {
+                    float h, s, l;
+                    str = dlg_editbox_get(cd->redit, dlg); h = strtof(str, NULL);
+                    str = dlg_editbox_get(cd->gedit, dlg); s = strtof(str, NULL) / 100.0f;
+                    str = dlg_editbox_get(cd->bedit, dlg); l = strtof(str, NULL) / 100.0f;
+                    int r, g, b;
+                    hsl_to_rgb8(h, s, l, &r, &g, &b);
+                    conf_set_int_int(conf, CONF_colours, i*3+0, r);
+                    conf_set_int_int(conf, CONF_colours, i*3+1, g);
+                    conf_set_int_int(conf, CONF_colours, i*3+2, b);
+                }
             }
         }
     } else if (event == EVENT_ACTION) {
@@ -1113,28 +1213,25 @@ static void colour_handler(dlgcontrol *ctrl, dlgparam *dlg,
              * return nonzero on success, or zero if the colour
              * selector did nothing (user hit Cancel, for example).
              */
+            int r, g, b;
             if (dlg_coloursel_results(ctrl, dlg, &r, &g, &b)) {
                 conf_set_int_int(conf, CONF_colours, i*3+0, r);
                 conf_set_int_int(conf, CONF_colours, i*3+1, g);
                 conf_set_int_int(conf, CONF_colours, i*3+2, b);
+                if (cd->colourspace == COLOURSPACE_RGB) {
+                    ac.rgb.r = r;
+                    ac.rgb.g = g;
+                    ac.rgb.b = b;
+                } else
+                    rgb8_to_hsl(r, g, b, &ac.hsl.h, &ac.hsl.s, &ac.hsl.l);
                 clear = false;
                 update = true;
             }
         }
     }
 
-    if (update) {
-        if (clear) {
-            dlg_editbox_set(cd->redit, dlg, "");
-            dlg_editbox_set(cd->gedit, dlg, "");
-            dlg_editbox_set(cd->bedit, dlg, "");
-        } else {
-            char buf[40];
-            sprintf(buf, "%d", r); dlg_editbox_set(cd->redit, dlg, buf);
-            sprintf(buf, "%d", g); dlg_editbox_set(cd->gedit, dlg, buf);
-            sprintf(buf, "%d", b); dlg_editbox_set(cd->bedit, dlg, buf);
-        }
-    }
+    if (update)
+        apply_colour_to_dialog(dlg, cd, clear ? NULL : &ac);
 }
 
 struct ttymodes_data {
@@ -2472,7 +2569,9 @@ void setup_config_box(struct controlbox *b, bool midsession,
                                HELPCTX(colours_config), colour_handler, P(cd));
     cd->listbox->column = 0;
     cd->listbox->listbox.height = 11;
-    c = ctrl_text(s, "RGB value:", HELPCTX(colours_config));
+    c = ctrl_radiobuttons(s, NULL, NO_SHORTCUT, 2, HELPCTX(colours_config), colourspace_handler, P(cd),
+                          "RGB", NO_SHORTCUT, I(COLOURSPACE_RGB),
+                          "HSL", NO_SHORTCUT, I(COLOURSPACE_HSL));
     c->column = 1;
     cd->redit = ctrl_editbox(s, "Red", 'r', 50, HELPCTX(colours_config),
                              colour_handler, P(cd), P(NULL));
@@ -2486,6 +2585,7 @@ void setup_config_box(struct controlbox *b, bool midsession,
     cd->button = ctrl_pushbutton(s, "Modify", 'm', HELPCTX(colours_config),
                                  colour_handler, P(cd));
     cd->button->column = 1;
+    cd->colourspace = COLOURSPACE_HSL;
     ctrl_columns(s, 1, 100);
 
     /*

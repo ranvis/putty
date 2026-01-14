@@ -290,6 +290,9 @@ Select a colour to adjust:=変更する色を選択:
 Red=赤
 Green=緑
 Blue=青
+Hue=色相
+Satul.=彩度
+Light.=輝度
 Modify=変更...
 
 Default Foreground=標準の文字
