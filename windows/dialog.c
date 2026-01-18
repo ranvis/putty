@@ -482,6 +482,7 @@ static INT_PTR GenericMainDlgProc(HWND hwnd, UINT msg, WPARAM wParam,
 {
     PortableDialogStuff *pds = (PortableDialogStuff *)ctx;
     const int DEMO_SCREENSHOT_TIMER_ID = 1230;
+    const int PANEL_CHANGED_TIMER_ID = 1231;
     HWND treeview;
     struct treeview_faff tvfaff;
 
@@ -621,27 +622,16 @@ static INT_PTR GenericMainDlgProc(HWND hwnd, UINT msg, WPARAM wParam,
                 sfree(err);
             }
             ShinyEndDialog(hwnd, 0);
-        }
-        return 0;
+        } else if (wParam == PANEL_CHANGED_TIMER_ID) {
+            KillTimer(hwnd, PANEL_CHANGED_TIMER_ID);
+            treeview = GetDlgItem(hwnd, IDCX_TREEVIEW);
+            if (!treeview) return 0;
 
-      case WM_NOTIFY:
-        if (LOWORD(wParam) == IDCX_TREEVIEW &&
-            ((LPNMHDR) lParam)->code == TVN_SELCHANGED) {
-            /*
-             * Selection-change events on the treeview cause us to do
-             * a flurry of control deletion and creation - but only
-             * after WM_INITDIALOG has finished. The initial
-             * selection-change event(s) during treeview setup are
-             * ignored.
-             */
             HTREEITEM i;
             TVITEM item;
             char buffer[64];
 
-            if (!pds->initialised)
-                return 0;
-
-            i = TreeView_GetSelection(((LPNMHDR) lParam)->hwndFrom);
+            i = TreeView_GetSelection(treeview);
 
             SendMessage (hwnd, WM_SETREDRAW, false, 0);
 
@@ -649,7 +639,7 @@ static INT_PTR GenericMainDlgProc(HWND hwnd, UINT msg, WPARAM wParam,
             item.pszText = buffer;
             item.cchTextMax = sizeof(buffer);
             item.mask = TVIF_TEXT | TVIF_PARAM;
-            TreeView_GetItem(((LPNMHDR) lParam)->hwndFrom, &item);
+            TreeView_GetItem(treeview, &item);
             {
                 /* Destroy all controls in the currently visible panel. */
                 int k;
@@ -675,9 +665,33 @@ static INT_PTR GenericMainDlgProc(HWND hwnd, UINT msg, WPARAM wParam,
             dlg_refresh(NULL, pds->dp);    /* set up control values */
 
             SendMessage (hwnd, WM_SETREDRAW, true, 0);
-            InvalidateRect (hwnd, NULL, true);
+            // invalidate right panel area.
+            RECT wr, cr[2];
+            GetClientRect(hwnd, &wr);
+            GetWindowRect(treeview, &cr[0]);
+            GetWindowRect(GetDlgItem(hwnd, IDCX_STDBASE), &cr[1]);
+            MapWindowPoints(NULL, hwnd, (POINT *)cr, 4);
+            wr.left = cr[0].right + 1;
+            wr.bottom = cr[1].top;
+            InvalidateRect(hwnd, &wr, true);
 
-            SetFocus(((LPNMHDR) lParam)->hwndFrom);     /* ensure focus stays */
+            SetFocus(treeview);     /* ensure focus stays */
+        }
+        return 0;
+
+      case WM_NOTIFY:
+        if (LOWORD(wParam) == IDCX_TREEVIEW &&
+            ((LPNMHDR) lParam)->code == TVN_SELCHANGED) {
+            /*
+             * Selection-change events on the treeview cause us to do
+             * a flurry of control deletion and creation - but only
+             * after WM_INITDIALOG has finished. The initial
+             * selection-change event(s) during treeview setup are
+             * ignored.
+             */
+            if (!pds->initialised)
+                return 0;
+            SetTimer(hwnd, PANEL_CHANGED_TIMER_ID, 10, NULL);
         }
         return 0;
 
