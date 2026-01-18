@@ -1167,6 +1167,8 @@ void progressbar(struct ctlpos *cp, int id)
           , WS_EX_CLIENTEDGE, "", id);
 }
 
+#include "controls-lazy.h"
+
 /* ----------------------------------------------------------------------
  * Platform-specific side of portable dialog-box mechanism.
  */
@@ -1300,14 +1302,22 @@ void winctrl_init(struct winctrls *wc)
     wc->byctrl = newtree234(winctrl_cmp_byctrl);
     wc->byid = newtree234(winctrl_cmp_byid);
 }
+
+void winctrl_free(struct winctrl *c)
+{
+    // Notice that c->ctrl may not available here due to the call ordering of pds_free().
+    if (c->data_freefn) c->data_freefn(c);
+    else sfree(c->data);
+    sfree(c);
+}
+
 void winctrl_cleanup(struct winctrls *wc)
 {
     struct winctrl *c;
 
     while ((c = index234(wc->byid, 0)) != NULL) {
         winctrl_remove(wc, c);
-        sfree(c->data);
-        sfree(c);
+        winctrl_free(c);
     }
 
     freetree234(wc->byctrl);
@@ -1400,6 +1410,7 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
         c->base_id = c->align_id = base_id;
         c->num_ids = 1;
         c->data = NULL;
+        c->data_freefn = NULL;
         memset(c->shortcuts, NO_SHORTCUT, lenof(c->shortcuts));
         winctrl_add(wc, c);
         beginbox(cp, s->boxtitle, base_id);
@@ -1413,6 +1424,7 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
         c->base_id = c->align_id = base_id;
         c->num_ids = 1;
         c->data = dupstr(s->boxtitle);
+        c->data_freefn = NULL;
         memset(c->shortcuts, NO_SHORTCUT, lenof(c->shortcuts));
         winctrl_add(wc, c);
         paneltitle(cp, base_id);
@@ -1739,6 +1751,7 @@ void winctrl_layout(struct dlgparam *dp, struct winctrls *wc,
             c->align_id = c->base_id + align_id_relative;
             c->num_ids = num_ids;
             c->data = data;
+            c->data_freefn = NULL;
             memcpy(c->shortcuts, shortcuts, sizeof(shortcuts));
             winctrl_add(wc, c);
             winctrl_add_shortcuts(dp, c);
@@ -1909,6 +1922,8 @@ bool winctrl_handle_command(struct dlgparam *dp, UINT msg,
      */
     switch (ctrl->type) {
       case CTRL_EDITBOX:
+        if (msg == WM_COMMAND && ctrl->editbox.has_list)
+            lazy_items_handle_cmd(c, ctrl, dp, HIWORD(wParam));
         if (msg == WM_COMMAND && !ctrl->editbox.has_list &&
             (HIWORD(wParam) == EN_SETFOCUS || HIWORD(wParam) == EN_KILLFOCUS))
             winctrl_set_focus(ctrl, dp, HIWORD(wParam) == EN_SETFOCUS);
@@ -1982,6 +1997,8 @@ bool winctrl_handle_command(struct dlgparam *dp, UINT msg,
         }
         break;
       case CTRL_LISTBOX:
+        if (msg == WM_COMMAND)
+            lazy_items_handle_cmd(c, ctrl, dp, HIWORD(wParam));
         if (msg == WM_COMMAND && ctrl->listbox.height != 0 &&
             (HIWORD(wParam)==LBN_SETFOCUS || HIWORD(wParam)==LBN_KILLFOCUS))
             winctrl_set_focus(ctrl, dp, HIWORD(wParam) == LBN_SETFOCUS);
@@ -2273,6 +2290,7 @@ void dlg_listbox_clear(dlgcontrol *ctrl, dlgparam *dp)
            (c->ctrl->type == CTRL_LISTBOX ||
             (c->ctrl->type == CTRL_EDITBOX &&
              c->ctrl->editbox.has_list)));
+    if (lazy_items_clear(c, ctrl, dp)) return;
     msg = (c->ctrl->type==CTRL_LISTBOX && c->ctrl->listbox.height!=0 ?
            LB_RESETCONTENT : CB_RESETCONTENT);
     SendDlgItemMessage(dp->hwnd, c->base_id+1, msg, 0, 0);
@@ -2286,6 +2304,7 @@ void dlg_listbox_del(dlgcontrol *ctrl, dlgparam *dp, int index)
            (c->ctrl->type == CTRL_LISTBOX ||
             (c->ctrl->type == CTRL_EDITBOX &&
              c->ctrl->editbox.has_list)));
+    if (lazy_items_del(c, ctrl, dp, index)) return;
     msg = (c->ctrl->type==CTRL_LISTBOX && c->ctrl->listbox.height!=0 ?
            LB_DELETESTRING : CB_DELETESTRING);
     SendDlgItemMessage(dp->hwnd, c->base_id+1, msg, index, 0);
@@ -2299,6 +2318,7 @@ void dlg_listbox_add(dlgcontrol *ctrl, dlgparam *dp, char const *text)
            (c->ctrl->type == CTRL_LISTBOX ||
             (c->ctrl->type == CTRL_EDITBOX &&
              c->ctrl->editbox.has_list)));
+    if (lazy_items_add(c, ctrl, dp, text)) return;
     msg = (c->ctrl->type==CTRL_LISTBOX && c->ctrl->listbox.height!=0 ?
            LB_ADDSTRING : CB_ADDSTRING);
     SendDlgItemMessage(dp->hwnd, c->base_id+1, msg, 0, (LPARAM)text);
@@ -2320,6 +2340,7 @@ void dlg_listbox_addwithid(dlgcontrol *ctrl, dlgparam *dp,
            (c->ctrl->type == CTRL_LISTBOX ||
             (c->ctrl->type == CTRL_EDITBOX &&
              c->ctrl->editbox.has_list)));
+    if (lazy_items_addwithid(c, ctrl, dp, text, id)) return;
     msg = (c->ctrl->type==CTRL_LISTBOX && c->ctrl->listbox.height!=0 ?
            LB_ADDSTRING : CB_ADDSTRING);
     msg2 = (c->ctrl->type==CTRL_LISTBOX && c->ctrl->listbox.height!=0 ?
@@ -2364,6 +2385,7 @@ bool dlg_listbox_issel(dlgcontrol *ctrl, dlgparam *dp, int index)
     assert(c && c->ctrl->type == CTRL_LISTBOX &&
            c->ctrl->listbox.multisel &&
            c->ctrl->listbox.height != 0);
+    if (lazy_items_is_delayed(c, ctrl, dp) && !index) return false;
     return
         SendDlgItemMessage(dp->hwnd, c->base_id+1, LB_GETSEL, index, 0);
 }
@@ -2374,6 +2396,7 @@ void dlg_listbox_select(dlgcontrol *ctrl, dlgparam *dp, int index)
     int msg;
     assert(c && c->ctrl->type == CTRL_LISTBOX &&
            !c->ctrl->listbox.multisel);
+    if (lazy_items_select(c, ctrl, dp, index)) return;
     msg = (c->ctrl->listbox.height != 0 ? LB_SETCURSEL : CB_SETCURSEL);
     SendDlgItemMessage(dp->hwnd, c->base_id+1, msg, index, 0);
 }

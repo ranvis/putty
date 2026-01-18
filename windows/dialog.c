@@ -655,8 +655,7 @@ static INT_PTR GenericMainDlgProc(HWND hwnd, UINT msg, WPARAM wParam,
                     }
                     winctrl_rem_shortcuts(pds->dp, c);
                     winctrl_remove(&pds->ctrltrees[TREE_PANEL], c);
-                    sfree(c->data);
-                    sfree(c);
+                    winctrl_free(c);
                 }
             }
             pds_create_controls(pds, TREE_PANEL, IDCX_PANELBASE,

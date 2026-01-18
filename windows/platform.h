@@ -591,6 +591,7 @@ struct winctrl {
      * store temporary data about the control.
      */
     void *data;
+    void (*data_freefn)(struct winctrl *c);
 };
 /*
  * And this structure holds a set of the above, in two separate
@@ -607,6 +608,7 @@ void winctrl_init(struct winctrls *);
 void winctrl_cleanup(struct winctrls *);
 void winctrl_add(struct winctrls *, struct winctrl *);
 void winctrl_remove(struct winctrls *, struct winctrl *);
+void winctrl_free(struct winctrl *c);
 struct winctrl *winctrl_findbyctrl(struct winctrls *, dlgcontrol *);
 struct winctrl *winctrl_findbyid(struct winctrls *, int);
 struct winctrl *winctrl_findbyindex(struct winctrls *, int);
