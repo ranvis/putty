@@ -700,20 +700,27 @@ static void codepage_handler(dlgcontrol *ctrl, dlgparam *dlg,
         int i;
         const char *cp, *thiscp;
         dlg_update_start(ctrl, dlg);
-        thiscp = conf_get_str(conf, CONF_line_codepage);
-        if (decode_codepage(thiscp) != CP_UTF8 || iso2022_init_test(thiscp))
+        char *thiscp_t = thiscp = conf_get_str(conf, CONF_line_codepage);
+        char t_buf[128];
+        if (decode_codepage(thiscp) != CP_UTF8 || iso2022_init_test(thiscp)) {
             thiscp = cp_name(decode_codepage(thiscp));
+            thiscp_t = l10n_translate(thiscp, t_buf);
+        }
         dlg_listbox_clear(ctrl, dlg);
         for (i = 0; (cp = cp_enumerate(i)) != NULL; i++)
             dlg_listbox_add(ctrl, dlg, cp);
-        dlg_editbox_set(ctrl, dlg, thiscp);
+        dlg_editbox_set(ctrl, dlg, thiscp_t);
         conf_set_str(conf, CONF_line_codepage, thiscp);
         dlg_update_done(ctrl, dlg);
     } else if (event == EVENT_VALCHANGE) {
         char *codepage = dlg_editbox_get(ctrl, dlg);
         conf_set_str(conf, CONF_line_codepage, codepage);
-        if (decode_codepage(codepage) != CP_UTF8 || iso2022_init_test(codepage))
-            conf_set_str(conf, CONF_line_codepage, cp_name(decode_codepage(codepage)));
+        extern const char *l10n_get_codepage_orig_name(const char *cp_name);
+        const char *codepage_orig = l10n_get_codepage_orig_name(codepage);
+        if (codepage_orig) codepage = NULL;
+        else codepage_orig = codepage;
+        if (decode_codepage(codepage_orig) != CP_UTF8 || iso2022_init_test(codepage_orig))
+            conf_set_str(conf, CONF_line_codepage, cp_name(decode_codepage(codepage_orig)));
         sfree(codepage);
     }
 }

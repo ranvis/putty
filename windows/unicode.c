@@ -1106,6 +1106,17 @@ int check_compose(int first, int second)
     return check_compose_internal(first, second, 0);
 }
 
+const char *l10n_get_codepage_orig_name(const char *cp_name)
+{
+    for (const struct cp_list_item *cpi = cp_list; cpi->name; cpi++) {
+        char tr_buf[128];
+        const char *tr = l10n_translate(cpi->name, tr_buf);
+        if (tr == tr_buf && !strcmp(tr, cp_name))  // strict match only
+            return cpi->name;
+    }
+    return NULL;
+}
+
 int decode_codepage(const char *cp_name)
 {
     const char *s, *d;
@@ -1185,7 +1196,7 @@ const char *cp_name(int codepage)
     static char buf[32];
 
     if (codepage == -1) {
-        sprintf(buf, "Use font encoding");
+        strcpy(buf, "Use font encoding");
         return buf;
     }
 

@@ -51,3 +51,8 @@ const char *l10n_translate_s(const char *str, char *buf, size_t len)
 char *l10n_dupstr (char *s) {
   return dupstr(s);
 }
+
+const char *l10n_get_codepage_orig_name(const char *cp_name)
+{
+    return NULL;
+}
