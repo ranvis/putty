@@ -89,11 +89,11 @@ add_executable(pageant
   pageant.c
   help.c
   ini.c
+  ${CMAKE_SOURCE_DIR}/stubs/no-iso2022.c
   pageant.rc)
 add_dependencies(pageant generated_licence_h)
 target_link_libraries(pageant
   guimisc eventloop agent network crypto utils
-  iso2022
   ${platform_libraries})
 set_target_properties(pageant PROPERTIES WIN32_EXECUTABLE ON)
 installed_program(pageant)
@@ -159,11 +159,11 @@ add_executable(puttygen
   ${CMAKE_SOURCE_DIR}/sshpubk.c
   ${CMAKE_SOURCE_DIR}/sshrand.c
   controls.c
+  ${CMAKE_SOURCE_DIR}/stubs/no-iso2022.c
   puttygen.rc)
 add_dependencies(puttygen generated_licence_h)
 target_link_libraries(puttygen
   keygen guimisc crypto utils
-  iso2022
   ${platform_libraries})
 set_target_properties(puttygen PROPERTIES WIN32_EXECUTABLE ON)
 installed_program(puttygen)
@@ -201,18 +201,22 @@ target_compile_definitions(test_split_into_argv PRIVATE TEST)
 target_link_libraries(test_split_into_argv utils ${platform_libraries})
 
 add_executable(test_screenshot
+  ${CMAKE_SOURCE_DIR}/stubs/no-ini.c
+  ${CMAKE_SOURCE_DIR}/stubs/no-iso2022.c
   test/test_screenshot.c)
 target_link_libraries(test_screenshot utils ${platform_libraries})
 
 add_executable(test_lineedit
   ${CMAKE_SOURCE_DIR}/test/test_lineedit.c
   ${CMAKE_SOURCE_DIR}/stubs/no-gss.c
+  ${CMAKE_SOURCE_DIR}/stubs/no-ini.c
   ${CMAKE_SOURCE_DIR}/stubs/no-logging.c
   ${CMAKE_SOURCE_DIR}/stubs/no-printing.c
   ${CMAKE_SOURCE_DIR}/stubs/no-storage.c
   ${CMAKE_SOURCE_DIR}/stubs/no-timing.c
   no-jump-list.c)
 target_link_libraries(test_lineedit
+  iso2022
   guiterminal settings eventloop utils ${platform_libraries})
 
 add_executable(test_terminal
@@ -222,6 +226,9 @@ add_executable(test_terminal
   ${CMAKE_SOURCE_DIR}/stubs/no-timing.c
   no-jump-list.c)
 target_link_libraries(test_terminal
+  iso2022
   guiterminal settings eventloop utils ${platform_libraries})
 
-add_sources_from_current_dir(test_conf no-jump-list.c handle-wait.c)
+add_sources_from_current_dir(test_conf
+  ../stubs/no-iso2022.c
+  no-jump-list.c handle-wait.c)
