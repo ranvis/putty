@@ -2227,6 +2227,8 @@ static void usage(void)
            " standard error\n");
     printf("  -proxycmd command\n");
     printf("            use 'command' as local proxy\n");
+    printf("  -preconnectcommand command\n");
+    printf("            run 'command' before making network connection\n");
     printf("  -unsafe   allow server-side wildcards (DANGEROUS)\n");
     printf("  -sftp     force use of SFTP protocol\n");
     printf("  -scp      force use of SCP protocol\n");

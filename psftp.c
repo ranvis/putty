@@ -2559,6 +2559,8 @@ static void usage(void)
            " standard error\n");
     printf("  -proxycmd command\n");
     printf("            use 'command' as local proxy\n");
+    printf("  -preconnectcommand command\n");
+    printf("            run 'command' before making network connection\n");
     printf("  -sshlog file\n");
     printf("  -sshrawlog file\n");
     printf("            log protocol details to a file\n");

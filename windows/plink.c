@@ -145,6 +145,8 @@ static void usage(void)
     printf("  -batch    disable all interactive prompts\n");
     printf("  -proxycmd command\n");
     printf("            use 'command' as local proxy\n");
+    printf("  -preconnectcommand command\n");
+    printf("            run 'command' before making network connection\n");
     printf("  -sercfg configuration-string (e.g. 19200,8,n,1,X)\n");
     printf("            Specify the serial configuration (serial only)\n");
     printf("The following options only apply to SSH connections:\n");
