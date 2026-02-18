@@ -473,6 +473,7 @@ int cmdline_process_param(CmdlineArg *arg, CmdlineArg *nextarg,
     }
     if (!strcmp(p, "-preconnectcommand")) {
         RETURN(2);
+        UNAVAILABLE_IN(TOOLTYPE_NONNETWORK);
         SAVEABLE(1);
         conf_set_str(conf, CONF_pre_connect_command, value);
     }
