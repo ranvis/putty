@@ -1880,12 +1880,6 @@ The results of running the program will be logged in PuTTY's Event
 Log. So if it terminates with an error message, the Event Log will
 show the message.
 
-\s{NOTE} that when PuTTY runs this command as a subprocess, it will
-stop responding completely while it waits for the subprocess to finish
-\dash it will not even respond to the GUI. So you should make sure the
-knock command completes quickly, whether it succeeds or fails, or
-PuTTY will become unresponsive.
-
 \H{config-data} The Data panel
 
 The Data panel allows you to configure various pieces of data which
