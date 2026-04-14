@@ -596,150 +596,155 @@ void pty_pre_init(void)
 static void pty_try_wait(void);
 static void pty_uxsel_setup(Pty *pty);
 
+static void pty_finished(Pty *pty)
+{
+    int close_on_exit;
+    int i;
+
+    for (i = 0; i < 3; i++)
+        if (pty->fds[i].fd >= 0)
+            uxsel_del(pty->fds[i].fd);
+
+    pty_close(pty);
+
+    pty->finished = true;
+
+    /*
+     * This is a slight layering-violation sort of hack: only
+     * if we're not closing on exit (COE is set to Never, or to
+     * Only On Clean and it wasn't a clean exit) do we output a
+     * `terminated' message.
+     */
+    close_on_exit = conf_get_int(pty->conf, CONF_close_on_exit);
+    if (close_on_exit == FORCE_OFF ||
+        (close_on_exit == AUTO && pty->exit_code != 0)) {
+        char *message;
+        if (WIFEXITED(pty->exit_code)) {
+            message = dupprintf(
+                "\r\n[pterm: process terminated with exit code %d]\r\n",
+                WEXITSTATUS(pty->exit_code));
+        } else if (WIFSIGNALED(pty->exit_code)) {
+#if !HAVE_STRSIGNAL
+            message = dupprintf(
+                "\r\n[pterm: process terminated on signal %d]\r\n",
+                WTERMSIG(pty->exit_code));
+#else
+            message = dupprintf(
+                "\r\n[pterm: process terminated on signal %d (%s)]\r\n",
+                WTERMSIG(pty->exit_code),
+                strsignal(WTERMSIG(pty->exit_code)));
+#endif
+        } else {
+            /* _Shouldn't_ happen, but if it does, a vague message
+             * is better than no message at all */
+            message = dupprintf("\r\n[pterm: process terminated]\r\n");
+        }
+        seat_stdout_pl(pty->seat, ptrlen_from_asciz(message));
+        sfree(message);
+    }
+
+    seat_eof(pty->seat);
+    seat_notify_remote_exit(pty->seat);
+}
+
 static void pty_real_select_result(Pty *pty, int fd, int event, int status)
 {
     char buf[4096];
     int ret;
     bool finished = false;
 
-    if (event < 0) {
+    if (event == SELECT_R) {
+        bool is_stdout = (fd == pty->master_o);
+
+        ret = read(fd, buf, sizeof(buf));
+
         /*
-         * We've been called because our child process did
-         * something. `status' tells us what.
+         * Treat EIO on a pty master as equivalent to EOF (because
+         * that's how the kernel seems to report the event where
+         * the last process connected to the other end of the pty
+         * went away).
          */
-        if ((WIFEXITED(status) || WIFSIGNALED(status))) {
+        if (fd == pty->master_fd && ret < 0 && errno == EIO)
+            ret = 0;
+
+        if (ret == 0) {
             /*
-             * The primary child process died.
+             * EOF on this input fd, so to begin with, we may as
+             * well close it, and remove all references to it in
+             * the pty's fd fields.
              */
-            pty->child_dead = true;
-            del234(ptys_by_pid, pty);
-            pty->exit_code = status;
+            uxsel_del(fd);
+            close(fd);
+            if (pty->master_fd == fd)
+                pty->master_fd = -1;
+            if (pty->master_o == fd)
+                pty->master_o = -1;
+            if (pty->master_e == fd)
+                pty->master_e = -1;
 
-            /*
-             * If this is an ordinary pty session, this is also the
-             * moment to terminate the whole backend.
-             *
-             * We _could_ instead keep the terminal open for remaining
-             * subprocesses to output to, but conventional wisdom
-             * seems to feel that that's the Wrong Thing for an
-             * xterm-alike, so we bail out now (though we don't
-             * necessarily _close_ the window, depending on the state
-             * of Close On Exit). This would be easy enough to change
-             * or make configurable if necessary.
-             */
-            if (pty->master_fd >= 0)
-                finished = true;
-        }
-    } else {
-        if (event == SELECT_R) {
-            bool is_stdout = (fd == pty->master_o);
-
-            ret = read(fd, buf, sizeof(buf));
-
-            /*
-             * Treat EIO on a pty master as equivalent to EOF (because
-             * that's how the kernel seems to report the event where
-             * the last process connected to the other end of the pty
-             * went away).
-             */
-            if (fd == pty->master_fd && ret < 0 && errno == EIO)
-                ret = 0;
-
-            if (ret == 0) {
+            if (is_stdout) {
                 /*
-                 * EOF on this input fd, so to begin with, we may as
-                 * well close it, and remove all references to it in
-                 * the pty's fd fields.
+                 * We assume a clean exit if the pty (or stdout
+                 * pipe) has closed, but the actual child process
+                 * hasn't. The only way I can imagine this
+                 * happening is if it detaches itself from the pty
+                 * and goes daemonic - in which case the expected
+                 * usage model would precisely _not_ be for the
+                 * pterm window to hang around!
                  */
-                uxsel_del(fd);
-                close(fd);
-                if (pty->master_fd == fd)
-                    pty->master_fd = -1;
-                if (pty->master_o == fd)
-                    pty->master_o = -1;
-                if (pty->master_e == fd)
-                    pty->master_e = -1;
-
-                if (is_stdout) {
-                    /*
-                     * We assume a clean exit if the pty (or stdout
-                     * pipe) has closed, but the actual child process
-                     * hasn't. The only way I can imagine this
-                     * happening is if it detaches itself from the pty
-                     * and goes daemonic - in which case the expected
-                     * usage model would precisely _not_ be for the
-                     * pterm window to hang around!
-                     */
-                    finished = true;
-                    pty_try_wait(); /* one last effort to collect exit code */
-                    if (!pty->child_dead)
-                        pty->exit_code = 0;
-                }
-            } else if (ret < 0) {
-                perror("read pty master");
-                exit(1);
-            } else if (ret > 0) {
-                pty->output_backlog = seat_output(
-                    pty->seat, !is_stdout, buf, ret);
-                pty_uxsel_setup(pty);
+                finished = true;
+                pty_try_wait(); /* one last effort to collect exit code */
+                if (!pty->child_dead)
+                    pty->exit_code = 0;
             }
-        } else if (event == SELECT_W) {
-            /*
-             * Attempt to send data down the pty.
-             */
-            pty_try_write(pty);
+        } else if (ret < 0) {
+            perror("read pty master");
+            exit(1);
+        } else if (ret > 0) {
+            pty->output_backlog = seat_output(
+                pty->seat, !is_stdout, buf, ret);
+            pty_uxsel_setup(pty);
         }
-    }
-
-    if (finished && !pty->finished) {
-        int close_on_exit;
-        int i;
-
-        for (i = 0; i < 3; i++)
-            if (pty->fds[i].fd >= 0)
-                uxsel_del(pty->fds[i].fd);
-
-        pty_close(pty);
-
-        pty->finished = true;
-
+    } else if (event == SELECT_W) {
         /*
-         * This is a slight layering-violation sort of hack: only
-         * if we're not closing on exit (COE is set to Never, or to
-         * Only On Clean and it wasn't a clean exit) do we output a
-         * `terminated' message.
+         * Attempt to send data down the pty.
          */
-        close_on_exit = conf_get_int(pty->conf, CONF_close_on_exit);
-        if (close_on_exit == FORCE_OFF ||
-            (close_on_exit == AUTO && pty->exit_code != 0)) {
-            char *message;
-            if (WIFEXITED(pty->exit_code)) {
-                message = dupprintf(
-                    "\r\n[pterm: process terminated with exit code %d]\r\n",
-                    WEXITSTATUS(pty->exit_code));
-            } else if (WIFSIGNALED(pty->exit_code)) {
-#if !HAVE_STRSIGNAL
-                message = dupprintf(
-                    "\r\n[pterm: process terminated on signal %d]\r\n",
-                    WTERMSIG(pty->exit_code));
-#else
-                message = dupprintf(
-                    "\r\n[pterm: process terminated on signal %d (%s)]\r\n",
-                    WTERMSIG(pty->exit_code),
-                    strsignal(WTERMSIG(pty->exit_code)));
-#endif
-            } else {
-                /* _Shouldn't_ happen, but if it does, a vague message
-                 * is better than no message at all */
-                message = dupprintf("\r\n[pterm: process terminated]\r\n");
-            }
-            seat_stdout_pl(pty->seat, ptrlen_from_asciz(message));
-            sfree(message);
-        }
-
-        seat_eof(pty->seat);
-        seat_notify_remote_exit(pty->seat);
+        pty_try_write(pty);
     }
+
+    if (finished && !pty->finished)
+        pty_finished(pty);
+}
+
+static void pty_subprocess_status(Pty *pty, int status)
+{
+    /*
+     * We've been called because our child process did something.
+     * `status' tells us what.
+     */
+    if (!(WIFEXITED(status) || WIFSIGNALED(status)))
+        return;
+
+    /*
+     * If we get here, the primary child process died.
+     */
+    pty->child_dead = true;
+    del234(ptys_by_pid, pty);
+    pty->exit_code = status;
+
+    /*
+     * If this is an ordinary pty session, this is also the moment to
+     * terminate the whole backend.
+     *
+     * We _could_ instead keep the terminal open for remaining
+     * subprocesses to output to, but conventional wisdom seems to
+     * feel that that's the Wrong Thing for an xterm-alike, so we bail
+     * out now (though we don't necessarily _close_ the window,
+     * depending on the state of Close On Exit). This would be easy
+     * enough to change or make configurable if necessary.
+     */
+    if (pty->master_fd >= 0 && !pty->finished)
+        pty_finished(pty);
 }
 
 static void pty_try_wait(void)
@@ -754,7 +759,7 @@ static void pty_try_wait(void)
         pty = find234(ptys_by_pid, &pid, pty_find_by_pid);
 
         if (pty)
-            pty_real_select_result(pty, -1, -1, status);
+            pty_subprocess_status(pty, status);
     } while (pid > 0);
 }
 
