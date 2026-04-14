@@ -38,6 +38,7 @@ add_sources_from_current_dir(utils
   utils/shinydialogbox.c
   utils/split_into_argv.c
   utils/split_into_argv_w.c
+  utils/subprocess_waiter.c
   utils/version.c
   utils/win_strerror.c
   unicode.c)

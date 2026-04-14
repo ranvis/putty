@@ -470,6 +470,9 @@ typedef void (*cliloop_pw_check_t)(void *ctx, pollwrapper *pw);
 typedef bool (*cliloop_continue_t)(void *ctx, bool found_any_fd,
                                    bool ran_any_callback);
 
+/* Unix-specific API for making a SubprocessWaiter */
+SubprocessWaiter *subproc_waiter_from_pid(pid_t pid);
+
 void cli_main_loop(cliloop_pw_setup_t pw_setup,
                    cliloop_pw_check_t pw_check,
                    cliloop_continue_t cont, void *ctx);
