@@ -69,7 +69,7 @@ static void sigchld_handler(int signum)
     }
 }
 
-static void subproc_waiter_wait(void)
+void subproc_waiter_force_wait(void)
 {
     while (1) {
         int status;
@@ -108,11 +108,11 @@ static void sigchld_select_result(int fd, int event)
             /* do nothing */;
 
         /* Now wait for all available subprocesses. */
-        subproc_waiter_wait();
+        subproc_waiter_force_wait();
     }
 }
 
-static void subproc_waiter_setup(void)
+void subproc_waiter_force_setup(void)
 {
     static bool setup = false;
     if (!setup) {
@@ -129,7 +129,9 @@ static void subproc_waiter_setup(void)
 
         waiters_by_pid = newtree234(subproc_waiter_compare_by_pid);
 
-        uxsel_set(sigchld_pipe[0], SELECT_R, sigchld_select_result);
+        /* We don't call uxsel_set here, because this function might
+         * have been called too early, e.g. in pty.c. We leave that
+         * for subproc_waiter_from_pid. */
 
         setup = true;
     }
@@ -137,7 +139,8 @@ static void subproc_waiter_setup(void)
 
 SubprocessWaiter *subproc_waiter_from_pid(pid_t pid)
 {
-    subproc_waiter_setup();
+    subproc_waiter_force_setup();
+    uxsel_set(sigchld_pipe[0], SELECT_R, sigchld_select_result);
 
     SubprocessWaiter *waiter = snew(SubprocessWaiter);
     waiter->pid = pid;

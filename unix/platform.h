@@ -472,6 +472,11 @@ typedef bool (*cliloop_continue_t)(void *ctx, bool found_any_fd,
 
 /* Unix-specific API for making a SubprocessWaiter */
 SubprocessWaiter *subproc_waiter_from_pid(pid_t pid);
+/* Force setup of the SIGCHLD handler, in case we're about to fork for
+ * any other reason */
+void subproc_waiter_force_setup(void);
+/* Force a run of the waitpid() loop even if there's been no signal */
+void subproc_waiter_force_wait(void);
 
 void cli_main_loop(cliloop_pw_setup_t pw_setup,
                    cliloop_pw_check_t pw_check,

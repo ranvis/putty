@@ -2747,8 +2747,11 @@ Socket *platform_start_subprocess(
  * EXITTYPE_NORMAL, because exits and signal terminations aren't
  * distinguished in the API. So don't depend on this enumeration for
  * anything semantic: only use it to write sensible (ish) user-facing
- * messages. */
-enum { EXITTYPE_NORMAL, EXITTYPE_SIGNAL };
+ * messages.
+ *
+ * EXITTYPE_WEIRD is never returned from this callback, but is
+ * available for callers to use as an extra value of their own. */
+enum { EXITTYPE_NORMAL, EXITTYPE_SIGNAL, EXITTYPE_WEIRD };
 typedef void (*SubprocessWaiterCallback)(
     void *ctx, int exittype, uint32_t exitdata);
 void subproc_waiter_set_callback(
