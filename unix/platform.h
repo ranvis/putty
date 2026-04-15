@@ -186,6 +186,14 @@ void app_menu_action(GtkFrontend *frontend, enum MenuAction);
 extern const char *const *const main_icon[];
 extern const char *const *const cfg_icon[];
 extern const int n_main_icon, n_cfg_icon;
+/* Same, but in raw RGB24 with a wrapper struct */
+struct RgbIconImage {
+    unsigned width, height;
+    const void *data;
+};
+extern const struct RgbIconImage *const main_icon_rgb[];
+extern const struct RgbIconImage *const cfg_icon_rgb[];
+extern const int n_main_icon_rgb, n_cfg_icon_rgb;
 
 /* Things dialog.c needs from window.c */
 #ifdef MAY_REFER_TO_GTK_IN_HEADERS
@@ -200,8 +208,7 @@ enum DialogSlot {
 GtkWidget *gtk_seat_get_window(Seat *seat);
 void register_dialog(Seat *seat, enum DialogSlot slot, GtkWidget *dialog);
 void unregister_dialog(Seat *seat, enum DialogSlot slot);
-void set_window_icon(GtkWidget *window, const char *const *const *icon,
-                     int n_icon);
+void set_window_cfg_icon(GtkWidget *window);
 extern GdkAtom compound_text_atom;
 #endif
 

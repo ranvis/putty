@@ -27,10 +27,14 @@ add_sources_from_current_dir(utils
 # Compiled icon pixmap files
 add_library(puttyxpms STATIC
   putty-xpm.c
-  putty-config-xpm.c)
+  putty-rgb.c
+  putty-config-xpm.c
+  putty-config-rgb.c)
 add_library(ptermxpms STATIC
   pterm-xpm.c
-  pterm-config-xpm.c)
+  pterm-rgb.c
+  pterm-config-xpm.c
+  pterm-config-rgb.c)
 add_sources_from_current_dir(eventloop
   cliloop.c uxsel.c)
 add_sources_from_current_dir(console
