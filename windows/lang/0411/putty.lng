@@ -372,6 +372,8 @@ Enable TCP keepalives (SO_KEEPALIVE option)=TCP keepalive を有効にする (SO
 Internet protocol version=インターネットプロトコルバージョン
 Logical name of remote host=リモートホストの論理名
 Logical name of remote host (e.g. for SSH key lookup):=リモートホストの論理名 (SSHキーの照合など):
+Command to run at connection event=接続イベント時に実行するコマンド
+Command to run before connection=接続前に実行するコマンド
 
 Data=データ
 Data to send to the server=サーバに送られるデータ
