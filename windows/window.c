@@ -2699,6 +2699,19 @@ static void ime_mode_update(WinGuiSeat *wgs)
     HIMC hImc = ImmGetContext(hwnd);
     wgs->ime_mode = ImmGetOpenStatus(hImc);
     ImmReleaseContext(hwnd, hImc);
+
+    // invalidate cursor position
+    Terminal *term = wgs->term;
+    const pos curs = term->curs;
+    if (curs.y >= 0 && curs.y < term->rows && curs.x >= 0 && curs.x < term->cols) {
+        termline *ldata = term->disptext[curs.y - term->disptop];
+        ldata->chars[curs.x].attr |= ATTR_INVALID;
+        if (curs.x > 0 && ldata->chars[curs.x].chr == UCSWIDE)
+            ldata->chars[curs.x - 1].attr |= ATTR_INVALID;
+        if (curs.x < term->cols - 1 && ldata->chars[curs.x + 1].chr == UCSWIDE)
+            ldata->chars[curs.x + 1].attr |= ATTR_INVALID;
+    }
+
     term_update(wgs->term);
 }
 
@@ -4192,7 +4205,9 @@ LRESULT wndproc_document_feed(WinGuiSeat *wgs, RECONVERTSTRING *rs)
     HIMC himc;
     int ctx_len = lenof(str) / 3;
     ctx_len = min(ctx_len, term->cols);
-    curs.x = term->dispcursx, curs.y = term->dispcursy;
+    int term_dispcursy = term->curs.y - term->disptop;
+    int term_dispcursx = term->curs.x;
+    curs.x = term_dispcursx, curs.y = term_dispcursy;
     start = end = curs;
     if (!start.x && start.y)
         start.x = term->cols - ctx_len, start.y--;
