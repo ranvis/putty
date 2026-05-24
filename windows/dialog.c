@@ -421,8 +421,6 @@ static INT_PTR CALLBACK AboutProc(HWND hwnd, UINT msg,
             "%s\r\n\r\n%s\r\n\r\n%s\r\n\r\n%s",
             appname, ver, buildinfo_text,
             "\251 " SHORT_COPYRIGHT_DETAILS ". All rights reserved."
-            "\r\n(This build is a modified version of the original software."
-            "\r\nIt is not affiliated with the original developers.)"
         );
         sfree(buildinfo_text);
         SetDlgItemTextCp1252(hwnd, IDA_TEXT, text);

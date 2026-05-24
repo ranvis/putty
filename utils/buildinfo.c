@@ -182,5 +182,8 @@ char *buildinfo(const char *newline)
 
     put_fmt(buf, "%sSource commit: %s", newline, commitid);
 
+    put_fmt(buf, "%s" "Notice: This build is a modified version of the original software.", newline);
+    put_fmt(buf, "%s" "  It is not affiliated with the original developers.", newline);
+
     return strbuf_to_str(buf);
 }
