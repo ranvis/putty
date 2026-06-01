@@ -1974,7 +1974,7 @@ static NORETURN void opt_error(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    char *msg = dupvprintf(fmt, ap);
+    char *msg = l10n_dupvprintf(fmt, ap);
     va_end(ap);
 
     MessageBox(NULL, msg, "Pageant command line error", MB_ICONERROR | MB_OK);

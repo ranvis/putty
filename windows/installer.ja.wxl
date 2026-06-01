@@ -24,6 +24,8 @@
   <String Id="exit_readme"
     Overridable="yes">README ファイルを読む</String>
 
+  <String Id="rv_feature_ini_restriction"
+    Overridable="yes">-ini FILE オプションの利用制限</String>
   <String Id="rv_lang_0411"
     Overridable="yes">日本語 言語ファイル</String>
 </WixLocalization>

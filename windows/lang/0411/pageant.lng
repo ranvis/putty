@@ -71,9 +71,14 @@ Pageant: Decrypting Stored Key=Pageant: 保存された鍵を復号します
 A client of Pageant wants to use the following encrypted key:=Pageant のクライアントが以下の暗号化された鍵を使おうとしています:
 If you intended this, click in this box to make sure it has=これが意図した操作である場合、入力ボックスをクリックして入力可能な
 input focus, then enter the passphrase to decrypt the key.=状態にした上で、パスフレーズを入力して鍵を復号してください。
-Pageant command-line syntax error=Pageant コマンドライン文法エラー
-unrecognised command-line option%0A'%25s'=認識できないコマンドラインオプションです:%0A'%25s'
+Pageant command line error=Pageant コマンドラインエラー
+unrecognised option '%25s'%0A=オプション '%s' は認識できません。%0A
 Pageant error=Pageant エラー
 some of the reencrypt event will not be notified from Windows.=いくつかの再暗号化イベントは Windows によって通知されません。
 unrecognised re-encrypt option%0A'%25s'=認識できない再暗号化オプションです:%0A'%25s'
 re-encrypt time in minutes must be between %25d and %25d%0A'%25s'=再暗号化時間は %25d 分から %25d 分の間で指定してください%0A'%25s'
+
+-ini must be followed by a filename=-ini に続けてファイル名の指定が必要です
+cannot use "%25s" as ini file="%s" をiniファイルとして使用できません
+-ini option is disabled by the registry setting=-ini オプションはレジストリ設定で無効化されています
+option '%25s' expects a value=オプション "%s" は値が必要です

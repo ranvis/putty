@@ -818,6 +818,7 @@ Discards data sent before its greeting=greeting の前に送信されたデー�
 the -pwfile option can only be used with the SSH protocol=-pwfile オプションは SSH プロトコルでのみ使用可能です
 -ini must be followed by a filename=-ini に続けてファイル名の指定が必要です
 cannot use "%25s" as ini file="%s" をiniファイルとして使用できません
+-ini option is disabled by the registry setting=-ini オプションはレジストリ設定で無効化されています
 option "%25s" requires an argument=オプション "%s" は値が必要です
 unrecognised option "%25s"=オプション '%s' は認識できません。
 unknown option "%25s"=オプション "%s" は認識できません。

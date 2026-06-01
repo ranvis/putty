@@ -17,16 +17,45 @@ char inifile[2 * MAX_PATH + 10];
 
 static bool get_ini_bool(const char *section, const char *name, const char *ini_file, bool fallback);
 
+enum {
+    INI_ORIG_APP = 1,
+    INI_ORIG_USER = 2,
+    INI_ORIG_ARG = 4,
+    INI_ORIG_ALL = INI_ORIG_APP | INI_ORIG_USER | INI_ORIG_ARG,
+};
+typedef int8_t ini_origin_flags;
+
+static ini_origin_flags get_ini_origin_flags()
+{
+    static ini_origin_flags flags = -1;
+    if (flags == -1) {
+        HKEY hkey = open_regkey_ro(HKEY_CURRENT_USER, PUTTY_REG_POS);
+        if (hkey) {
+            DWORD dw;
+            if (get_reg_dword(hkey, "AllowIniFiles", &dw))
+                flags = (ini_origin_flags)dw;
+            else
+                flags = (ini_origin_flags)INI_ORIG_ALL;
+            close_regkey(hkey);
+        }
+    }
+    return flags;
+}
+
 bool get_use_inifile(void)
 {
     if (inifile[0] == '\0') {
-        GetModuleFileName(NULL, inifile, sizeof inifile - 10);
-        char *p = strrchr(inifile, '\\');
-        if (p) {
-            strcpy(p, "\\putty.ini");
-            use_inifile = get_ini_bool("Generic", "UseIniFile", inifile, false);
+        ini_origin_flags flags = get_ini_origin_flags();
+        use_inifile = false;
+        if (flags & INI_ORIG_APP) {
+            GetModuleFileName(NULL, inifile, sizeof inifile - 10);
+            char *p = strrchr(inifile, '\\');
+            if (p) {
+                strcpy(p, "\\putty.ini");
+                use_inifile = get_ini_bool("Generic", "UseIniFile", inifile, false);
+            }
         }
-        if (!use_inifile) {
+        if (!use_inifile && flags & INI_ORIG_USER) {
             HMODULE module;
             DECL_WINDOWS_FUNCTION(LOCAL_SCOPE, HRESULT, SHGetFolderPathA, (HWND, int, HANDLE, DWORD, LPSTR));
             module = load_system32_dll("shell32.dll");
@@ -88,8 +117,15 @@ void process_ini_option(sprintf_void_fp error_cb)
     split_into_argv_w(cmdline, true, &argc, &argv, NULL);
     if (argc >= 2) {
         if (!wcscmp(argv[1], L"-ini")) {
-            char *new_path = argc > 2 ? dup_wc_to_mb(CP_ACP, argv[2], "") : NULL;
-            char *error_msg = change_ini_path(new_path);
+            char *new_path, *error_msg;
+            ini_origin_flags flags = get_ini_origin_flags();
+            if (flags & INI_ORIG_ARG) {
+                new_path = argc > 2 ? dup_wc_to_mb(CP_ACP, argv[2], "") : NULL;
+                error_msg = change_ini_path(new_path);
+            } else {
+                new_path = NULL;
+                error_msg = l10n_dupstr("-ini option is disabled by the registry setting");
+            }
             sfree(new_path);
             if (error_msg) {
                 error_cb(error_msg);
