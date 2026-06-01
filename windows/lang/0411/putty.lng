@@ -671,8 +671,8 @@ This procedure will remove ALL Registry entries%0Aassociated with %25s, and will
 ;Network is down
 ;WSAAsyncSelect(): unknown error
 ;(No sessions)
-%25.70s Fatal Error=%25.70s 重大なエラー
-;;%25.70s Command Line Error
+%25s Fatal Error=%25s 重大なエラー
+%25s Command Line Error=%25s コマンドラインエラー
 Connection closed by remote host=リモートホストが接続を閉じました
 Remote side closed network connection=リモート側がネットワーク接続を閉じました
 Remote side unexpectedly closed network connection=リモート側が突然にネットワーク接続を閉じました
@@ -680,9 +680,9 @@ Remote side unexpectedly closed network connection=リモート側が突然に�
 Are you sure you want to close this session?=このセッションを閉じますか?
 Are you sure you want to close this session?%25s%25s=このセッションを閉じますか? %25s%25s
 This will also close %25d downstream connection%25s.=%d 本の下り接続も同時に閉じます。
-;%25.70s Error
+%25s Error=%25s エラー
 ;;Unable to play sound file%0A%25s%0AUsing default sound instead
-;%25.70s Sound Error
+%25s Sound Error=%25s サウンドエラー
 
 SSH connection sharing=SSH 接続の共有
 Permit sharing an existing SSH connection %25s?=既存の SSH 接続 %s を共有しますか?

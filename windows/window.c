@@ -337,13 +337,13 @@ static void start_backend(WinGuiSeat *wgs)
                          conf_get_bool(wgs->conf, CONF_tcp_nodelay),
                          conf_get_bool(wgs->conf, CONF_tcp_keepalives));
     if (error) {
-        char *str = dupprintf("%s Error", appname);
+        char *str = l10n_dupprintf("%s Error", appname);
         char *msg;
         if (cmdline_tooltype & TOOLTYPE_NONNETWORK) {
             /* Special case for pterm. */
-            msg = dupprintf("Unable to open terminal:\n%s", error);
+            msg = l10n_dupprintf("Unable to open terminal:\n%s", error);
         } else {
-            msg = dupprintf("Unable to open connection to\n%s\n%s",
+            msg = l10n_dupprintf("Unable to open connection to\n%s\n%s",
                             conf_dest(wgs->conf), error);
         }
         sfree(error);
@@ -1636,7 +1636,7 @@ static void win_seat_connection_fatal(Seat *seat, const char *msg)
 static void win_seat_nonfatal(Seat *seat, const char *msg)
 {
     WinGuiSeat *wgs = container_of(seat, WinGuiSeat, seat);
-    char *title = dupprintf("%s Error", appname);
+    char *title = l10n_dupprintf("%s Error", appname);
     show_mouseptr(wgs, true);
     MessageBox(wgs->term_hwnd, msg, title, MB_ICONERROR | MB_OK);
     sfree(title);
@@ -1663,7 +1663,7 @@ void cmdline_error(const char *fmt, ...)
     va_start(ap, fmt);
     message = l10n_dupvprintf(fmt, ap);
     va_end(ap);
-    title = dupprintf("%s Command Line Error", appname);
+    title = l10n_dupprintf("%s Command Line Error", appname);
     MessageBox(find_window_for_msgbox(), message, title, MB_ICONERROR | MB_OK);
     sfree(message);
     sfree(title);
@@ -6338,7 +6338,7 @@ void nonfatal(const char *fmt, ...)
     message = dupvprintf(fmt, ap);
     va_end(ap);
     show_mouseptr(NULL, true);
-    title = dupprintf("%s Error", appname);
+    title = l10n_dupprintf("%s Error", appname);
     MessageBox(find_window_for_msgbox(), message, title, MB_ICONERROR | MB_OK);
     sfree(message);
     sfree(title);
@@ -6457,7 +6457,7 @@ static void wintw_bell(TermWin *tw, int mode)
             buf = dupprintf(
                 "Unable to play sound file\n%s\nUsing default sound instead",
                 bell_wavefile->utf8path);
-            otherbuf = dupprintf("%s Sound Error", appname);
+            otherbuf = l10n_dupprintf("%s Sound Error", appname);
             message_box(wgs->term_hwnd, buf, otherbuf,
                         MB_OK | MB_ICONEXCLAMATION, true, 0);
             sfree(buf);
