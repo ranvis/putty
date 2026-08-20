@@ -190,3 +190,14 @@ containing string was ill-formed=内部の文字列が不正な形式です
 key data did not contain six integers=鍵データが 6 個の整数を含みません
 predefined DSA parameters not supported=DSA パラメータの事前指定には対応していません
 key data did not contain five integers=鍵データが 5 個の整数を含みません
+
+Save parameters invalid=保存するパラメータが無効
+passphrase length %25zu exceeds 2^32-1=パスフレーズの長さ %zu が 2^32-1 を超えています
+salt length %25zu exceeds 2^32-1=ソルトの長さ %zu が 2^32-1 を超えています
+parallelism level must be at least 1=スレッド数は 1 以上にしてください
+parallelism level %25u exceeds 2^24-1=スレッド数 %u が 2^24-1 を超えています
+tag length %25u exceeds 2^32-1=タグ長 %u が 2^32-1 を超えています
+memory requirement %25u must be at least %25u for parallelism level %25u=メモリ要求量 %u は最低 %u がスレッド数 %u を満たすために必要です
+number of passes must be at least 1=パス数は 1 以上にしてください
+secret length %25zu exceeds 2^32-1=秘密データ長 %zu が 2^32-1 を超えています
+associated data length %25zu exceeds 2^32-1=関連データ長 %zu が 2^32-1 を超えています

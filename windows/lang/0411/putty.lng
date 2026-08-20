@@ -857,3 +857,6 @@ PuTTY SSH-2 private key=PuTTY SSH-2 秘密鍵
 OpenSSH SSH-2 private key (old PEM format)=OpenSSH SSH-2 秘密鍵 (旧 PEM 形式)
 OpenSSH SSH-2 private key (new format)=OpenSSH SSH-2 秘密鍵 (新形式)
 ssh.com SSH-2 private key=ssh.com SSH-2 秘密鍵
+
+PPK format version %25u is lower than 2, the earliest version supported by this code=PPK 形式のバージョン %u は対応している最小バージョン 2 よりも古いものです
+PPK format version %25u is higher than 3, the latest version supported by this code=PPK 形式のバージョン %u は対応している最大バージョン 3 よりも新しいものです
