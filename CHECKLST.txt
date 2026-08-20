@@ -52,8 +52,6 @@ Things to do during the branch-stabilisation period:
     + build the old-Windows binaries and test-run them on Win95 (PuTTY
       proper even without WinSock2)
 
- - Check Coverity is happy.
-
  - Check the side-channel tester is happy.
 
  - Check all the non-SSH network backends still basically work.
@@ -148,8 +146,6 @@ Making a release candidate build
       case there's an unguarded clangism that would prevent it)
     * quick check of the outlying network protocols (Telnet, SUPDUP
       etc)
-    * feed the release-candidate source to Coverity and make sure it
-      didn't turn up any last-minute problems
     * make sure we have a clean run of testsc
     * do some testing on a system with a completely clean slate (no
       prior saved session data)
@@ -283,9 +279,9 @@ entries etc, this is the procedure for putting it all up on the web.
        * provide a new set of installer URLs, then click "save all"
          which actually uploads them
           + be careful to use URLs without "latest" in the pathname!
-            Just copying from the links on the download page is wrong.
-            Change "latest" to the version number, and test-download
-            via those URLs to check you didn't make a typo.
+            Go to the Changes page and click on the actual version
+            number, which gives the URLs that explicitly mention that
+            version.
        * change the "what's new in this release" text in the store
          listing
        * upload revised screenshots, if necessary
@@ -299,8 +295,10 @@ entries etc, this is the procedure for putting it all up on the web.
       headers:
        * Reply-To: <putty@projects.tartarus.org>
        * Subject: PuTTY X.YZ is released
-    + Mail that release announcement to
-      <putty-announce@lists.tartarus.org>.
+    + Mail that announcement to <putty-announce@lists.tartarus.org>
+       * but first, remember to enable the 'allow-putty-announce' flag
+         in mailfilter so that it won't be rejected. Then turn that
+         flag back off once the post has appeared in the list archive.
     + Post it to comp.security.ssh.
     + Post the prepared toot to Mastodon.
     + Mention it in <TDHTT> on mono.
