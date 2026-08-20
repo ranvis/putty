@@ -425,6 +425,11 @@ static INT_PTR CALLBACK PPKParamsProc(HWND hwnd, UINT msg,
             try_get_dlg_item_uint32(hwnd, IDC_ARGON2_TIME,
                                     pp->params.argon2_passes_auto ?
                                     &pp->time_ms : &pp->time_passes);
+            if (pp->params.argon2_passes_auto) {
+                pp->params.argon2_milliseconds = pp->time_ms;
+            } else {
+                pp->params.argon2_passes = pp->time_passes;
+            }
             return 0;
           case IDC_ARGON2_PARALLEL:
             try_get_dlg_item_uint32(hwnd, IDC_ARGON2_PARALLEL,
@@ -1840,11 +1845,6 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg,
             int dlgret = DialogBoxParam(hinst, MAKEINTRESOURCE(215),
                                         NULL, PPKParamsProc, (LPARAM)pp);
             if (dlgret) {
-                if (pp->params.argon2_passes_auto) {
-                    pp->params.argon2_milliseconds = pp->time_ms;
-                } else {
-                    pp->params.argon2_passes = pp->time_passes;
-                }
                 save_params = pp->params;
             }
             break;
