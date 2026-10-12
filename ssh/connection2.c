@@ -551,6 +551,16 @@ static bool ssh2_connection_filter_queue(struct ssh2_connection_state *s)
 
               case SSH2_MSG_CHANNEL_DATA:
               case SSH2_MSG_CHANNEL_EXTENDED_DATA:
+                if (c->closes & CLOSES_RCVD_EOF) {
+                    ssh_proto_error(
+                        s->ppl.ssh,
+                        "Received %s for channel %d after receiving EOF",
+                        ssh2_pkt_type(s->ppl.bpp->pls->kctx,
+                                      s->ppl.bpp->pls->actx, pktin->type),
+                        c->localid);
+                    return true;
+                }
+
                 ext_type = (pktin->type == SSH2_MSG_CHANNEL_DATA ? 0 :
                             get_uint32(pktin));
                 data = get_string(pktin);
