@@ -118,12 +118,11 @@ static void local_proxy_opener_coroutine(void *vctx)
         unsigned flags;
         lp->formatted_cmd = format_telnet_command(
             lp->addr, lp->port, lp->conf, &flags);
+        burnstr(lp->formatted_cmd);
+        lp->formatted_cmd = NULL;
 
         if (lp->clientseat && (flags & (TELNET_CMD_MISSING_USERNAME |
                                         TELNET_CMD_MISSING_PASSWORD))) {
-            burnstr(lp->formatted_cmd);
-            lp->formatted_cmd = NULL;
-
             /*
              * We're missing at least one of the two parts, and we
              * have an Interactor we can use to prompt for them, so
