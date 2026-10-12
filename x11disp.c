@@ -180,6 +180,7 @@ struct X11Display *x11_setup_display(const char *display, Conf *conf,
 void x11_free_display(struct X11Display *disp)
 {
     sfree(disp->hostname);
+    sfree(disp->realhost);
     sfree(disp->unixsocketpath);
     if (disp->localauthdata)
         smemclr(disp->localauthdata, disp->localauthdatalen);

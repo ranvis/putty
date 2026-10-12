@@ -601,6 +601,7 @@ static size_t x11_send(
             strcpy(new_peer_addr, "0.0.0.0");
             new_peer_port = 0;
         }
+        sfree(socketdata);
 
         greeting = x11_make_greeting(xconn->firstpkt[0],
                                      protomajor, protominor,
