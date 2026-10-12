@@ -42,7 +42,7 @@ static ChanopenResult chan_open_forwarded_tcpip(
     ptrlen fwdaddr, int fwdport, ptrlen peeraddr, int peerport)
 {
     PacketProtocolLayer *ppl = &s->ppl; /* for ppl_logevent */
-    struct ssh_rportfwd pf, *realpf;
+    struct ssh_rportfwd pf, *realpf = NULL;
     Channel *ch;
     char *err;
 
@@ -50,10 +50,12 @@ static ChanopenResult chan_open_forwarded_tcpip(
                  PTRLEN_PRINTF(fwdaddr), fwdport,
                  PTRLEN_PRINTF(peeraddr), peerport);
 
-    pf.shost = mkstr(fwdaddr);
-    pf.sport = fwdport;
-    realpf = find234(s->rportfwds, &pf, NULL);
-    sfree(pf.shost);
+    if (s->rportfwds) {  /* rportfwds is created on first use, may be NULL */
+        pf.shost = mkstr(fwdaddr);
+        pf.sport = fwdport;
+        realpf = find234(s->rportfwds, &pf, NULL);
+        sfree(pf.shost);
+    }
 
     if (realpf == NULL) {
         CHANOPEN_RETURN_FAILURE(
