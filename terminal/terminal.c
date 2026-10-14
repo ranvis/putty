@@ -3646,10 +3646,6 @@ unsigned long term_translate(
                 (t < 0x4000000 && utf8->size >= 5))
                 return UCSINVALID;
 
-            /* Unicode line separator and paragraph separator are CR-LF */
-            if (t == 0x2028 || t == 0x2029)
-                return 0x85;
-
             /* High controls are probably a Baaad idea too. */
             if (t < 0xA0)
                 return 0xFFFD;
