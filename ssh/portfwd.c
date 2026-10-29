@@ -344,13 +344,21 @@ static void pfd_receive(Plug *plug, int urgent, const char *data, size_t len)
 
                     reply_code = SOCKS5_RESP_SUCCESS;
 
+                    /* In case we've been through here before with a
+                     * partial packet */
+                    sfree(pf->hostname);
+                    pf->hostname = NULL;
+
                     switch (get_byte(src)) {
                       case SOCKS5_ADDR_IPV4:
                         pf->hostname = ipv4_to_string(get_uint32(src));
                         break;
-                      case SOCKS5_ADDR_IPV6:
-                        pf->hostname = ipv6_to_string(get_data(src, 16));
+                      case SOCKS5_ADDR_IPV6: {
+                        ptrlen addr = get_data(src, 16);
+                        if (addr.len == 16) /* may not have all the data yet */
+                            pf->hostname = ipv6_to_string(addr);
                         break;
+                      }
                       case SOCKS5_ADDR_HOSTNAME:
                         pf->hostname = mkstr(get_pstring(src));
                         break;
