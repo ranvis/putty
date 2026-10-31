@@ -2164,6 +2164,10 @@ void term_free(Terminal *term)
 
     conf_free(term->conf);
 
+    sfree(term->last_selected_text);
+    sfree(term->last_selected_attr);
+    sfree(term->last_selected_tc);
+
     sfree(term->window_title);
     sfree(term->icon_title);
 
