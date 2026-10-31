@@ -1040,6 +1040,8 @@ void portfwdmgr_config(PortFwdManager *mgr, Conf *conf)
                     logeventf(mgr->cl->logctx,
                               "Duplicate remote port forwarding to %s:%d",
                               pfr->daddr, pfr->dport);
+                    del234(mgr->forwardings, pfr);
+                    i--;        /* avoid the loop skipping an entry */
                     pfr_free(pfr);
                 } else {
                     logeventf(mgr->cl->logctx, "Requesting remote port %s"
