@@ -201,6 +201,7 @@ add_executable(test_terminal
   ${CMAKE_SOURCE_DIR}/stubs/no-gss.c
   ${CMAKE_SOURCE_DIR}/stubs/no-storage.c
   ${CMAKE_SOURCE_DIR}/stubs/no-timing.c
+  ${CMAKE_SOURCE_DIR}/otherbackends/testback.c
   no-jump-list.c)
 target_link_libraries(test_terminal
   guiterminal settings eventloop utils ${platform_libraries})

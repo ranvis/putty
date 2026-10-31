@@ -29,9 +29,14 @@ const struct BackendVtable *const backends[] = { NULL };
 
 typedef struct Mock {
     Terminal *term;
+    Seat seat;
+    Backend *backend;
+    Ldisc *ldisc;
     Conf *conf;
     struct unicode_data ucsdata[1];
     strbuf *title;
+
+    bufchain terminal_input;
 
     strbuf *context;
 
@@ -66,6 +71,38 @@ static const TermWinVtable mock_termwin_vt = {
     .palette_get_overrides = mock_palette_get_overrides,
 };
 
+static const SeatVtable mock_seat_vt = {
+    .output = nullseat_output,
+    .eof = nullseat_eof,
+    .sent = nullseat_sent,
+    .banner = nullseat_banner,
+    .get_userpass_input = nullseat_get_userpass_input,
+    .notify_session_started = nullseat_notify_session_started,
+    .notify_remote_exit = nullseat_notify_remote_exit,
+    .notify_remote_disconnect = nullseat_notify_remote_disconnect,
+    .connection_fatal = nullseat_connection_fatal,
+    .nonfatal = nullseat_nonfatal,
+    .update_specials_menu = nullseat_update_specials_menu,
+    .get_ttymode = nullseat_get_ttymode,
+    .set_busy_status = nullseat_set_busy_status,
+    .confirm_ssh_host_key = nullseat_confirm_ssh_host_key,
+    .confirm_weak_crypto_primitive = nullseat_confirm_weak_crypto_primitive,
+    .confirm_weak_cached_hostkey = nullseat_confirm_weak_cached_hostkey,
+    .prompt_descriptions = nullseat_prompt_descriptions,
+    .is_utf8 = nullseat_is_never_utf8,
+    .echoedit_update = nullseat_echoedit_update,
+    .get_display = nullseat_get_display,
+    .get_windowid = nullseat_get_windowid,
+    .get_window_pixel_size = nullseat_get_window_pixel_size,
+    .stripctrl_new = nullseat_stripctrl_new,
+    .set_trust_status = nullseat_set_trust_status,
+    .can_set_trust_status = nullseat_can_set_trust_status_no,
+    .has_mixed_input_stream = nullseat_has_mixed_input_stream_no,
+    .verbose = nullseat_verbose_no,
+    .interactive = nullseat_interactive_no,
+    .get_cursor_position = nullseat_get_cursor_position,
+};
+
 static Mock *mock_new(void)
 {
     Mock *mk = snew(Mock);
@@ -82,15 +119,20 @@ static Mock *mock_new(void)
 
     mk->tw.vt = &mock_termwin_vt;
 
+    bufchain_init(&mk->terminal_input);
+
     return mk;
 }
 
 static void mock_free(Mock *mk)
 {
     strbuf_free(mk->context);
+    ldisc_free(mk->ldisc);
+    backend_free(mk->backend);
     conf_free(mk->conf);
     term_free(mk->term);
     strbuf_free(mk->title);
+    bufchain_clear(&mk->terminal_input);
     sfree(mk);
 }
 
@@ -153,8 +195,17 @@ static inline void check_sequal(Mock *mk, const char *file, int line,
         report_fail(mk, file, line, "'%s' != '%s'", lhs, rhs);
 }
 
+static inline void check_plequal(Mock *mk, const char *file, int line,
+                                 ptrlen lhs, ptrlen rhs)
+{
+    if (!ptrlen_eq_ptrlen(lhs, rhs))
+        report_fail(mk, file, line, "'%.*s' != '%.*s'",
+                    PTRLEN_PRINTF(lhs), PTRLEN_PRINTF(rhs));
+}
+
 #define IEQUAL(lhs, rhs) check_iequal(mk, __FILE__, __LINE__, lhs, rhs)
 #define SEQUAL(lhs, rhs) check_sequal(mk, __FILE__, __LINE__, lhs, rhs)
+#define PLEQUAL(lhs, rhs) check_plequal(mk, __FILE__, __LINE__, lhs, rhs)
 
 static inline void term_datapl(Terminal *term, ptrlen pl)
 {
@@ -524,15 +575,52 @@ static void test_wintitle(Mock *mk)
     SEQUAL(mk->title->s, "bar");
 }
 
+static strbuf *get_terminal_input(Mock *mk)
+{
+    strbuf *sb = strbuf_new();
+    size_t size = bufchain_size(&mk->terminal_input);
+    bufchain_fetch(&mk->terminal_input, strbuf_append(sb, size), size);
+    return sb;
+}
+
+static void test_selection(Mock *mk)
+{
+    reset(mk);
+    term_datapl(mk->term, PTRLEN_LITERAL("foo"));
+    term_update(mk->term);
+    {
+        int clipboards[1] = { CLIP_LOCAL };
+        term_copyall(mk->term, clipboards, 1);
+    }
+    term_request_paste(mk->term, CLIP_LOCAL);
+    while (run_toplevel_callbacks())
+        /* empty loop body */;
+    strbuf *paste = get_terminal_input(mk);
+    PLEQUAL(ptrlen_from_strbuf(paste), PTRLEN_LITERAL("foo\r"));
+    strbuf_free(paste);
+}
+
 int main(void)
 {
     Mock *mk = mock_new();
     mk->term = term_init(mk->conf, mk->ucsdata, &mk->tw);
+    mk->seat.vt = &mock_seat_vt;
+    {
+        char *realhost = NULL;
+        char *backend_error = backend_init(
+            &test_backend, &mk->seat, &mk->backend, NULL, mk->conf,
+            "dummyhost", 0, &realhost, false, false);
+        assert(!backend_error);
+        sfree(realhost);
+        test_backend_provide_output(mk->backend, &mk->terminal_input);
+    }
+    mk->ldisc = ldisc_create(mk->conf, mk->term, mk->backend, &mk->seat);
 
     test_hello_world(mk);
     test_wrap(mk);
     test_nonwrap(mk);
     test_wintitle(mk);
+    test_selection(mk);
 
     bool failed = mk->any_test_failed;
     mock_free(mk);
