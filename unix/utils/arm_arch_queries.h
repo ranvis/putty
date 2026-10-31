@@ -60,9 +60,10 @@ static inline SysctlResult test_sysctl_flag(const char *flagname)
         size == sizeof(value)) {
         return value != 0 ? SYSCTL_ON : SYSCTL_OFF;
     }
-#else /* HAVE_SYSCTLBYNAME */
-    return SYSCTL_MISSING;
+    /* If sysctlbyname returns an error, fall through to returning the
+     * same thing we'd have done if sysctlbyname hadn't even existed. */
 #endif /* HAVE_SYSCTLBYNAME */
+    return SYSCTL_MISSING;
 }
 #endif /* defined __APPLE__ */
 
