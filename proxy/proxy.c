@@ -98,9 +98,12 @@ static void sk_proxy_close (Socket *s)
 {
     ProxySocket *ps = container_of(s, ProxySocket, sock);
 
-    sk_close(ps->sub_socket);
-    sk_addr_free(ps->proxy_addr);
-    sk_addr_free(ps->remote_addr);
+    if (ps->sub_socket)
+        sk_close(ps->sub_socket);
+    if (ps->proxy_addr)
+        sk_addr_free(ps->proxy_addr);
+    if (ps->remote_addr)
+        sk_addr_free(ps->remote_addr);
     proxy_negotiator_cleanup(ps);
     bufchain_clear(&ps->pending_output_data);
     bufchain_clear(&ps->output_from_negotiator);
@@ -535,6 +538,7 @@ Socket *new_connection(SockAddr *addr, const char *hostname,
             return sret;
 
         ps = snew(ProxySocket);
+        memset(ps, 0, sizeof(ProxySocket));
         ps->sock.vt = &ProxySocket_sockvt;
         ps->plugimpl.vt = &ProxySocket_plugvt;
         ps->interactor.vt = &ProxySocket_interactorvt;
