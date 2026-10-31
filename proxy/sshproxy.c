@@ -751,6 +751,7 @@ Socket *sshproxy_new_connection(SockAddr *addr, const char *hostname,
     if (error) {
         sp->errmsg = dupprintf("unable to open SSH proxy connection: %s",
                                error);
+        sfree(realhost);
         return &sp->sock;
     }
 

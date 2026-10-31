@@ -478,8 +478,10 @@ static void do_cmd(char *host, char *user, char *cmd)
                        conf_get_int(conf, CONF_port),
                        &realhost, 0,
                        conf_get_bool(conf, CONF_tcp_keepalives));
-    if (err != NULL)
+    if (err != NULL) {
+        sfree(realhost);
         bump("ssh_init: %s", err);
+    }
     ssh_scp_init();
     if (verbose && realhost != NULL && errs == 0)
         tell_user(stderr, "Connected to %s", realhost);

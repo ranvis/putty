@@ -306,6 +306,7 @@ static void start_backend(WinGuiSeat *wgs)
             msg = dupprintf("Unable to open connection to\n%s\n%s",
                             conf_dest(wgs->conf), error);
         }
+        sfree(realhost);
         sfree(error);
         MessageBox(NULL, msg, str, MB_ICONERROR | MB_OK);
         sfree(str);

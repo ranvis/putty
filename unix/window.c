@@ -5248,6 +5248,7 @@ static void start_backend(GtkFrontend *inst)
                                   "Unable to open connection to %s:\n%s",
                                   conf_dest(inst->conf), error);
         }
+        sfree(realhost);
         sfree(error);
         inst->exited = true;
         return;

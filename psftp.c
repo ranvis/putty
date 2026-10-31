@@ -2755,6 +2755,7 @@ static int psftp_connect(char *userhost, char *user, int portnumber)
                        conf_get_bool(conf, CONF_tcp_keepalives));
     if (err != NULL) {
         fprintf(stderr, "ssh_init: %s\n", err);
+        sfree(realhost);
         return 1;
     }
     while (!backend_sendok(backend)) {

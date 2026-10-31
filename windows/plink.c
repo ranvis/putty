@@ -540,6 +540,7 @@ int main(int argc, char **argv)
                              conf_get_bool(conf, CONF_tcp_keepalives));
         if (error) {
             fprintf(stderr, "Unable to open connection:\n%s", error);
+            sfree(realhost);
             sfree(error);
             return 1;
         }

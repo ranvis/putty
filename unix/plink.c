@@ -966,6 +966,7 @@ int main(int argc, char **argv)
         if (error) {
             fprintf(stderr, "Unable to open connection:\n%s\n", error);
             sfree(error);
+            sfree(realhost);
             return 1;
         }
         ldisc_create(conf, NULL, backend, plink_seat);
