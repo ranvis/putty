@@ -313,8 +313,8 @@ Socket *new_main_connection(
     assert(template);
     if (*template) {
         Conf *tmpconf = conf_copy(conf);
-        conf_set_str(conf, CONF_proxy_username, "");
-        conf_set_str(conf, CONF_proxy_password, "");
+        conf_set_str(tmpconf, CONF_proxy_username, "");
+        conf_set_str(tmpconf, CONF_proxy_password, "");
         unsigned flags;
         command = format_connection_setup_command(
             template, addr, port, tmpconf, &flags);
