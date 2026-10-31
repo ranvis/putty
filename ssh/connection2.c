@@ -322,6 +322,24 @@ static void ssh2_connection_free(PacketProtocolLayer *ppl)
     sfree(s);
 }
 
+static void stoat_success(void *ctx, unsigned long now)
+{
+    PktOut *pktout;
+    struct ssh2_connection_state *s = ctx;
+    printf("stoat_success\n");
+    pktout = ssh_bpp_new_pktout(s->ppl.bpp, (intptr_t)SSH2_MSG_REQUEST_SUCCESS);
+    pq_push(s->ppl.out_pq, pktout);
+}
+
+static void stoat_failure(void *ctx, unsigned long now)
+{
+    PktOut *pktout;
+    struct ssh2_connection_state *s = ctx;
+    printf("stoat_failure\n");
+    pktout = ssh_bpp_new_pktout(s->ppl.bpp, (intptr_t)SSH2_MSG_REQUEST_FAILURE);
+    pq_push(s->ppl.out_pq, pktout);
+}
+
 static bool ssh2_connection_filter_queue(struct ssh2_connection_state *s)
 {
     PktIn *pktin;
@@ -349,10 +367,7 @@ static bool ssh2_connection_filter_queue(struct ssh2_connection_state *s)
                 s, type, pktin);
 
             if (want_reply) {
-                int type = (reply_success ? SSH2_MSG_REQUEST_SUCCESS :
-                            SSH2_MSG_REQUEST_FAILURE);
-                pktout = ssh_bpp_new_pktout(s->ppl.bpp, type);
-                pq_push(s->ppl.out_pq, pktout);
+                schedule_timer(TICKSPERSEC * 10, reply_success ? stoat_success : stoat_failure, s);
             }
             pq_pop(s->ppl.in_pq);
             break;

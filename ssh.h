@@ -197,6 +197,7 @@ extern const bool share_can_be_upstream;
 struct X11Display;
 struct X11FakeAuth;
 
+struct rportfwd_pending_request;
 /* Structure definition centralised here because the SSH-1 and SSH-2
  * connection layers both use it. But the client module (portfwd.c)
  * should not try to look inside here. */
@@ -207,6 +208,9 @@ struct ssh_rportfwd {
     char *log_description; /* name of remote listening port, for logging */
     ssh_sharing_connstate *share_ctx;
     PortFwdRecord *pfr;
+
+    /* Non-NULL when the server hasn't acknowledged yet */
+    struct rportfwd_pending_request *pending_request;
 };
 void free_rportfwd(struct ssh_rportfwd *rpf);
 

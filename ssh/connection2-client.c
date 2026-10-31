@@ -210,24 +210,46 @@ static int ssh2_rportfwd_cmp(void *av, void *bv)
     return 0;
 }
 
+struct rportfwd_pending_request {
+    struct ssh_rportfwd *rpf;
+    bool cancelled;
+};
+
 static void ssh2_rportfwd_globreq_response(struct ssh2_connection_state *s,
                                            PktIn *pktin, void *ctx)
 {
     PacketProtocolLayer *ppl = &s->ppl; /* for ppl_logevent */
-    struct ssh_rportfwd *rpf = (struct ssh_rportfwd *)ctx;
+    struct rportfwd_pending_request *preq =
+        (struct rportfwd_pending_request *)ctx;
 
-    if (pktin->type == SSH2_MSG_REQUEST_SUCCESS) {
-        ppl_logevent("Remote port forwarding from %s enabled",
-                     rpf->log_description);
-    } else {
-        ppl_logevent("Remote port forwarding from %s refused",
-                     rpf->log_description);
+    struct ssh_rportfwd *rpf = preq->rpf;
+    assert(rpf->pending_request == preq);
+    rpf->pending_request = NULL;
 
-        struct ssh_rportfwd *realpf = del234(s->rportfwds, rpf);
-        assert(realpf == rpf);
-        portfwdmgr_close(s->portfwdmgr, rpf->pfr);
+    if (preq->cancelled) {
+        ppl_logevent("Remote port forwarding from %s %s "
+                     "(but we already cancelled it)",
+                     rpf->log_description,
+                     (pktin->type == SSH2_MSG_REQUEST_SUCCESS ?
+                      "accepted" : "refused"));
+
         free_rportfwd(rpf);
+    } else {
+        if (pktin->type == SSH2_MSG_REQUEST_SUCCESS) {
+            ppl_logevent("Remote port forwarding from %s enabled",
+                         rpf->log_description);
+        } else {
+            ppl_logevent("Remote port forwarding from %s refused",
+                         rpf->log_description);
+
+            struct ssh_rportfwd *realpf = del234(s->rportfwds, rpf);
+            assert(realpf == rpf);
+            portfwdmgr_close(s->portfwdmgr, rpf->pfr);
+            free_rportfwd(rpf);
+        }
     }
+
+    sfree(preq);
 }
 
 struct ssh_rportfwd *ssh2_rportfwd_alloc(
@@ -238,11 +260,12 @@ struct ssh_rportfwd *ssh2_rportfwd_alloc(
 {
     struct ssh2_connection_state *s =
         container_of(cl, struct ssh2_connection_state, cl);
-    struct ssh_rportfwd *rpf = snew(struct ssh_rportfwd);
 
     if (!s->rportfwds)
         s->rportfwds = newtree234(ssh2_rportfwd_cmp);
 
+    struct ssh_rportfwd *rpf = snew(struct ssh_rportfwd);
+    memset(rpf, 0, sizeof(*rpf));
     rpf->shost = dupstr(shost);
     rpf->sport = sport;
     rpf->dhost = dupstr(dhost);
@@ -258,6 +281,12 @@ struct ssh_rportfwd *ssh2_rportfwd_alloc(
     }
 
     if (!rpf->share_ctx) {
+        struct rportfwd_pending_request *preq =
+            snew(struct rportfwd_pending_request);
+        preq->rpf = rpf;
+        rpf->pending_request = preq;
+        preq->cancelled = false;
+
         PktOut *pktout = ssh_bpp_new_pktout(
             s->ppl.bpp, SSH2_MSG_GLOBAL_REQUEST);
         put_stringz(pktout, "tcpip-forward");
@@ -267,7 +296,7 @@ struct ssh_rportfwd *ssh2_rportfwd_alloc(
         pq_push(s->ppl.out_pq, pktout);
 
         ssh2_queue_global_request_handler(
-            s, ssh2_rportfwd_globreq_response, rpf);
+            s, ssh2_rportfwd_globreq_response, preq);
     }
 
     return rpf;
@@ -298,7 +327,16 @@ void ssh2_rportfwd_remove(ConnectionLayer *cl, struct ssh_rportfwd *rpf)
     assert(s->rportfwds);
     struct ssh_rportfwd *realpf = del234(s->rportfwds, rpf);
     assert(realpf == rpf);
-    free_rportfwd(rpf);
+
+    if (rpf->pending_request) {
+        /* Can't actually free this rpf yet, because when the response
+         * to its GLOBAL_REQUEST arrives, we're going to need it for a
+         * diagnostic. Just mark it as cancelled, and
+         * ssh2_rportfwd_globreq_response will free it later. */
+        rpf->pending_request->cancelled = true;
+    } else {
+        free_rportfwd(rpf);
+    }
 }
 
 SshChannel *ssh2_session_open(ConnectionLayer *cl, Channel *chan)
