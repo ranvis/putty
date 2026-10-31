@@ -116,8 +116,30 @@ void pollwrap_add_fd_events(pollwrapper *pw, int fd, int events)
 #define SELECT_X_IN (POLLPRI)
 
 #define SELECT_R_OUT (SELECT_R_IN | POLLERR | POLLHUP)
-#define SELECT_W_OUT (SELECT_W_IN | POLLERR)
 #define SELECT_X_OUT (SELECT_X_IN)
+
+/*
+ * I'm not quite sure what the _right_ set of poll(2) flags are to
+ * mimic what select(2) has to say about writability. In particular,
+ * select(2) writability is used to indicate that an asynchronous
+ * connect(2) call has either succeeded or failed; for failure, what
+ * poll flag gets set?
+ *
+ * On Linux, the kernel doesn't seem to think POLLHUP is included in
+ * select writability (going by the definition of POLLOUT_SET in
+ * fs/select.c): in the case where an async connect fails, we get
+ * POLLWRNORM among the returned flags, which is in SELECT_W_IN above.
+ *
+ * But on MacOS, if we _don't_ add POLLHUP to this list, then failure
+ * of an async connect causes a tight loop, when poll() keeps
+ * terminating immediately: apparently that's the only flag in this
+ * whole list that tells us anything has happened.
+ */
+#if defined __APPLE__
+#define SELECT_W_OUT (SELECT_W_IN | POLLERR | POLLHUP)
+#else
+#define SELECT_W_OUT (SELECT_W_IN | POLLERR)
+#endif
 
 void pollwrap_add_fd_rwx(pollwrapper *pw, int fd, int rwx)
 {
