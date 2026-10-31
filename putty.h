@@ -1023,9 +1023,14 @@ typedef struct truecolour {
     X(CLIP_LOCAL, "last text selected in terminal")     \
     /* end of list */
 
+#ifndef TEST_CLIPBOARDS
+#define TEST_CLIPBOARDS(X)
+#endif
+
 #define ALL_CLIPBOARDS(X)                       \
     CROSS_PLATFORM_CLIPBOARDS(X)                \
     PLATFORM_CLIPBOARDS(X)                      \
+    TEST_CLIPBOARDS(X)                          \
     /* end of list */
 
 #define CLIP_ID(id,name) id,

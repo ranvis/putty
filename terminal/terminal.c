@@ -6709,10 +6709,11 @@ static void clipme(Terminal *term, pos top, pos bottom, bool rect, bool desel,
                 continue;
             }
 
+            attr = ldata->chars[x].attr;
+            tc = ldata->chars[x].truecolour;
+
             while (1) {
                 int uc = ldata->chars[x].chr;
-                attr = ldata->chars[x].attr;
-                tc = ldata->chars[x].truecolour;
 
                 switch (uc & CSET_MASK) {
                   case CSET_LINEDRW:

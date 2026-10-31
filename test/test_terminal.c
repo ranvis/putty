@@ -1,3 +1,7 @@
+/* Define this before including putty.h */
+#define TEST_CLIPBOARDS(X) \
+    X(CLIP_TEST, "test clipboard id for checking rich paste attributes")
+
 #include "putty.h"
 #include "terminal.h"
 
@@ -38,6 +42,11 @@ typedef struct Mock {
 
     bufchain terminal_input;
 
+    wchar_t *paste_data;
+    int *paste_attr;
+    truecolour *paste_tc;
+    int paste_len;
+
     strbuf *context;
 
     bool any_test_failed;
@@ -59,6 +68,22 @@ static void mock_palette_get_overrides(TermWin *tw, Terminal *term) {}
 static void mock_set_title(TermWin *win, const char *title, int codepage);
 static void mock_set_icon_title(TermWin *win, const char *title, int cp) {}
 
+static void mock_clip_write(
+    TermWin *tw, int clipboard, wchar_t *data, int *attr,
+    truecolour *tc, int len, bool must_deselect)
+{
+    Mock *mk = container_of(tw, Mock, tw);
+    if (clipboard == CLIP_TEST) {
+        mk->paste_data = sresize(mk->paste_data, len, wchar_t);
+        mk->paste_attr = sresize(mk->paste_attr, len, int);
+        mk->paste_tc = sresize(mk->paste_tc, len, truecolour);
+        memcpy(mk->paste_data, data, len * sizeof(*mk->paste_data));
+        memcpy(mk->paste_attr, attr, len * sizeof(*mk->paste_attr));
+        memcpy(mk->paste_tc, tc, len * sizeof(*mk->paste_tc));
+        mk->paste_len = len;
+    }
+}
+
 static const TermWinVtable mock_termwin_vt = {
     .setup_draw_ctx = mock_setup_draw_ctx,
     .draw_text = mock_draw_text,
@@ -69,6 +94,7 @@ static const TermWinVtable mock_termwin_vt = {
     .set_raw_mouse_mode_pointer = mock_set_raw_mouse_mode_pointer,
     .palette_set = mock_palette_set,
     .palette_get_overrides = mock_palette_get_overrides,
+    .clip_write = mock_clip_write,
 };
 
 static const SeatVtable mock_seat_vt = {
@@ -133,6 +159,9 @@ static void mock_free(Mock *mk)
     term_free(mk->term);
     strbuf_free(mk->title);
     bufchain_clear(&mk->terminal_input);
+    sfree(mk->paste_data);
+    sfree(mk->paste_attr);
+    sfree(mk->paste_tc);
     sfree(mk);
 }
 
@@ -588,6 +617,9 @@ static void test_selection(Mock *mk)
     reset(mk);
     term_datapl(mk->term, PTRLEN_LITERAL("foo"));
     term_update(mk->term);
+
+    /* Copy to CLIP_LOCAL, and then request a paste back from it to
+     * ensure it weent to our test backend */
     {
         int clipboards[1] = { CLIP_LOCAL };
         term_copyall(mk->term, clipboards, 1);
@@ -598,6 +630,65 @@ static void test_selection(Mock *mk)
     strbuf *paste = get_terminal_input(mk);
     PLEQUAL(ptrlen_from_strbuf(paste), PTRLEN_LITERAL("foo\r"));
     strbuf_free(paste);
+
+    /* Test rich attributes, including on combining characters */
+    mk->ucsdata->line_codepage = CP_UTF8;
+    reset(mk);
+    term_datapl(mk->term, PTRLEN_LITERAL(
+                    "\033[1;31m" /* bold red */
+                    "a\xCD\x8A" /* U+0061 + U+034A COMBINING NOT TILDE ABOVE */
+                    "\033[0;38;2;11;22;33m" /* no bold, RGB colour */
+                    "b\xCD\x93" /* U+0062 + U+0353 COMBINING X BELOW */
+                    "\033[m" /* tidy up, out of sheer habit */
+                    ));
+
+    /* Copy to CLIP_TEST so that mock_clip_write will receive all the data */
+    {
+        int clipboards[1] = { CLIP_TEST };
+        term_copyall(mk->term, clipboards, 1);
+    }
+    /* Check the output paste data. This time, we expect \n, not \r,
+     * because the paste data is in the form of a text file rather
+     * than terminal input, so the translation back to \r hasn't been
+     * done. */
+    IEQUAL(mk->paste_len, 5);
+    IEQUAL(mk->paste_data[0], 0x0061);
+    IEQUAL(mk->paste_data[1], 0x034A);
+    IEQUAL(mk->paste_data[2], 0x0062);
+    IEQUAL(mk->paste_data[3], 0x0353);
+    IEQUAL(mk->paste_data[4], 0x000A);
+    /* Check the attributes. Each combining character should share the
+     * attributes of its principal. */
+    IEQUAL(mk->paste_attr[0],
+           (OSC4_COLOUR_red << ATTR_FGSHIFT) |
+           (OSC4_COLOUR_bg << ATTR_BGSHIFT) | ATTR_BOLD);
+    IEQUAL(mk->paste_attr[1],
+           (OSC4_COLOUR_red << ATTR_FGSHIFT) |
+           (OSC4_COLOUR_bg << ATTR_BGSHIFT) | ATTR_BOLD);
+    IEQUAL(mk->paste_attr[2],
+           (OSC4_COLOUR_fg << ATTR_FGSHIFT) |
+           (OSC4_COLOUR_bg << ATTR_BGSHIFT));
+    IEQUAL(mk->paste_attr[3],
+           (OSC4_COLOUR_fg << ATTR_FGSHIFT) |
+           (OSC4_COLOUR_bg << ATTR_BGSHIFT));
+    IEQUAL(mk->paste_attr[4], 0);      /* no attributes on the \n */
+    /* Similarly, check the truecolour data. */
+    IEQUAL(mk->paste_tc[0].fg.enabled, false);
+    IEQUAL(mk->paste_tc[0].bg.enabled, false);
+    IEQUAL(mk->paste_tc[1].fg.enabled, false);
+    IEQUAL(mk->paste_tc[1].bg.enabled, false);
+    IEQUAL(mk->paste_tc[2].fg.enabled, true);
+    IEQUAL(mk->paste_tc[2].fg.r, 11);
+    IEQUAL(mk->paste_tc[2].fg.g, 22);
+    IEQUAL(mk->paste_tc[2].fg.b, 33);
+    IEQUAL(mk->paste_tc[2].bg.enabled, false);
+    IEQUAL(mk->paste_tc[3].fg.enabled, true);
+    IEQUAL(mk->paste_tc[3].fg.r, 11);
+    IEQUAL(mk->paste_tc[3].fg.g, 22);
+    IEQUAL(mk->paste_tc[3].fg.b, 33);
+    IEQUAL(mk->paste_tc[3].bg.enabled, false);
+    IEQUAL(mk->paste_tc[4].fg.enabled, false);
+    IEQUAL(mk->paste_tc[4].bg.enabled, false);
 }
 
 int main(void)
