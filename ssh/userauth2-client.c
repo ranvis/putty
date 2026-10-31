@@ -2576,6 +2576,8 @@ static PktOut *ssh2_userauth_gss_packet(
     }
     put_string(p, mic.value, mic.length);
 
+    s->shgss->lib->free_mic(s->shgss->lib, &mic);
+
     return p;
 }
 #endif
