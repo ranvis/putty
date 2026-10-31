@@ -197,8 +197,10 @@ static void rlogin_startup(Rlogin *rlogin, SeatPromptResult spr,
     if (rlogin->prompt)
         free_prompts(rlogin->prompt);
     rlogin->prompt = NULL;
-    if (rlogin->ldisc)
+    if (rlogin->ldisc) {
         ldisc_check_sendok(rlogin->ldisc);
+        ldisc_echoedit_update(rlogin->ldisc);
+    }
 }
 
 static const PlugVtable Rlogin_plugvt = {
