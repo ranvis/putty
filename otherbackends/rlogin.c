@@ -194,6 +194,8 @@ static void rlogin_startup(Rlogin *rlogin, SeatPromptResult spr,
         rlogin->bufsize = sk_write(rlogin->s, &z, 1);
     }
 
+    if (rlogin->prompt)
+        free_prompts(rlogin->prompt);
     rlogin->prompt = NULL;
     if (rlogin->ldisc)
         ldisc_check_sendok(rlogin->ldisc);
