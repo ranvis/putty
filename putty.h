@@ -2169,11 +2169,21 @@ void log_packet(LogContext *logctx, int direction, int type,
                 unsigned downstream_id, const char *additional_log_text);
 
 /*
- * Exports from testback.c
+ * Exports from testback.c. These backends aren't linked in to normal
+ * applications; they're used for test programs and development.
+ *
+ * null_backend does absolutely nothing - emits no output and discards
+ * all input. loop_backend echoes its input to its output, so you can
+ * use it for initial bringup of a terminal frontend by just typing
+ * into the terminal to test display of things. And test_backend
+ * writes its input on to a provided bufchain, so that you can query
+ * the bufchain to see if it received what you wanted.
  */
 
 extern const struct BackendVtable null_backend;
 extern const struct BackendVtable loop_backend;
+extern const struct BackendVtable test_backend;
+void test_backend_provide_output(Backend *be, bufchain *output);
 
 /*
  * Exports from raw.c.

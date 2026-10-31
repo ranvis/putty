@@ -38,6 +38,7 @@ static void loop_free(Backend *);
 static void null_reconfig(Backend *, Conf *);
 static void null_send(Backend *, const char *, size_t);
 static void loop_send(Backend *, const char *, size_t);
+static void test_send(Backend *, const char *, size_t);
 static size_t null_sendbuffer(Backend *);
 static size_t loop_sendbuffer(Backend *);
 static void null_size(Backend *, int, int);
@@ -97,10 +98,34 @@ const BackendVtable loop_backend = {
     .default_port = 0,
 };
 
+const BackendVtable test_backend = {
+    .init = loop_init,
+    .free = loop_free,
+    .reconfig = null_reconfig,
+    .send = test_send,
+    .sendbuffer = null_sendbuffer,
+    .size = null_size,
+    .special = null_special,
+    .get_specials = null_get_specials,
+    .connected = null_connected,
+    .exitcode = null_exitcode,
+    .sendok = null_sendok,
+    .ldisc_option_state = null_ldisc,
+    .provide_ldisc = null_provide_ldisc,
+    .unthrottle = null_unthrottle,
+    .cfg_info = null_cfg_info,
+    .id = "test",
+    .displayname_tc = "Test",
+    .displayname_lc = "test",
+    .protocol = -1,
+    .default_port = 0,
+};
+
 struct loop_state {
     Seat *seat;
     Backend backend;
     size_t sendbuffer;
+    bufchain *output; /* for test_backend only */
 };
 
 static char *loop_init(const BackendVtable *vt, Seat *seat,
@@ -140,6 +165,19 @@ static void loop_send(Backend *be, const char *buf, size_t len) {
     struct loop_state *st = container_of(be, struct loop_state, backend);
 
     st->sendbuffer = seat_output(st->seat, 0, buf, len);
+}
+
+static void test_send(Backend *be, const char *buf, size_t len) {
+    struct loop_state *st = container_of(be, struct loop_state, backend);
+    if (st->output)
+        bufchain_add(st->output, buf, len);
+}
+
+void test_backend_provide_output(Backend *be, bufchain *output)
+{
+    struct loop_state *st = container_of(be, struct loop_state, backend);
+    assert(st->backend.vt == &test_backend);
+    st->output = output;
 }
 
 static size_t null_sendbuffer(Backend *be) {
