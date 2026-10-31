@@ -108,6 +108,13 @@ prompts_t *proxy_new_prompts(ProxySocket *ps);
 void proxy_spr_abort(ProxyNegotiator *pn, SeatPromptResult spr);
 
 /*
+ * Helper function that proxy implementations can call from a callback
+ * in order to trigger a run of process_queue followed by handling
+ * whatever it did.
+ */
+void proxy_negotiate(ProxySocket *ps);
+
+/*
  * This is a wrapper on format_connection_setup_command which gets the
  * format string from CONF_proxy_telnet_command. Despite the name, it
  * may also be reused by local-command proxies on individual

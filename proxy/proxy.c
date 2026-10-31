@@ -212,7 +212,7 @@ static void plug_proxy_closing(Plug *p, PlugCloseType type,
     plug_closing(ps->plug, type, error_msg);
 }
 
-static void proxy_negotiate(ProxySocket *ps)
+void proxy_negotiate(ProxySocket *ps)
 {
     assert(ps->pn);
     proxy_negotiator_process_queue(ps->pn);

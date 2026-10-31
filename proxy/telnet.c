@@ -52,7 +52,7 @@ static void proxy_telnet_free(ProxyNegotiator *pn)
 static void proxy_telnet_process_queue_callback(void *vctx)
 {
     TelnetProxyNegotiator *s = (TelnetProxyNegotiator *)vctx;
-    proxy_negotiator_process_queue(&s->pn);
+    proxy_negotiate(s->pn.ps);
 }
 
 static void proxy_telnet_process_queue(ProxyNegotiator *pn)
