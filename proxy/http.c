@@ -24,10 +24,17 @@ static bool read_line(bufchain *input, strbuf *output, bool is_header)
             put_byte(output, c);
             bufchain_consume(input, 1);
 
-            if (!is_header && output->len > 0 &&
-                output->s[output->len - 1] == '\n') {
-                /* If we're looking for just a line, not an HTTP
-                 * header, then any newline terminates it. */
+            /* If we've just written a \n, then it may not terminate
+             * the header, because we have to wait until we see if the
+             * next line is a continuation line (beginning with space
+             * or tab, as in the previous clause). An exception is if
+             * we're in "just read any line, not an HTTP header" mode
+             * (!is_header). Another exception is if the \n appears at
+             * the very _start_ of the line, so that this is the blank
+             * line that terminates HTTP header parsing completely.
+             * _That_ can't be followed by a continuation! */
+            if (output->len > 0 && output->s[output->len - 1] == '\n' &&
+                (!is_header || output->len == 1)) {
                 goto done;
             }
         }
