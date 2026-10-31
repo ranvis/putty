@@ -795,6 +795,8 @@ void ssh_bpp_common_setup(BinaryPacketProtocol *bpp)
 void ssh_bpp_free(BinaryPacketProtocol *bpp)
 {
     delete_callbacks_for_context(bpp);
+    pq_in_clear(&bpp->in_pq);
+    pq_out_clear(&bpp->out_pq);
     bpp->vt->free(bpp);
 }
 
