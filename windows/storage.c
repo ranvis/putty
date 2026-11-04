@@ -780,7 +780,7 @@ int remove_from_jumplist_registry(const char *item)
 
 /* Returns the jumplist entries from the registry. Caller must free
  * the returned pointer. */
-char *get_jumplist_registry_entries (void)
+char *get_jumplist_registry_entries(void)
 {
     char *list_value;
 

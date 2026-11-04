@@ -199,7 +199,7 @@ static void null_special(Backend *be, SessionSpecialCode code, int arg) {
 
 }
 
-static const SessionSpecial *null_get_specials (Backend *be) {
+static const SessionSpecial *null_get_specials(Backend *be) {
 
     return NULL;
 }
@@ -228,7 +228,7 @@ static bool null_ldisc(Backend *be, int option) {
     return false;
 }
 
-static void null_provide_ldisc (Backend *be, Ldisc *ldisc) {
+static void null_provide_ldisc(Backend *be, Ldisc *ldisc) {
 
 }
 

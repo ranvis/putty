@@ -265,7 +265,7 @@ static inline void plug_closing_user_abort(Plug *p)
 { p->vt->closing(p, PLUGCLOSE_USER_ABORT, "User aborted connection setup"); }
 static inline void plug_receive(Plug *p, int urg, const char *data, size_t len)
 { p->vt->receive(p, urg, data, len); }
-static inline void plug_sent (Plug *p, size_t bufsize)
+static inline void plug_sent(Plug *p, size_t bufsize)
 { p->vt->sent(p, bufsize); }
 static inline int plug_accepting(Plug *p, accept_fn_t cons, accept_ctx_t ctx)
 { return p->vt->accepting(p, cons, ctx); }

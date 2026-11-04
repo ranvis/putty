@@ -2300,7 +2300,7 @@ bool is_dbcs_leadbyte(int codepage, char byte);
 wchar_t xlat_uskbd2cyrllic(int ch);
 int check_compose(int first, int second);
 int decode_codepage(const char *cp_name);
-const char *cp_enumerate (int index);
+const char *cp_enumerate(int index);
 const char *cp_name(int codepage);
 void get_unitab(int codepage, wchar_t *unitab, int ftype);
 
